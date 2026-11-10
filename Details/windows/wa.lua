@@ -243,164 +243,6 @@ local text_interrupt_prototype = {
     ["disjunctive"] = true,
 }
 
-local group_prototype_boss_mods = {
-    ["grow"] = "DOWN",
-    ["controlledChildren"] = {},
-    ["animate"] = true,
-    ["xOffset"] = 0,
-    ["border"] = "None",
-    ["yOffset"] = 370,
-    ["anchorPoint"] = "CENTER",
-    ["untrigger"] = {},
-    ["sort"] = "none",
-    ["actions"] = {
-        ["start"] = {},
-        ["finish"] = {},
-        ["init"] = {},
-    },
-    ["space"] = 2,
-    ["background"] = "None",
-    ["expanded"] = true,
-    ["constantFactor"] = "RADIUS",
-    ["selfPoint"] = "TOP",
-    ["borderOffset"] = 16,
-    ["trigger"] = {
-        ["type"] = "aura2",
-        ["spellIds"] = {
-        },
-        ["names"] = {},
-        ["debuffType"] = "HELPFUL",
-        ["unit"] = "player",
-    },
-    ["animation"] = {
-        ["start"] = {
-            ["duration_type"] = "seconds",
-            ["type"] = "none",
-        },
-        ["main"] = {
-            ["duration_type"] = "seconds",
-            ["type"] = "none",
-        },
-        ["finish"] = {
-            ["duration_type"] = "seconds",
-            ["type"] = "none",
-        },
-    },
-    ["id"] = "Details! Boss Mods Group",
-    ["backgroundInset"] = 0,
-    ["frameStrata"] = 1,
-    ["width"] = 359.096801757813,
-    ["rotation"] = 0,
-    ["radius"] = 200,
-    ["numTriggers"] = 1,
-    ["stagger"] = 0,
-    ["height"] = 121.503601074219,
-    ["align"] = "CENTER",
-    ["load"] = {
-        ["difficulty"] = {
-            ["multi"] = {
-            },
-        },
-        ["role"] = {
-            ["multi"] = {
-            },
-        },
-        ["use_class"] = false,
-        ["talent"] = {
-            ["multi"] = {
-            },
-        },
-        ["race"] = {
-            ["multi"] = {
-            },
-        },
-        ["spec"] = {
-            ["multi"] = {
-            },
-        },
-        ["class"] = {
-        },
-        ["size"] = {
-            ["multi"] = {
-            },
-        },
-    },
-    ["regionType"] = "dynamicgroup",
-}
-
-local group_prototype = {
-    ["xOffset"] = -678.999450683594,
-    ["yOffset"] = 212.765991210938,
-    ["id"] = "Details! Aura Group",
-    ["grow"] = "RIGHT",
-    ["controlledChildren"] = {},
-    ["animate"] = true,
-    ["border"] = "None",
-    ["anchorPoint"] = "CENTER",
-    ["regionType"] = "dynamicgroup",
-    ["sort"] = "none",
-    ["actions"] = {},
-    ["space"] = 0,
-    ["background"] = "None",
-    ["expanded"] = true,
-    ["constantFactor"] = "RADIUS",
-    ["trigger"] = {
-        ["type"] = "aura2",
-        ["spellIds"] = {},
-        ["unit"] = "player",
-        ["debuffType"] = "HELPFUL",
-        ["names"] = {},
-    },
-    ["borderOffset"] = 16,
-
-    ["animation"] = {
-        ["start"] = {
-            ["type"] = "none",
-            ["duration_type"] = "seconds",
-        },
-        ["main"] = {
-            ["type"] = "none",
-            ["duration_type"] = "seconds",
-        },
-        ["finish"] = {
-            ["type"] = "none",
-            ["duration_type"] = "seconds",
-        },
-    },
-    ["align"] = "CENTER",
-    ["rotation"] = 0,
-    ["frameStrata"] = 1,
-    ["width"] = 199.999969482422,
-    ["height"] = 20,
-    ["stagger"] = 0,
-    ["radius"] = 200,
-    ["numTriggers"] = 1,
-    ["backgroundInset"] = 0,
-    ["selfPoint"] = "LEFT",
-    ["load"] = {
-        ["use_combat"] = true,
-        ["race"] = {
-            ["multi"] = {},
-        },
-        ["talent"] = {
-            ["multi"] = {},
-        },
-        ["role"] = {
-            ["multi"] = {},
-        },
-        ["spec"] = {
-            ["multi"] = {},
-        },
-        ["class"] = {
-            ["multi"] = {},
-        },
-        ["size"] = {
-            ["multi"] = {},
-        },
-    },
-    ["untrigger"] = {},
-}
-
 local bar_dbm_timerbar_prototype = {
         ["sparkWidth"] = 30,
         ["stacksSize"] = 12,
@@ -1150,18 +992,6 @@ local icon_prototype = {
     ["textColor"] = {1, 1, 1, 1},
 }
 
-local actions_prototype = {
-    ["start"] = {
-        ["do_glow"] = true,
-        ["glow_action"] = "show",
-        ["do_sound"] = true,
-        ["glow_frame"] = "WeakAuras:Crystalline Barrage Step",
-        ["sound"] = "Interface\\AddOns\\WeakAuras\\Media\\Sounds\\WaterDrop.ogg",
-        ["sound_channel"] = "Master",
-    },
-    ["finish"] = {},
-}
-
 local debuff_prototype = {
     ["cooldown"] = false,
     ["trigger"] = {
@@ -1228,17 +1058,6 @@ local sound_prototype = {
     },
 }
 
-local sound_prototype_custom = {
-    ["actions"] = {
-        ["start"] = {
-            ["do_sound"] = true,
-            ["sound"] = " custom",
-            ["sound_path"] = "Interface\\Quiet.ogg",
-            ["sound_channel"] = "Master",
-        },
-    },
-}
-
 local chat_prototype = {
     ["actions"] = {
         ["start"] = {
@@ -1266,25 +1085,12 @@ local glow_prototype = {
     },
 }
 
-function _detalhes:CreateWeakAura (aura_type, spellid, use_spellid, spellname, name, icon_texture, target, stacksize, sound, chat, icon_text, icon_glow, encounter_id, group, icon_size, other_values, in_combat, cooldown_animation)
-
-    -- print (aura_type, spellid, use_spellid, spellname, name, icon_texture, target, stacksize, sound, chat, icon_text, icon_glow, encounter_id, group, icon_size, other_values)
+function _detalhes:CreateWeakAura (aura_type, spellid, use_spellid, spellname, name, icon_texture, target, stacksize, sound, chat, icon_text, icon_glow, encounter_id, icon_size, other_values, in_combat, cooldown_animation)
 
     --> check if wa is installed
     if (not WeakAuras or not WeakAurasSaved) then
         return
     end
-
-    -- > check if there is a group for our auras
-    -- if (not WeakAurasSaved.displays ["Details! Aura Group"]) then
-    --     local group = _detalhes.table.copy ({}, group_prototype)
-    --     WeakAuras.Add (group)
-    -- end
-
-    -- if (not WeakAurasSaved.displays ["Details! Boss Mods Group"]) then
-    --     local group = _detalhes.table.copy ({}, group_prototype_boss_mods)
-    --     WeakAuras.Add (group)
-    -- end
 
     --> create the icon table
     local new_aura
@@ -1295,7 +1101,6 @@ function _detalhes:CreateWeakAura (aura_type, spellid, use_spellid, spellname, n
         chat = nil
         sound = nil
         icon_glow = nil
-        group = nil
 
         new_aura = _detalhes.table.copy ({}, text_interrupt_prototype)
 
@@ -1340,7 +1145,6 @@ function _detalhes:CreateWeakAura (aura_type, spellid, use_spellid, spellname, n
         chat = nil
         sound = nil
         icon_glow = nil
-        group = nil
 
         new_aura = _detalhes.table.copy ({}, text_dispell_prototype)
 
@@ -1446,13 +1250,6 @@ function _detalhes:CreateWeakAura (aura_type, spellid, use_spellid, spellname, n
                     --ej timers
                 	new_aura.trigger.id = timerId
                 end
-            -- elseif (other_values.bw_timer_id) then
-            --     new_aura.trigger.id = ""
-            --     new_aura.trigger.use_id = false
-            --     new_aura.trigger.spellId_operator = "=="
-            --     new_aura.trigger.use_spellId = true
-            --     new_aura.trigger.spellId = tostring (other_values.bw_timer_id)
-            --     new_aura.trigger.event = "BigWigs Timer"
             end
 
         elseif (aura_type == "aurabar" or aura_type == "icon") then
@@ -1469,10 +1266,6 @@ function _detalhes:CreateWeakAura (aura_type, spellid, use_spellid, spellname, n
                 trigger.event = "DBM Timer"
                 trigger.spellId = tostring (other_values.spellid)
 
-            -- elseif (other_values.bw_timer_id) then
-            --     trigger.event = "BigWigs Timer"
-            --     trigger.spellId = tostring (other_values.bw_timer_id)
-            --     trigger.spellId_operator = "=="
             end
         end
 
@@ -1638,7 +1431,7 @@ function _detalhes:CreateWeakAura (aura_type, spellid, use_spellid, spellname, n
         else
             new_aura.trigger.spellId = tostring (spellid)
             new_aura.trigger.name = spellname
-            tinsert (new_aura.trigger.spellIds, spellid)
+            new_aura.trigger.spellIds[#new_aura.trigger.spellIds+1] = spellid
         end
 
         --> if is a regular auras without using spells ids
@@ -1695,13 +1488,7 @@ function _detalhes:CreateWeakAura (aura_type, spellid, use_spellid, spellname, n
     end
 
     --> using sound
-    if (sound and type (sound) == "table") then
-        local add = _detalhes.table.copy ({}, sound_prototype_custom)
-        add.actions.start.sound_path = sound.sound_path
-        add.actions.start.sound_channel = sound.sound_channel or "Master"
-        _detalhes.table.overwrite (new_aura, add)
-
-    elseif (sound and sound ~= "" and not sound:find ("Quiet.ogg")) then
+    if (sound and sound ~= "" and not sound:find ("Quiet.ogg")) then
         local add = _detalhes.table.copy ({}, sound_prototype)
         add.actions.start.sound = sound
         _detalhes.table.overwrite (new_aura, add)
@@ -1736,46 +1523,12 @@ function _detalhes:CreateWeakAura (aura_type, spellid, use_spellid, spellname, n
         new_aura.cooldownTextEnabled = true
     end
 
-    --> add the aura on a group
-    if (group) then
-        new_aura.parent = group
-
-        if (new_aura.regionType == "icon") then
-            --> adjust the width and height of the new aura following the existing auras on the group
-            local normalWidth, normalHeight, amount = 0, 0, 0
-            local allAurasInTheGroup = WeakAurasSaved.displays [group].controlledChildren
-
-            for index, auraname in ipairs (allAurasInTheGroup) do
-                local auraObject = WeakAurasSaved.displays [auraname]
-                if (auraObject and auraObject.regionType == "icon") then
-                    amount = amount + 1
-                    normalWidth = normalWidth + auraObject.width
-                    normalHeight = normalHeight + auraObject.height
-                end
-            end
-
-            if (normalWidth > 0) then
-                normalWidth = normalWidth / amount
-                normalHeight = normalHeight / amount
-                new_aura.width = normalWidth
-                new_aura.height = normalHeight
-            end
-        end
-
-        tinsert (WeakAurasSaved.displays [group].controlledChildren, new_aura.id)
-    else
-        new_aura.parent = nil
-    end
+    new_aura.parent = nil
     new_aura.internalVersion = 2
     --> add the aura
     WeakAuras.Add (new_aura)
 
-    --> check if the options panel has loaded
-    local options_frame = WeakAuras.OptionsFrame and WeakAuras.OptionsFrame()
-    if (options_frame) then
-        if (options_frame and not options_frame:IsShown()) then
-            WeakAuras.ToggleOptions()
-        end
+    if (WeakAuras.IsOptionsOpen()) then
         WeakAuras.NewDisplayButton (new_aura)
     end
 
@@ -1828,38 +1581,16 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
 
         DetailsAuraPanel.Initialized = true
 
-        --> check if there is a group for our auras
-        -- if (WeakAuras and WeakAurasSaved) then
-        --     if (not WeakAurasSaved.displays ["Details! Aura Group"]) then
-        --         local group = _detalhes.table.copy ({}, group_prototype)
-        --         WeakAuras.Add (group)
-        --     end
-        --     if (not WeakAurasSaved.displays ["Details! Boss Mods Group"]) then
-        --         local group = _detalhes.table.copy ({}, group_prototype_boss_mods)
-        --         WeakAuras.Add (group)
-        --     end
-        -- end
-
         local f = DetailsAuraPanel or CreateFrame ("Frame", "DetailsAuraPanel", UIParent)
         f:SetSize (800, 600)
         f:SetPoint ("CENTER", UIParent, "CENTER", 0, 150)
-        f:SetFrameStrata ("DIALOG")
+        f:SetFrameStrata ("HIGH")
         f:EnableMouse (true)
         f:SetMovable (true)
         f:SetToplevel (true)
 
         --background
-        f.bg1 = f:CreateTexture (nil, "background")
-        f.bg1:SetTexture ([[Interface\AddOns\Details\images\background]], true)
-        f.bg1:SetAlpha (0.8)
-        f.bg1:SetVertexColor (0.27, 0.27, 0.27)
-        f.bg1:SetVertTile (true)
-        f.bg1:SetHorizTile (true)
-        f.bg1:SetSize (790, 454)
-        f.bg1:SetAllPoints()
-        f:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-        f:SetBackdropColor (.5, .5, .5, .7)
-        f:SetBackdropBorderColor (0, 0, 0, 1)
+        _detalhes:FormatBackground (f, 0.8, .7)
 
         --register to libwindow
         local LibWindow = LibStub ("LibWindow-1.1")
@@ -1884,17 +1615,7 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
         f.TitleBar:SetBackdropBorderColor (0, 0, 0, 1)
 
         --close button
-        f.Close = CreateFrame ("button", "$parentCloseButton", f)
-        f.Close:SetPoint ("RIGHT", f.TitleBar, "RIGHT", -2, 0)
-        f.Close:SetSize (16, 16)
-        f.Close:SetNormalTexture (_detalhes.gump.folder .. "icons")
-        f.Close:SetHighlightTexture (_detalhes.gump.folder .. "icons")
-        f.Close:SetPushedTexture (_detalhes.gump.folder .. "icons")
-        f.Close:GetNormalTexture():SetTexCoord (0, 16/128, 0, 1)
-        f.Close:GetHighlightTexture():SetTexCoord (0, 16/128, 0, 1)
-        f.Close:GetPushedTexture():SetTexCoord (0, 16/128, 0, 1)
-        f.Close:SetAlpha (0.7)
-        f.Close:SetScript ("OnClick", function() f:Hide() end)
+        _detalhes:CreateWindowCloseButton (f, f.TitleBar, function() f:Hide() end)
 
         --title
         f.Title = f.TitleBar:CreateFontString ("$parentTitle", "overlay", "GameFontNormal")
@@ -1903,11 +1624,7 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
 
         local fw = _detalhes:GetFramework()
 
-        local text_template = fw:GetTemplate ("font", "OPTIONS_FONT_TEMPLATE")
-        local dropdown_template = fw:GetTemplate ("dropdown", "OPTIONS_DROPDOWN_TEMPLATE")
-        local switch_template = fw:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE")
         local slider_template = fw:GetTemplate ("slider", "OPTIONS_SLIDER_TEMPLATE")
-        local button_template = fw:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE")
 
         --aura name
         local name_label = fw:CreateLabel (f, L["Aura Name: "], nil, nil, "GameFontNormal")
@@ -2164,11 +1881,7 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
 
         --sound effect
         local play_sound = function (self, fixedParam, file)
-            if (type (file) == "table") then
-                PlaySoundFile (file.sound_path, "Master")
-            else
-                PlaySoundFile (file, "Master")
-            end
+            PlaySoundFile (file, "Master")
         end
 
         local sort = function (t1, t2)
@@ -2179,50 +1892,12 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
         end
         local iconsize = {14, 14}
 
-        local game_sounds = {
-        --8.2 broke file paths, removing them until a way of converting to soundIds is possible
-            --[=[
-            ["Horde Banner Down"] = [[Sound\event\EVENT_VashjirIntro_HordeBannerDown_01.ogg]],
-            ["Mast Crack"] = [[Sound\event\EVENT_VashjirIntro_MastCrack_01.ogg]],
-            ["Orc Attack "] = [[Sound\event\EVENT_VashjirIntro_OrcAttackVox_03.ogg]],
-            ["Ship Hull Impact"] = [[Sound\event\EVENT_VashjirIntro_ShipHullImpact_03.ogg]],
-            ["Run! 01"] = [[Sound\character\Scourge\ScourgeVocalFemale\UndeadFemaleFlee01.ogg]],
-            ["Run! 02"] = [[Sound\creature\HoodWolf\HoodWolfTransformPlayer01.ogg]],
-            ["Danger!"] = [[Sound\character\Scourge\ScourgeVocalMale\UndeadMaleIncoming01.ogg]],
-            ["Wing Flap 01"] = [[Sound\creature\Illidan\IllidanWingFlap2.ogg]],
-            ["Wing Flap 02"] = [[Sound\Universal\BirdFlap1.ogg]],
-            ["Not Prepared"] = [[Sound\creature\Illidan\BLACK_Illidan_04.ogg]],
-            ["Cannon Shot"] = [[Sound\DOODAD\AGS_BrassCannon_Custom0.ogg]],
-            ["Click 01"] = [[Sound\DOODAD\HangingBones_BoneClank06.ogg]],
-            ["Click 02"] = [[Sound\DOODAD\HangingBones_BoneClank02.ogg]],
-            ["Click 03"] = [[Sound\DOODAD\HangingBones_BoneClank03.ogg]],
-            ["Click 04"] = [[Sound\DOODAD\HangingBones_BoneClank09.ogg]],
-            ["Click 05"] = [[Sound\DOODAD\FX_Emote_Chopping_Wood08.ogg]],
-            ["Click 06"] = [[Sound\DOODAD\FX_Emote_Chopping_Wood04.ogg]],
-            ["Click 07"] = [[Sound\DOODAD\FX_BoardTilesDice_02.OGG]],
-            ["Click 08"] = [[Sound\Spells\IceCrown_Bug_Attack_08.ogg]],
-            ["Click 09"] = [[Sound\Spells\Tradeskills\BlackSmithCraftingE.ogg]],
-            ["Chest 01"] = [[Sound\DOODAD\G_BarrelOpen-Chest1.ogg]],
-            ["Beat 01"] = [[Sound\DOODAD\GO_PA_Kungfugear_bag_Left08.OGG]],
-            ["Beat 02"] = [[Sound\DOODAD\GO_PA_Kungfugear_bag_Left04.OGG]],
-            ["Water Drop"] = [[Sound\DOODAD\Hellfire_DW_Pipe_Type4_01.ogg]],
-            ["Frog"] = [[Sound\EMITTERS\Emitter_Dalaran_Petstore_Frog_01.ogg]],
-            --]=]
-        }
 
         local sound_options = function()
             local t = {{label = "No Sound", value = "", icon = [[Interface\Buttons\UI-GuildButton-MOTD-Disabled]], iconsize = iconsize}}
 
             local sounds = {}
             local already_added = {}
-
-            for name, soundFile in pairs (game_sounds) do
-                name = name:gsub ("(%a)([%w_']*)", titlecase)
-                if (not already_added [name]) then
-                    sounds [#sounds+1] = {name = name, file = soundFile, gamesound = true}
-                    already_added [name] = true
-                end
-            end
 
             for name, soundFile in pairs (LibStub:GetLibrary("LibSharedMedia-3.0"):HashTable ("sound")) do
                 name = name:gsub ("(%a)([%w_']*)", titlecase)
@@ -2232,24 +1907,13 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
                 end
             end
 
-            if (WeakAuras and WeakAuras.sound_types) then
-                for soundFile, name in pairs (WeakAuras.sound_types) do
-                    name = name:gsub ("(%a)([%w_']*)", titlecase)
-                    if (not already_added [name]) then
-                        sounds [#sounds+1] = {name = name, file = soundFile}
-                    end
-                end
-            end
-
             table.sort (sounds, sort)
 
             for _, sound in ipairs (sounds) do
                 if (sound.name:find ("D_")) then --> details sound
-                    tinsert (t, {color = "orange", label = sound.name, value = sound.file, icon = [[Interface\Buttons\UI-GuildButton-MOTD-Up]], onclick = play_sound, iconsize = iconsize})
-                elseif (sound.gamesound) then --> game sound
-                    tinsert (t, {color = "yellow", label = sound.name, value = {sound_path = sound.file}, icon = [[Interface\Buttons\UI-GuildButton-MOTD-Up]], onclick = play_sound, iconsize = iconsize})
+                    t[#t+1] = {color = "orange", label = sound.name, value = sound.file, icon = [[Interface\Buttons\UI-GuildButton-MOTD-Up]], onclick = play_sound, iconsize = iconsize}
                 else
-                    tinsert (t, {label = sound.name, value = sound.file, icon = [[Interface\Buttons\UI-GuildButton-MOTD-Up]], onclick = play_sound, iconsize = iconsize})
+                    t[#t+1] = {label = sound.name, value = sound.file, icon = [[Interface\Buttons\UI-GuildButton-MOTD-Up]], onclick = play_sound, iconsize = iconsize}
                 end
             end
             return t
@@ -2276,31 +1940,13 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
 
         --apply glow
         local useglow_label = fw:CreateLabel (f, L["Glow Effect: "], nil, nil, "GameFontNormal")
-        local useglow = fw:CreateSwitch (f, function(self, _, state)
-            if (state and self.glow_test) then
---					self.glow_test:Show()
---					self.glow_test.animOut:Stop()
---					ActionButton_OverlayAnimOutStop(self.glow_test)
---					self.glow_test.animIn:Play()
---					ActionButton_OverlayAnimInPlay(self.glow_test)
-            elseif (self.glow_test) then
---					self.glow_test.animIn:Stop()
---					ActionButton_OverlayAnimInStop(self.glow_test)
---					self.glow_test.animOut:Play()
---					ActionButton_OverlayAnimOutPlay(self.glow_test)
-            end
-        end, false, nil, nil, nil, nil, "UseGlow")
+        local useglow = fw:CreateSwitch (f, function() end, false, nil, nil, nil, nil, "UseGlow")
 
         useglow:SetTemplate (fw:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE"))
         useglow:SetAsCheckBox()
 
         useglow:SetPoint ("LEFT", useglow_label, "RIGHT", 2, 0)
         useglow.tooltip = "Do not rename the aura on WeakAuras options panel or the glow effect may not work."
-
---			useglow.glow_test = CreateFrame ("Frame", "DetailsAuraTextGlowTest", useglow.widget, "ActionBarButtonSpellActivationAlert")
---			useglow.glow_test:SetPoint ("TOPLEFT", useglow.widget, "TOPLEFT", -20, 2)
---			useglow.glow_test:SetPoint ("BOTTOMRIGHT", useglow.widget, "BOTTOMRIGHT", 20, -2)
---			useglow.glow_test:Hide()
 
         --encounter id
         local encounterid_label = fw:CreateLabel (f, L["Encounter ID: "], nil, nil, "GameFontNormal")
@@ -2316,102 +1962,6 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
         icon_size_slider:SetPoint ("LEFT", icon_size_label, "RIGHT", 2, 0)
         icon_size_slider.tooltip = "Icon size, width and height."
 
-        -- --aura addon
-        -- local addon_options = function()
-        --     local t = {}
-        --     if (WeakAuras) then
-        --         tinsert (t, {label = "Weak Auras 2", value = "WA", icon = [[Interface\AddOns\WeakAuras\Media\Textures\icon]]})
-        --     end
-        --     return t
-        -- end
-        -- local aura_addon = fw:CreateDropDown (f, addon_options, 1, 150, 20, "AuraAddonDropdown", "$parentAuraAddonDropdown")
-        -- aura_addon:SetTemplate (slider_template)
-        -- local aura_addon_label = fw:CreateLabel (f, "Addon: ", nil, nil, "GameFontNormal")
-        -- aura_addon:SetPoint ("LEFT", aura_addon_label, "RIGHT", 2, 0)
-
-        -- --weakauras - group
-
-        -- local folder_icon = [[Interface\AddOns\Details\images\icons]]
-        -- local folder_texcoord = {435/512, 469/512, 189/512, 241/512}
-        -- local folder_iconsize = {14, 14}
-
-        -- local sort_func = function (t1, t2) return t1.label < t2.label end
-
-        -- local weakauras_folder_options = function()
-        --     local t = {}
-        --     if (WeakAuras and WeakAurasSaved) then
-        --         for display_name, aura_table in pairs (WeakAurasSaved.displays) do
-        --             if (aura_table.regionType == "dynamicgroup" or aura_table.regionType == "group") then
-        --                 tinsert (t, {label = display_name, value = display_name, icon = folder_icon, texcoord = folder_texcoord, iconsize = folder_iconsize})
-        --             end
-        --         end
-        --     end
-        --     table.sort (t, sort_func)
-        --     tinsert (t, 1, {label = "No Group", value = false, icon = folder_icon, texcoord = folder_texcoord, iconcolor = {0.8, 0.2, 0.2}, iconsize = folder_iconsize})
-        --     return t
-        -- end
-
-        -- local weakauras_folder_label = fw:CreateLabel (f, "WeakAuras Group: ", nil, nil, "GameFontNormal")
-        -- local weakauras_folder = fw:CreateDropDown (f, weakauras_folder_options, 1, 150, 20, "WeakaurasFolderDropdown", "$parentWeakaurasFolder")
-        -- weakauras_folder:SetTemplate (slider_template)
-        -- weakauras_folder:SetPoint ("LEFT", weakauras_folder_label, "RIGHT", 2, 0)
-
-        -- --make new group
-        -- local create_wa_group = function()
-
-        --     local weakauras_newgroup_textentry = f.NewWeakaurasGroupTextEntry
-
-        --     if (not WeakAurasSaved or not WeakAurasSaved.displays) then
-        --         print ("nop, weakauras not found")
-        --         return
-        --     end
-
-        --     local groupName = weakauras_newgroup_textentry.text
-
-        --     if (string.len (groupName) == 0) then
-        --         print ("nop, group name is too small")
-        --         return
-        --     end
-
-        --     if (WeakAurasSaved.displays [groupName]) then
-        --         print ("nop, group already exists")
-        --         return
-        --     end
-
-        --     --make a copy of the prototype
-        --     local newGroup = _detalhes.table.copy ({}, group_prototype)
-
-        --     --set group settings
-        --     newGroup.id = groupName
-        --     newGroup.animate = false
-        --     newGroup.grow = "DOWN"
-
-        --     --add the gorup
-        --     WeakAuras.Add (newGroup)
-
-        --     --clear the text box
-        --     weakauras_newgroup_textentry.text = ""
-        --     weakauras_newgroup_textentry:ClearFocus()
-
-        --     --select the new group in the dropdown
-        --     weakauras_folder:Refresh()
-        --     weakauras_folder:Select (groupName)
-        -- end
-
-        -- local weakauras_newgroup_label = fw:CreateLabel (f, "New WeakAuras Group: ", nil, nil, "GameFontNormal")
-        -- local weakauras_newgroup_textentry = fw:CreateTextEntry (f, create_wa_group, 150, 20, "NewWeakaurasGroupTextEntry", "$parentNewWeakaurasGroup")
-        -- weakauras_newgroup_textentry:SetTemplate (slider_template)
-        -- weakauras_newgroup_textentry:SetPoint ("LEFT", weakauras_newgroup_label, "RIGHT", 2, 0)
-        -- f.weakauras_newgroup = weakauras_newgroup_textentry
-        -- weakauras_newgroup_textentry.tooltip = "Enter the name of the new group"
-
-        -- local weakauras_newgroup_button = fw:CreateButton (f, create_wa_group, 106, 20, "Create Group")
-        -- weakauras_newgroup_button:SetTemplate (slider_template)
-        -- weakauras_newgroup_button:SetTemplate (_detalhes.gump:GetTemplate ("button", "DETAILS_PLUGIN_BUTTON_TEMPLATE"))
-        -- weakauras_newgroup_button:SetWidth (100)
-        -- weakauras_newgroup_button:SetPoint ("LEFT", weakauras_newgroup_textentry, "RIGHT", 2, 0)
-
-
         --create
         local create_func = function()
 
@@ -2425,8 +1975,6 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
             local stacksize = f.StackSlider.value
             local sound = f.SoundEffectDropdown.value
             local chat = f.SaySomething.text
-            local addon = "WA"
-            local folder = nil
             local iconsize = f.IconSizeSlider.value
             local incombat = f.UseInCombat.value
             local iscooldown = f.IsCooldown.value
@@ -2439,11 +1987,7 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
                 eid = nil
             end
 
-            if (addon == "WA") then
-                _detalhes:CreateWeakAura (aura_type_value, spellid, use_spellId, spellname, name, icon, target, stacksize, sound, chat, icon_text, icon_glow, eid, folder, iconsize, f.other_values, incombat, iscooldown)
-            else
-                _detalhes:Msg ("No Aura Addon selected. Addons currently supported: WeakAuras 2.")
-            end
+            _detalhes:CreateWeakAura (aura_type_value, spellid, use_spellId, spellname, name, icon, target, stacksize, sound, chat, icon_text, icon_glow, eid, iconsize, f.other_values, incombat, iscooldown)
 
             f:Hide()
         end
@@ -2488,10 +2032,6 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
         useglow_label:SetPoint ("TOPLEFT", f, "TOPLEFT", x2_start, ((y_start*10) + (47)) * -1)
         iscooldown_label:SetPoint ("TOPLEFT", f, "TOPLEFT", x2_start, ((y_start*11) + (47)) * -1)
         icon_size_label:SetPoint ("TOPLEFT", f, "TOPLEFT", x2_start, ((y_start*12) + (47)) * -1)
-
-        -- aura_addon_label:SetPoint ("TOPLEFT", f, "TOPLEFT", x2_start, ((y_start*17) + (60)) * -1)
-        -- weakauras_folder_label:SetPoint ("TOPLEFT", f, "TOPLEFT", x2_start, ((y_start*18) + (60)) * -1)
-        -- weakauras_newgroup_label:SetPoint ("TOPLEFT", f, "TOPLEFT", x2_start, ((y_start*19) + (60)) * -1)
 
 
         create_button:SetPoint ("TOPLEFT", f, "TOPLEFT", x2_start, ((y_start*21) + (60)) * -1)
@@ -2591,19 +2131,6 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
 
     DetailsAuraPanel.other_values = other_values
 
-    -- DetailsAuraPanel.WeakaurasFolderDropdown:Refresh()
-    -- if (encounterid) then
-        -- DetailsAuraPanel.WeakaurasFolderDropdown:Select (1, true)
-        -- DetailsAuraPanel.IconSizeSlider:SetValue (128)
-    -- else
-        -- DetailsAuraPanel.WeakaurasFolderDropdown:Select (1, true)
-        -- DetailsAuraPanel.IconSizeSlider:SetValue (64)
-    -- end
-
-    -- if (DetailsAuraPanel.other_values.dbm_timer_id or DetailsAuraPanel.other_values.bw_timer_id) then
-        -- DetailsAuraPanel.WeakaurasFolderDropdown:Select ("Details! Boss Mods Group")
-    -- end
-
     if (DetailsAuraPanel.other_values.text_size) then
         DetailsAuraPanel.IconSizeSlider:SetValue (DetailsAuraPanel.other_values.text_size)
     end
@@ -2615,10 +2142,6 @@ function _detalhes:OpenAuraPanel (spellid, spellname, spellicon, encounterid, tr
     DetailsAuraPanel.AuraSpellId.text = tostring (spellid)
     DetailsAuraPanel.icon.texture = spellicon
 
---		DetailsAuraPanel.UseGlow.--.animIn:Stop()
---		ActionButton_OverlayAnimInStop(DetailsAuraPanel.UseGlow.glow_test)
---		DetailsAuraPanel.UseGlow.glow_test.animOut:Play()
---		ActionButton_OverlayAnimOutPlay(DetailsAuraPanel.UseGlow.glow_test)
     DetailsAuraPanel.UseGlow:SetValue (false)
 
     DetailsAuraPanel.StackSlider:SetValue (0)

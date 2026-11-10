@@ -2,15 +2,11 @@
 --> global name declaration
 _detalhes = LibStub("AceAddon-3.0"):NewAddon("_detalhes", "AceTimer-3.0", "AceComm-3.0", "AceSerializer-3.0", "NickTag-1.0")
 
-_detalhes.build_counter = 7270
-_detalhes.alpha_build_counter = 7269 --if this is higher than the regular counter, use it instead
 _detalhes.game_version = "v3.3.5"
-_detalhes.userversion = "v3.3.5." .. _detalhes.build_counter
-_detalhes.realversion = 141 --core version, this is used to check API version for scripts and plugins (see alias below)
+_detalhes.userversion = "v1.062"
+_detalhes.realversion = 142 --core version, this is used to check API version for scripts and plugins (see alias below)
 _detalhes.APIVersion = _detalhes.realversion --core version
 _detalhes.version = _detalhes.userversion .. " (core " .. _detalhes.realversion .. ")" --simple stirng to show to players
-
-_detalhes.BFACORE = 131 --core version on BFA launch
 
 Details = _detalhes
 
@@ -21,16 +17,7 @@ do
 
 	local _detalhes = _G._detalhes
 
-	_detalhes.resize_debug = {}
-
 	local Loc = LibStub ("AceLocale-3.0"):GetLocale ( "Details" )
---[[
-|cFFFFFF00v8.3.0.7255.140 (|cFFFFCC00January 20th, 2020|r|cFFFFFF00)|r:\n\n
-|cFFFFFF00-|r Fixed Eye of Corruption and Grand Delusions.\n\n
---]]
-
-	Loc ["STRING_VERSION_LOG"] = "|cFFFFFF00v8.3.0.7255.140 (|cFFFFCC00January 20th, 2020|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed Eye of Corruption and Grand Delusions.\n\n|cFFFFFF00v8.3.0.7239.140 (|cFFFFCC00January 06th, 2020|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Healers can now heal training dummies inside cities without being in combat.\n\n|cFFFFFF00-|r Added Shaman's Stormstrike ability to auto merge (consolidate skills feature).\n\n|cFFFFFF00v8.2.5.7224.140 (|cFFFFCC00October 20th, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Total revamp on '/details users'.\n\n|cFFFFFF00-|r Rewrite on the 'Potion Used' script, it should get all potions from the framework now.\n\n|cFFFFFF00-|r Done a workaround on a rare bug where pet ability isn't found in the game database.\n\n|cFFFFFF00v8.2.0.7172.140 (|cFFFFCC00August 3rd, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed player detail window showing a blank page after selecting another player when in the comparison tab.\n\n|cFFFFFF00-|r Added information about the Eternal Palace raid, this brings better boss icons, background textures and other things (by GyroJoe).\n\n|cFFFFFF00v8.2.0.7167.140 (|cFFFFCC00July 24th, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed overkill amount (by nullKomplex).\n\n|cFFFFFF00v8.2.0.7166.140 (|cFFFFCC00July 18th, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added new potions, food and flasks. (by nullKomplex).\n\n|cFFFFFF00v8.2.0.7165.140 (|cFFFFCC00July 14th, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r More 8.2 bug fixes.\n\n|cFFFFFF00v8.2.0.7152.140 (|cFFFFCC00July 7th, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed some issues with classes showing some wrong icons (by nullKomplex).\n\n|cFFFFFF00v8.2.0.7150.140 (|cFFFFCC00July 2nd, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added click through options.\n\n|cFFFFFF00-|r More 8.2 fixes.\n\n|cFFFFFF00v8.1.5.7129.140 (|cFFFFCC00May 2nd, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Energy redesign: track only the energy generated below the maximum energy amount.\nEnergy generated above the maximum energy now counts as energy 'overflow', this info is in the tooltip.\n\n|cFFFFFF00v8.1.5.7102.139 (|cFFFFCC00April 23rd, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added API Details.SegmentPhases() and Details.UnitDamageByPhase() see '/details api' for the full API.\n\n|cFFFFFF00-|r Minor fixes for the mythic version of 'The Restless Cabal' encounter.\n\n|cFFFFFF00v8.1.5.7099.139 (|cFFFFCC00April 16rd, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Damage and Healing API is ready to be used by scripters, use '/details api' for more information.\n\n|cFFFFFF00v8.1.5.7084.138 (|cFFFFCC00April 9rd, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Replacing the old API with the new, see /details api.\n\n|cFFFFFF00v8.1.5.7053.138 (|cFFFFCC00April 3rd, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed the 'Event Tracker' not showing all cooldowns and crowdcontrol.\n\n|cFFFFFF00-|r Added new gradient wallpapers.\n\n|cFFFFFF00v8.1.5.7042.138 (|cFFFFCC00March 23th, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added the first batch of functions call for Details API 2.0.\n\n|cFFFFFF00v8.1.0.6923.136 (|cFFFFCC00March 06th, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed Vamguard plugin not showing debuffs on tanks.\n\n|cFFFFFF00-|r Attempt to fix some plugins loading after details! start and failing to install.\n\n|cFFFFFF00-|r Fixed a bug within Atal'Dazar dungeon where in some cases adds damage where considered friendly fire.\n\n|cFFFFFF00v8.1.0.6902.135 (|cFFFFCC00February 19th, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed some window gliches with lock, snap and resize buttons.\n\n|cFFFFFF00-|r Fixed issue with the window unlocking after a /reload.\n\n|cFFFFFF00v8.1.0.6861.135 (|cFFFFCC00January 20th, 2019|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed rogue spec icons.\n\n|cFFFFFF00-|r Some visuals improvements.\n\n|cFFFFFF00-|r Added some buttons below the release death recap window, only show in raid after a boss.\n\n|cFFFFFF00v8.1.0.6702.135 (|cFFFFCC00December 31th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Streamers/Youtubers the Event Tracker tool has been fixed for 8.1, enjoy!\n\n|cFFFFFF00v8.0.1.6692.135 (|cFFFFCC00December 11th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed East Asian myriads showing a giganting non formated number in the total bar DPS.\n\n|cFFFFFF00-|r Added a reset nickname button in the right side of the nickname field.\n\n|cFFFFFF00-|r Framework and NickTag library updates.\n\n|cFFFFFF00v8.0.1.6691.135 (|cFFFFCC00November 23th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Experimental: added deaths to overall data during a mythic dungeon run.\n\n|cFFFFFF00-|r Report window revamp: removed report history.\n\n|cFFFFFF00-|r Fixed report tooltip not closing on report button click.\n\n|cFFFFFF00-|r Fixed copy/paste report window.\n\n|cFFFFFF00-|r Time Line (plugin) added enemy cast time line.\n\n|cFFFFFF00v8.0.1.6678.135 (|cFFFFCC00November 07th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r New Feature: import and export profiles.\n\n|cFFFFFF00-|r Major improvements on bar text scripts.\n\n|cFFFFFF00-|r Improved import and export custom skins.\n\n|cFFFFFF00-|r Fixed shaman's sundering spell not showing in crowd control.\n\n|cFFFFFF00-|r Fixed sharing guild statistics.\n\n|cFFFFFF00-|r More spells added to spell consolidation: Whirlwind, Fracture, Mutilate.\n\n|cFFFFFF00-|r Monk Mistweaver Blackout Kick now has a indicator when it comes from passive 'Teachings of the Monastery'.\n\n|cFFFFFF00-|r Added slash command '/details debugwindow' for cases when the window isn't shown or are anchored in the wrong place.\n\n|cFFFFFF00-|r Exposed spell ignore table, you can now add spells to be ignored using Details.SpellsToIgnore [spellID] = true.\n\n|cFFFFFF00v8.0.1.6599.135 (|cFFFFCC00October 19th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed damage on low level training dummies where it was showing 1 damage for each ability.\n\n|cFFFFFF00-|r Added a line in the tooltip shown when hovering over the spec icon to show non-formated DPS, example: '12.0K' DPS shows '11,985.8'.\n\n|cFFFFFF00-|r Developers: command /run Details:DumpTable() should now show the correct table names with quotation marks if string.\n\n|cFFFFFF00v8.0.1.6553.135 (|cFFFFCC00October 06th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added a 'Macros' section in the options panel.\n\n|cFFFFFF00-|r Updated to BFA 'Potion Used' and 'Health Potion and Stone' custom displays.\n\n|cFFFFFF00-|r Backfire damage from Light of the Martyr now shows on death logs as friendly fire.\n\n|cFFFFFF00-|r Deprecated rules for friendly fire has been removed, this might fix some random issues with mind controlled players in the Lord Stormsong encounter in the Shrine of the Storm dungeon.\n\n|cFFFFFF00-|r Fixed DBM/BigWigs aura creation from the Spell List panel.\n\n|cFFFFFF00-|r Chart scripts now receives the envTable, use local envTable = ... .\n\n|cFFFFFF00-|r Polymorth (Black Cat) and Between the Eyes got added to Crowd Control list.\n\n|cFFFFFF00-|r Fixed Timeline plugin not showing the cooldown panel.\n\n|cFFFFFF00-|r Overall data setting won't reset on every logout.\n\n|cFFFFFF00-|r Slash command '/details merge' won't flag the merged combat as a trash segment anymore.\n\n|cFFFFFF00-|r Added function to use on macros to open the Player Details Window: /script Details:OpenPlayerDetails(1).\n\n|cFFFFFF00-|r Done more improvements on the Death Recap window.\n\n|cFFFFFF00v8.0.1.6449.134 (|cFFFFCC00September 11th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Details! is ready for Uldir mythic raiding!.\n\n|cFFFFFF00-|r Several improvements on Encounter Details plugin.\n\n|cFFFFFF00-|r Details! Scroll Damage for training in dummies is now ready for more tests, access it |cFFFFFF00/details scrolldamage|r.\n\n|cFFFFFF00-|r Damage and Healing tooltips now show a statusbar indicating the percent done by the ability.\n\n|cFFFFFF00-|r Added a scale slider  to the options panel.\n\n|cFFFFFF00-|r Added monk's Quaking Palm to crowd control spells.\n\n|cFFFFFF00-|r Fixed an issue with Plater integration.\n\n|cFFFFFF00-|r Fixed tooltips not hiding when the cursor leaves the spell icon in the Damage Taken by Spell.\n\n|cFFFFFF00-|r Framework: fixed an issue with tooltips and menus where the division line wasn't hiding properly.\n\n|cFFFFFF00-|r Framework: fixed some buttons not showing its text in the options panel.\n\n|cFFFFFF00v8.0.1.6272.134 (|cFFFFCC00August 28th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed Dynamic Overall Data custom display.\n\n|cFFFFFF00-|r Fixed friendly fire on some dungeon fights with mind control.\n\n|cFFFFFF00-|r Raid Check plugin fully revamped, now shows talents, spec and role.\n\n|cFFFFFF00-|r Updated flask and food list for BFA.\n\n|cFFFFFF00-|r Added NpcID listing at the Spell List window.\n\n|cFFFFFF00-|r Fixed an issue with Alliance or Horde icons showing at random in player bars.\n\n|cFFFFFF00-|r Small revamp in the Death Recap window.\n\n|cFFFFFF00-|r Fixed new segment creation when the option to use only one segment while in a battleground is disabled.\n\n|cFFFFFF00-|r Fixed east asian number format on several strings.\n\n|cFFFFFF00-|r 'Smart Score' option renamed to 'Unique Segment' under the PvP options for battlegrounds.\n\n|cFFFFFF00v8.0.1.6120.132 (|cFFFFCC00August 07th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Death Knight: Epidemic, Scourge Strike and Howling Blast now has a better description on the spell name.\n\n|cFFFFFF00-|r Fixed snap button showing when 'Hide Resize Buttons' are enabled.\n\n|cFFFFFF00-|r Fixed title bar icons not hiding when 'Auto Hide Buttons' is enabled.\n\n|cFFFFFF00-|r Several improvements to overall data, it should be more consistent now.\n\n|cFFFFFF00-|r Details! now passes to identify the tank role of the player even when out of a party or raid.\n\n|cFFFFFF00-|r Debug helper /run Details:DumpTable(table) now correctly shows the key name when it isn't a string.\n\n|cFFFFFF00-|r Improvements done on the Bookmark config frame accessed by the options panel > display section.\n\n|cFFFFFF00-|r New slash command: '/details spells'.\n\n|cFFFFFF00-|r Statistics for Legion has been closed! You can access statistics from the orange gear > statistics.\n\n|cFFFFFF00v8.0.1.6027.132 (|cFFFFCC00July 28th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added size offset options for the chat tab embed feature.\n\n|cFFFFFF00-|r Revamp on the editor for the custom line text.\n\n|cFFFFFF00v8.0.1.5985.131 (|cFFFFCC00July 17th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added 'Auto Run Code' module.\n\n|cFFFFFF00-|r Added 'Plater Nameplates' integration.\n\n|cFFFFFF00-|r Weakauras integration with the Create Aura panel got great improvements.\n\n|cFFFFFF00-|r Many options has been renamed or moved from groups for better organization .\n\n|cFFFFFF00-|r Several skins got some revamp for 2018.\n\n|cFFFFFF00-|r Default settings for Arenas and Battlegrounds got changes and the experience should be more smooth now.\n\n|cFFFFFF00v7.3.5.5559.130 (|cFFFFCC00April 13th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added slash commands: /details 'softtoggle' 'softshow' 'softhide'. Use them to manipulate the window visibility while using auto hide.\n\n|cFFFFFF00-|r Mythic dungeon graphic window won't show up if the user leaves the dungeon before completing it.\n\n|cFFFFFF00v7.3.5.5529.130 (|cFFFFCC00April 06th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added minimize button on the mythic dungeon run chart.\n\n|cFFFFFF00-|r Added API calls: Details:ResetSegmentOverallData() and Details:ResetSegmentData().\n\n|cFFFFFF00v7.3.5.5499.130 (|cFFFFCC00Mar 30th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added outline option for the right text.\n\n|cFFFFFF00v7.3.5.5469.130 (|cFFFFCC00Mar 23th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed a few things on the mythic dungeon chart.\n\n|cFFFFFF00v7.3.5.5424.129 (|cFFFFCC00Mar 10th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added macro support to open plugins. Example:\n /run Details:OpenPlugin ('Time Line')\n\n|cFFFFFF00v7.3.5.5351.129 (|cFFFFCC00Feb 26rd, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added a damage chart for mythic dungeon runs, it shows at the of the run. You may disable it at the Streamer Settings.\n\n|cFFFFFF00v7.3.5.5231.128 (|cFFFFCC00Feb 02nd, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed an issue with wasted shield absorbs where the wasted amount was subtracting the total healing done.\n\n|cFFFFFF00v7.3.5.5221.128 (|cFFFFCC00Jan 26th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Warlock mana from Life Tap won't show up any more under mana regen, this makes easy to see Soul Shard gain.\n\n|cFFFFFF00v7.3.2.5183.128 (|cFFFFCC00Jan 12th, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r The new bar animation is now applied to all users by default.\n\n|cFFFFFF00-|r Fixed an issue with the threat plugin where sometimes it was triggering errors.\n\n|cFFFFFF00v7.3.2.5175.128 (|cFFFFCC00Jan 03rd, 2018|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r ElvUI skins should have now a more good looking scrollbar.\n\n|cFFFFFF00-|r When starting to edit a custom display, the code window now clear the code from the previous display.\n\n|cFFFFFF00v7.3.2.5154.128 (|cFFFFCC00Dec 22th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r API and Create Aura windows are now attached to the new plugin window.\n\n|cFFFFFF00v7.3.2.5101.128 (|cFFFFCC00Dec 15th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Moving the custom display window to the new plugins window.\n\n|cFFFFFF00-|r Major layout changes on the Encounter Details plugin window.\n\n|cFFFFFF00v7.3.2.4919.128 (|cFFFFCC00Dec 08th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed an issue with the statistics sharing among guild members.\n\n|cFFFFFF00-|r Fixed an issue with Argus encounter where two segments were created.\n\n|cFFFFFF00-|r Fixed aura type images on the Create Aura Panel.\n\n|cFFFFFF00-|r Create Aura Panel can now be closed with Right Click.\n\n|cFFFFFF00-|r Framework updated to r60, plugins should be more stable now.\n\n|cFFFFFF00v7.3.0.4830.126 (|cFFFFFF00v7.3.2.4836.126 (|cFFFFCC00Nov 21th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Removed some tutorial windows popups.\n\n|cFFFFCC00Oct 21th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed opening windows when streamer settings > no alerts is enabled.\n\n|cFFFFFF00v7.3.0.4823.126 (|cFFFFCC00Oct 09th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added new options section: Streamer Settings, focused on adjustments for streamers and youtubers.\n\n|cFFFFFF00-|r Animations now always run at the same speed regardless the framerate.\n\n|cFFFFFF00-|r Click-To-Open menus now close the menu if the menu is already open.\n\n|cFFFFFF00v7.3.0.4723.126 (|cFFFFCC00Set 22th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed overall dungeon segments being added to overall data.\n\n|cFFFFFF00v7.3.0.4705.126 (|cFFFFCC00Set 19th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Fixed damage taken tooltip for Brewmaster Monk where sometimes the tooltip didn't open.\n\n|cFFFFFF00-|r Fixed overall data on mythic dungeon not adding trash segments even with the option enabled on the options panel.\n\n|cFFFFFF00-|r Fixed the guild selection dropdown reseting everytime the Guild Rank window is opened.\n\n|cFFFFFF00v7.3.0.4677.126 (|cFFFFCC00Set 10th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r During mythic dungeons, the trash segments will be merged into a new segment at the end of the boss encounter (instead of merging on the fly while cleaning up).\n\n|cFFFFFF00v7.3.0.4615.125 (|cFFFFCC00Set 09th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Setting up the dungeon stuff as opt-in for early adopters while we continue to make improvements on the system.\n\n|cFFFFFF00v7.3.0.4586.125 (|cFFFFCC00Set 08th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Formating mythic+ dungeon segments, each segment should count the boss trash + boss fight.\n\n|cFFFFFF00-|r At the end of the mythic+ dungeon, it should create a new segment adding up all segments described above.\n\n|cFFFFFF00v7.3.0.4499.124 (|cFFFFCC00Set 05th, 2017|r|cFFFFFF00)|r:\n\n|cFFFFFF00-|r Added an option to always show all players when using the standard mode. Option under PvP/PvE bracket on the options panel.\n\n|cFFFFFF00-|r Added a setting to exclude healing done lines from the death log below a certain healing amount. This options is also under PvP/PvE bracket.\n\n|cFFFFFF00-|r Fixed the guild selection on the ranking panel."
-
 	Loc ["STRING_DETAILS1"] = "|cffffaeaeDetails!:|r "
 
 	--> startup
@@ -48,7 +35,6 @@ do
 			_detalhes.parser = {}
 			_detalhes.parser_functions = {}
 			_detalhes.parser_frame = CreateFrame ("Frame")
-			_detalhes.pvp_parser_frame = CreateFrame ("Frame")
 			_detalhes.parser_frame:Hide()
 
 			_detalhes.MacroList = {
@@ -61,166 +47,6 @@ do
 			--	/script Details:OpenPlugin ('Advanced Death Logs'); local a = Details_DeathGraphsModeEnduranceButton and Details_DeathGraphsModeEnduranceButton.MyObject:Click()
 
 				{Name = "Report What is Shown In the Window", Desc = "Report the current data shown in the window, the number 1 is the window number, replace it to report another window.", MacroText = "/script Details:FastReportWindow(1)"},
-
-			}
-
-		--> quais raides devem ser guardadas no hist�rico
-			_detalhes.InstancesToStoreData = { --> mapIDs
-				[867] = true, -- Zul'Aman
-				[863] = true, -- Serpentshrine Cavern
-				[866] = true, -- Magtheridon's Lair
-				[865] = true, -- Gruul's Lair
-				[868] = true, -- Karazhan
-				[862] = true, -- The Eye
-				[14] = true, -- Onyxia's Lair
-				[610] = true, -- The Ruby Sanctum
-				[605] = true, -- Icecrown Citadel
-				[544] = true, -- Trial of the Crusader
-				[536] = true, -- Naxxramas
-				[533] = true, -- Vault of Archavon
-				[532] = true, -- The Obsidian Sanctum
-				[528] = true, -- The Eye of Eternity
-				[530] = true, -- Ulduar
-				[925] = true, -- The Bronze Sanctuary
-				[914] = true, -- zort
-				[864] = true,
-			}
-
-			--must fail in map and encounter id to not store data
-			_detalhes.EncountersToStoreData = { --> encounterIDs
-			-- Zul'Aman
-				[23574] = 1, -- Akilzon
-				[23576] = 2, -- Nalorakk
-				[23578] = 3, -- Janalai
-				[23577] = 4, -- Halazzi
-				[24239] = 5, -- Malacrass
-				[23863] = 6, -- ZulJin
-			-- Serpentshrine Cavern
-				[21216] = 1, -- Hydross the Unstable
-				[21217] = 2, -- The Lurker Below
-				[21215] = 3, -- Leotheras the Blind
-				[21214] = 4, -- Fathom-Lord Karathress
-				[21213] = 5, -- Morogrim Tidewalker
-				[21212] = 6, -- Lady Vashj
-				[55681] = 7, -- Gore'lats
-			-- Magtheridon's Lair
-				[17257] = 1, -- Magtheridon
-			-- Gruul's Lair
-				[18831] = 1, -- High King Maulgar
-				[19044] = 2, -- Gruul the Dragonkiller
-			-- Karazhan
-				[34972] = 1, -- Attumen the Huntsman
-				[15687] = 2, -- Moroes
-				[16457] = 3, -- Maiden of Virtue
-				[1234567890] = 4, -- opera
-				[34437] = 5, -- The Curator
-				[15688] = 6, -- Terestian Illhoof
-				[16524] = 7, -- Shade of Aran
-				[15689] = 8, -- Netherspite
-				[17225] = 9, -- Nightbane
-				[15690] = 10, -- Prince Malchezaar
-			-- The Eye
-				[19514] = 1, -- Al'ar
-				[19516] = 2, -- Void Reaver
-				[18805] = 3, -- High Astromancer Solarian
-				[19622] = 4, -- Kael'thas Sunstrider
-
-			-- Onyxia's Lair
-				[10184] = 1, -- Onyxia
-			-- The Ruby Sanctum
-				[39863] = 1, -- Halion
-			-- Icecrown Citadel
-				[36612] = 1, -- Lord Marrowgar
-				[36855] = 2, -- Lady Deathwhisper
-				[37540] = 3, -- Icecrown Gunship Battle
-				[37215] = 3, -- Icecrown Gunship Battle
-				[37813] = 4, -- Deathbringer Saurfang
-				[36626] = 5, -- Festergut
-				[36627] = 6, -- Rotface
-				[36678] = 7, -- Professor Putricide
-				[37970] = 8, -- Blood Prince Council
-				[37955] = 9, -- Blood-Queen Lana'thel
-				[36789] = 10, -- Valithria Dreamwalker
-				[36853] = 11, -- Sindragosa
-				[36597] = 12, -- The Lich King
-				[3392] = 13, -- Lady Jaina Proudmoore
-			-- Trial of the Crusader
-				[34797] = 1, -- The Beasts of Northrend
-				[34780] = 2, -- Lord Jaraxxus
-				[34467] = 3, -- Faction Champions
-				[34451] = 3, -- Faction Champions
-				[34497] = 4, -- The Twin Val'kyr
-				[34496] = 4, -- The Twin Val'kyr
-				[34564] = 5, -- Anub'arak
-			-- Naxxramas
-				[15956] = 1, -- Anub'Rekhan
-				[15953] = 2, -- Grand Widow Faerlina
-				[15952] = 3, -- Maexxna
-				[15954] = 4, -- Noth the Plaguebringer
-				[15936] = 5, -- Heigan the Unclean
-				[16011] = 6, -- Loatheb
-				[16061] = 7, -- Instructor Razuvious
-				[16060] = 8, -- Gothik the Harvester
-				[30549] = 9, -- The Four Horsemen
-				[16028] = 10, -- Patchwerk
-				[15931] = 11, -- Grobbulus
-				[15932] = 12, -- Gluth
-				[15928] = 13, -- Thaddius
-				[15989] = 14, -- Sapphiron
-				[15990] = 15, -- Kel'Thuzad
-			-- Vault of Archavon
-				[31125] = 1, -- Archavon
-				[33993] = 2, -- Emalon
-				[35013] = 3, -- Koralon
-				[38433] = 4, -- Toravon
-			-- The Obsidian Sanctum
-				[28860] = 1, -- Sartharion
-			-- The Eye of Eternity
-				[28859] = 1, -- Malygos
-				-- Ulduar
-				[33113] = 1, -- Flame Leviathan
-				[33118] = 2, -- Ignis the Furnace Master
-				[33186] = 3, -- Razorscale
-				[33293] = 4, -- XT-002 Deconstructor
-				[32867] = 5, -- Assembly of Iron
-				[32930] = 6, -- Kologarn
-				[33515] = 7, -- Auriaya
-				[32845] = 8, -- Hodir
-				[32865] = 9, -- Thorim
-				[32906] = 10, -- Freya
-				[33350] = 11, -- Mimiron
-				[33271] = 12, -- General Vezax
-				[33288] = 13, -- Yogg-Saron
-				[32871] = 14, -- Algalon the Observer
-				-- The Bronze Sanctuary
-				[50608] = 1, -- Imporus
-				[50609] = 2, -- Elonus
-				[50612] = 3, -- Murozond
-				-- ttg
-				[84000] = 1, --Argaloth
-				[84002] = 2, --HeraldVolazj
-				[84017] = 3, --Shadhar
-				-- tg
-				[70010] = 1, --norigorn
-				--zort
-				[50702] = 1, --zort
-				--hij
-				[17767] = 1,
-				[17808] = 2,
-				[17888] = 3,
-				[17842] = 4,
-				[17968] = 5,
-				--bt
-				[22887] = 1,
-				[22898] = 2,
-				[22841] = 3,
-				[22871] = 4,
-				[22948] = 5,
-				[23420] = 6,
-				[22947] = 7,-- , 22950, 22951, 22952
-				[22949] = 8,
-				[22917] = 9,
-
 
 			}
 
@@ -249,10 +75,6 @@ do
 			_detalhes.savedStyles = {}
 		--> armazena quais atributos possue janela de atributos - contain attributes and sub attributos wich have a detailed window (left click on a row)
 			_detalhes.row_singleclick_overwrite = {}
-		--> report
-			_detalhes.ReportOptions = {}
-		--> armazena os buffs registrados - store buffs ids and functions
-			_detalhes.Buffs = {} --> initialize buff table
 		-->  cache dead npc
 			_detalhes.cache_dead_npc = {}
 		-->  cache de grupo
@@ -266,58 +88,31 @@ do
 			_detalhes.pets_ignored = {}
 			_detalhes.pets_no_owner = {}
 			_detalhes.pets_players = {}
-		--> dual candidates
-			_detalhes.duel_candidates = {}
 		--> armazena as skins dispon�veis para as janelas
 			_detalhes.skins = {}
 		--> armazena os hooks das fun��es do parser
 			_detalhes.hooks = {}
 		--> informa��es sobre a luta do boss atual
-			_detalhes.encounter_end_table = {}
 			_detalhes.encounter_table = {}
 			_detalhes.encounter_counter = {}
-			_detalhes.encounter_dungeons = {}
 		--> reliable char data sources
 		--> actors that are using details! and sent character data, we don't need query inspect on these actors
 			_detalhes.trusted_characters = {}
 		--> informa��es sobre a arena atual
 			_detalhes.arena_table = {}
-			_detalhes.arena_info = {
-				--> need to get the new mapID for 8.0.1
-				[562] = {file = "LoadScreenBladesEdgeArena", coords = {0, 1, 0.29296875, 0.9375}}, -- Circle of Blood Arena
-				[617] = {file = "LoadScreenDalaranSewersArena", coords = {0, 1, 0.29296875, 0.857421875}}, --Dalaran Arena
-				[559] = {file = "LoadScreenNagrandArenaBattlegrounds", coords = {0, 1, 0.341796875, 1}}, --Ring of Trials
-				[980] = {file = "LoadScreenTolvirArena", coords = {0, 1, 0.29296875, 0.857421875}}, --Tol'Viron Arena
-				[572] = {file = "LoadScreenRuinsofLordaeronBattlegrounds", coords = {0, 1, 0.341796875, 1}}, --Ruins of Lordaeron
-				[1134] = {file = "LoadingScreen_Shadowpan_bg", coords = {0, 1, 0.29296875, 0.857421875}}, -- Tiger's Peak
-				--> legion, thanks @pas06 on curse forge for the mapIds
-				[1552] = {file = "LoadingScreen_ArenaValSharah_wide", coords = {0, 1, 0.29296875, 0.857421875}}, -- Ashmane's Fall
-				[1504] = {file = "LoadingScreen_BlackrookHoldArena_wide", coords = {0, 1, 0.29296875, 0.857421875}}, --Black Rook Hold
-
-				--"LoadScreenOrgrimmarArena", --Ring of Valor
-			}
-
 			function _detalhes:GetArenaInfo (mapid)
-				local t = _detalhes.arena_info [mapid]
-				if (t) then
-					return t.file, t.coords
-				end
 			end
 			_detalhes.battleground_info = {
-				--> need to get the nwee mapID for 8.0.1
-				[611] = {file = "LoadScreenWarsongGulch", coords = {0, 1, 121/512, 484/512}}, --warsong gulch
-				[489] = {file = "LoadScreenWarsongGulch", coords = {0, 1, 121/512, 484/512}}, --warsong gulch
-				[727] = {file = "LoadScreenSilvershardMines", coords = {0, 1, 251/1024, 840/1024}}, --silvershard mines
-				[529] = {file = "LoadscreenArathiBasin", coords = {0, 1, 126/512, 430/512}}, --arathi basin
-				[566] = {file = "LoadScreenNetherBattlegrounds", coords = {0, 1, 142/512, 466/512}}, --eye of the storm
-				[30] = {file = "LoadScreenPvpBattleground", coords = {0, 1, 127/512, 500/512}}, --alterac valley
-				[761] = {file = "LoadScreenGilneasBG2", coords = {0, 1, 281/1024, 878/1024}}, --the battle for gilneas
-				[726] = {file = "LoadScreenTwinPeaksBG", coords = {0, 1, 294/1024, 876/1024}}, --twin peaks
-				[998] = {file = "LoadScreenValleyofPower", coords = {0, 1, 257/1024, 839/1024}}, --temple of kotmogu
-				[1105] = {file = "LoadScreen_GoldRush", coords = {0, 1, 264/1024, 840/1024}}, --deepwind gorge
-				[607] = {file = "LoadScreenNorthrendBG", coords = {0, 1, 302/1024, 879/1024}}, --strand of the ancients
-				[628] = {file = "LOADSCREENISLEOFCONQUEST", coords = {0, 1, 297/1024, 878/1024}}, --isle of conquest
-				--[] = {file = "", coords = {0, 1, 0, 0}}, --
+				[444] = {file = "LoadScreenWarsongGulch", coords = {0, 1, 121/512, 484/512}},
+				[960] = {file = "LoadScreenWarsongGulch", coords = {0, 1, 121/512, 484/512}},
+				[462] = {file = "LoadscreenArathiBasin", coords = {0, 1, 126/512, 430/512}},
+				[958] = {file = "LoadscreenArathiBasin", coords = {0, 1, 126/512, 430/512}},
+				[483] = {file = "LoadScreenNetherBattlegrounds", coords = {0, 1, 142/512, 466/512}},
+				[961] = {file = "LoadScreenNetherBattlegrounds", coords = {0, 1, 142/512, 466/512}},
+				[402] = {file = "LoadScreenPvpBattleground", coords = {0, 1, 127/512, 500/512}},
+				[963] = {file = "LoadScreenPvpBattleground", coords = {0, 1, 127/512, 500/512}},
+				[513] = {file = "LoadScreenNorthrendBG", coords = {0, 1, 302/1024, 879/1024}},
+				[541] = {file = "LOADSCREENISLEOFCONQUEST", coords = {0, 1, 297/1024, 878/1024}},
 			}
 			function _detalhes:GetBattlegroundInfo (mapid)
 				local t = _detalhes.battleground_info [mapid]
@@ -326,43 +121,6 @@ do
 				end
 			end
 
-		--> tokenid
-			_detalhes.TokenID = {
-				["SPELL_PERIODIC_DAMAGE"] = 1,
-				["SPELL_EXTRA_ATTACKS"] = 2,
-				["SPELL_DAMAGE"] = 3,
-				["SPELL_BUILDING_DAMAGE"] = 4,
-				["SWING_DAMAGE"] = 5,
-				["RANGE_DAMAGE"] = 6,
-				["DAMAGE_SHIELD"] = 7,
-				["DAMAGE_SPLIT"] = 8,
-				["RANGE_MISSED"] = 9,
-				["SWING_MISSED"] = 10,
-				["SPELL_MISSED"] = 11,
-				["SPELL_PERIODIC_MISSED"] = 12,
-				["SPELL_BUILDING_MISSED"] = 13,
-				["DAMAGE_SHIELD_MISSED"] = 14,
-				["ENVIRONMENTAL_DAMAGE"] = 15,
-				["SPELL_HEAL"] = 16,
-				["SPELL_PERIODIC_HEAL"] = 17,
-				["SPELL_AURA_APPLIED"] = 18,
-				["SPELL_AURA_REMOVED"] = 19,
-				["SPELL_AURA_REFRESH"] = 20,
-				["SPELL_AURA_APPLIED_DOSE"] = 21,
-				["SPELL_ENERGIZE"] = 22,
-				["SPELL_PERIODIC_ENERGIZE"] = 23,
-				["SPELL_CAST_START"] = 24,
-				["SPELL_CAST_SUCCESS"] = 25,
-				["SPELL_DISPEL"] = 26,
-				["SPELL_STOLEN"] = 27,
-				["SPELL_AURA_BROKEN"] = 29,
-				["SPELL_AURA_BROKEN_SPELL"] = 29,
-				["SPELL_RESURRECT"] = 30,
-				["SPELL_INTERRUPT"] = 31,
-				["UNIT_DIED"] = 32,
-				["UNIT_DESTROYED"] = 33,
-			}
-
 		--> armazena instancias inativas
 			_detalhes.unused_instances = {}
 			--_detalhes.default_skin_to_use = "Minimalistic"
@@ -370,8 +128,6 @@ do
 			_detalhes.instance_title_text_timer = {}
 		--> player detail skin
 			_detalhes.playerdetailwindow_skins = {}
-
-		_detalhes.BitfieldSwapDebuffsIDs = {265646, 272407, 269691, 273401, 269131, 260900, 260926, 284995, 292826, 311367, 310567, 308996, 307832}
 
 		--> auto run code
 		_detalhes.RunCodeTypes = {
@@ -401,10 +157,6 @@ do
 			function _detalhes:GetAttributeIcon (attribute)
 				return _detalhes.attribute_icons, 0.125 * (attribute - 1), 0.125 * attribute, 0, 1
 			end
-
-		--> colors
-			_detalhes.default_backdropcolor = {.094117, .094117, .094117, .8}
-			_detalhes.default_backdropbordercolor = {0, 0, 0, 1}
 
 	--> Plugins
 
@@ -482,18 +234,7 @@ do
 			--> name to plugin object
 				_detalhes.RaidTables.NameTable = {}
 			--> using by
-				_detalhes.RaidTables.InstancesInUse = {}
 				_detalhes.RaidTables.PluginsInUse = {}
-
-		--> solo -------------------------------------------------------------------
-			--> general functions for solo mode plugins
-				_detalhes.SoloTables = {}
-			--> maintain plugin menu
-				_detalhes.SoloTables.Menu = {}
-			--> plugins objects for solo mode
-				_detalhes.SoloTables.Plugins = {}
-			--> name to plugin object
-				_detalhes.SoloTables.NameTable = {}
 
 		--> toolbar -------------------------------------------------------------------
 			--> plugins container
@@ -520,41 +261,39 @@ do
 
 	--> constants
 		--[[global]] DETAILS_HEALTH_POTION_LIST = {
-			[250870] = true, --Coastal Healing Potion
-			[250872] = true, --Coastal Rejuvenation Potion
-			[6262] = true, --Warlock's Healthstone
-			-- [52697] = true, -- пойло нотта
+			[43185] = true,
+			[67489] = true,
+			[28495] = true,
+			[53761] = true,
+			[47872] = true,
+			[47873] = true,
+			[47874] = true,
+			[47875] = true,
+			[47876] = true,
+			[47877] = true,
+			[27235] = true,
+			[27236] = true,
+			[27237] = true,
+			[6262] = true,
 		}
 		--[[global]] DETAILS_CUSTOM_POILO = {
-			-- [250870] = true, --Coastal Healing Potion
-			-- [250872] = true, --Coastal Rejuvenation Potion
-			-- [6262] = true, --Warlock's Healthstone
 			[52697] = true, -- пойло нотта
 		}
-		--[[global]] DETAILS_HEALTH_POTION_ID = 250870
-		--[[global]] DETAILS_REJU_POTION_ID = 250872
-		--[[global]] DETAILS_MANA_POTION_ID = 250871
+		--[[global]] DETAILS_HEALTH_POTION_ID = 43185
+		--[[global]] DETAILS_REJU_POTION_ID = 53761
 		--[[global]] DETAILS_FOCUS_POTION_ID = 252753
-
-		--[[global]] DETAILS_INT_POTION_ID = 279151
-		--[[global]] DETAILS_AGI_POTION_ID = 279152
-		--[[global]] DETAILS_STR_POTION_ID = 279153
-		--[[global]] DETAILS_STAMINA_POTION_ID = 279154
 
 		_detalhes._detalhes_props = {
 			DATA_TYPE_START = 1,	--> Something on start
 			DATA_TYPE_END = 2,	--> Something on end
 
-			MODO_ALONE = 1,	--> Solo
 			MODO_GROUP = 2,	--> Group
 			MODO_ALL = 3,		--> Everything
 			MODO_RAID = 4,	--> Raid
 		}
 		_detalhes.modos = {
-			alone = 1, --> Solo
 			group = 2,	--> Group
 			all = 3,	--> Everything
-			raid = 4	--> Raid
 		}
 
 		_detalhes.divisores = {
@@ -570,49 +309,12 @@ do
 			NONE = "139:196:69:127",
 		}
 
-		_detalhes.role_texcoord_normalized = {
-			DAMAGER = {72/256, 130/256, 69/256, 127/256},
-			HEALER = {72/256, 130/256, 2/256, 60/256},
-			TANK = {5/256, 63/256, 69/256, 127/256},
-			NONE = {139/256, 196/256, 69/256, 127/256},
-		}
-
-		_detalhes.player_class = {
-			["HUNTER"] = true,
-			["WARRIOR"] = true,
-			["PALADIN"] = true,
-			["SHAMAN"] = true,
-			["MAGE"] = true,
-			["ROGUE"] = true,
-			["PRIEST"] = true,
-			["WARLOCK"] = true,
-			["DRUID"] = true,
-			["DEATHKNIGHT"] = true,
-		}
-		_detalhes.classstring_to_classid = {
-			["WARRIOR"] = 1,
-			["PALADIN"] = 2,
-			["HUNTER"] = 3,
-			["ROGUE"] = 4,
-			["PRIEST"] = 5,
-			["DEATHKNIGHT"] = 6,
-			["SHAMAN"] = 7,
-			["MAGE"] = 8,
-			["WARLOCK"] = 9,
-			["DRUID"] = 10,
-		}
-		_detalhes.classid_to_classstring = {
-			[1] = "WARRIOR",
-			[2] = "PALADIN",
-			[3] = "HUNTER",
-			[4] = "ROGUE",
-			[5] = "PRIEST",
-			[6] = "DEATHKNIGHT",
-			[7] = "SHAMAN",
-			[8] = "MAGE",
-			[9] = "WARLOCK",
-			[10] = "DRUID",
-		}
+		_detalhes.classid_to_classstring = {"WARRIOR", "PALADIN", "HUNTER", "ROGUE", "PRIEST", "DEATHKNIGHT", "SHAMAN", "MAGE", "WARLOCK", "DRUID"}
+		_detalhes.classstring_to_classid = {}
+		for classid, class in ipairs (_detalhes.classid_to_classstring) do
+			_detalhes.classstring_to_classid [class] = classid
+		end
+		_detalhes.player_class = _detalhes.classstring_to_classid
 
 		_detalhes.segmentos = {
 			label = Loc ["STRING_SEGMENT"]..": ",
@@ -623,29 +325,7 @@ do
 			past = Loc ["STRING_FIGHTNUMBER"]
 		}
 
-		_detalhes._detalhes_props["modo_nome"] = {
-				[_detalhes._detalhes_props["MODO_ALONE"]] = Loc ["STRING_MODE_SELF"],
-				[_detalhes._detalhes_props["MODO_GROUP"]] = Loc ["STRING_MODE_GROUP"],
-				[_detalhes._detalhes_props["MODO_ALL"]] = Loc ["STRING_MODE_ALL"],
-				[_detalhes._detalhes_props["MODO_RAID"]] = Loc ["STRING_MODE_RAID"]
-		}
-
-		--[[global]] DETAILS_MODE_SOLO = 1
-		--[[global]] DETAILS_MODE_RAID = 4
 		--[[global]] DETAILS_MODE_GROUP = 2
-		--[[global]] DETAILS_MODE_ALL = 3
-
-		_detalhes.icones = {
-			--> report window
-			report = {
-					up = "Interface\\AddOns\\Details\\textures\\FriendsFrame\\UI-Toast-FriendOnlineIcon",
-					down = "Interface\\ItemAnimations\\MINIMAP\\TRACKING\\Profession",
-					disabled = "Interface\\ItemAnimations\\MINIMAP\\TRACKING\\Profession",
-					highlight = nil
-				}
-		}
-
-		_detalhes.missTypes = {"ABSORB", "BLOCK", "DEFLECT", "DODGE", "EVADE", "IMMUNE", "MISS", "PARRY", "REFLECT", "RESIST"} --> do not localize-me
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> frames
@@ -655,14 +335,12 @@ do
 
 	--> Info Window
 		_detalhes.janela_info = _CreateFrame ("Frame", "DetailsPlayerDetailsWindow", _UIParent)
-		_detalhes.PlayerDetailsWindow = _detalhes.janela_info
 
 	--> Event Frame
 		_detalhes.listener = _CreateFrame ("Frame", nil, _UIParent)
 		_detalhes.listener:RegisterEvent ("ADDON_LOADED")
 		_detalhes.listener:SetFrameStrata ("LOW")
 		_detalhes.listener:SetFrameLevel (9)
-		_detalhes.listener.FrameTime = 0
 
 		_detalhes.overlay_frame = _CreateFrame ("Frame", nil, _UIParent)
 		_detalhes.overlay_frame:SetFrameStrata ("TOOLTIP")

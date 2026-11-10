@@ -70,6 +70,13 @@ local MAJOR, MINOR = "LibGroupTalents-1.0", tonumber(("$Rev: 55 $"):match("(%d+)
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
 if not lib then return end
 
+local GetNumTalentGroups = function(isInspect, isPet)
+	if not isInspect and not isPet and C_GlobalStorage and C_GlobalStorage.GetVar and C_GlobalStorage.GetVar("ASMSG_SPEC_INFO") == nil then
+		return 0
+	end
+	return _G.GetNumTalentGroups(isInspect, isPet)
+end
+
 local ChatThrottleLib = _G.ChatThrottleLib
 
 lib.roster = lib.roster or {}

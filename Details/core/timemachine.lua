@@ -9,7 +9,6 @@ local _table_insert = table.insert --lua local
 local _table_wipe = table.wipe --lua local
 local _time = time --lua local
 
-local _GetTime = GetTime --api local
 
 local timeMachine = _detalhes.timeMachine --details local
 
@@ -21,38 +20,16 @@ local _tempo = _time()
 --> core
 timeMachine.ligada = false
 
-local calc_for_pvp = function(self)
+local calc_hold = function(self, idle_time)
 	for tipo, tabela in _pairs(self.tabelas) do
 		for nome, jogador in _ipairs(tabela) do
 			if jogador then
-				if jogador.last_event + 3 > _tempo then --> okey o jogador esta dando dps
-					if jogador.on_hold then --> o dps estava pausado, retornar a ativa
+				if jogador.last_event + idle_time > _tempo then
+					if jogador.on_hold then
 						jogador:HoldOn(false)
 					end
-				else
-					if not jogador.on_hold then --> n�o ta pausado, precisa por em pausa
-						--> verifica se esta castando alguma coisa que leve + que 3 segundos
-						jogador:HoldOn(true)
-					end
-				end
-			end
-		end
-	end
-end
-
-local calc_for_pve = function(self)
-	for tipo, tabela in _pairs(self.tabelas) do
-		for nome, jogador in _ipairs(tabela) do
-			if jogador then
-				if jogador.last_event + 10 > _tempo then --> okey o jogador esta dando dps
-					if jogador.on_hold then --> o dps estava pausado, retornar a ativa
-						jogador:HoldOn(false)
-					end
-				else
-					if not jogador.on_hold then --> n�o ta pausado, precisa por em pausa
-						--> verifica se esta castando alguma coisa que leve + que 10 segundos
-						jogador:HoldOn(true)
-					end
+				elseif not jogador.on_hold then
+					jogador:HoldOn(true)
 				end
 			end
 		end
@@ -64,11 +41,7 @@ function timeMachine:Core()
 	_detalhes._tempo = _tempo
 	_detalhes:UpdateGears()
 
-	if _detalhes.is_in_battleground or _detalhes.is_in_arena then
-		return calc_for_pvp(self)
-	else
-		return calc_for_pve(self)
-	end
+	return calc_hold(self, (_detalhes.is_in_battleground or _detalhes.is_in_arena) and 3 or 10)
 end
 
 function timeMachine:Ligar()
@@ -84,21 +57,9 @@ function timeMachine:Ligar()
 	end
 end
 
-function timeMachine:Desligar()
-	self.ligada = false
-	self.tabelas = nil
-
-	if self.atualizador then
-		self:CancelTimer(self.atualizador)
-		self.atualizador = nil
-	end
-end
-
 function timeMachine:Reiniciar()
 	_table_wipe(self.tabelas[1])
 	_table_wipe(self.tabelas[2])
-
-	self.tabelas = {{}, {}} --> 1 dano 2 cura
 end
 
 function _detalhes:DesregistrarNaTimeMachine()
@@ -129,100 +90,52 @@ end
 function _detalhes:ManutencaoTimeMachine()
 	for tipo, tabela in _ipairs(timeMachine.tabelas) do
 		local t = {}
-		local removed = 0
 		for index, jogador in _ipairs(tabela) do
 			if jogador then
 				t[#t + 1] = jogador
 				jogador.timeMachine = #t
-			else
-				removed = removed + 1
 			end
 		end
 
 		timeMachine.tabelas[tipo] = t
-
-		if _detalhes.debug then
---			_detalhes:Msg("timemachine r"..removed.."| e"..#t.."| t"..tipo)
-		end
 	end
 end
 
 function _detalhes:Tempo()
-	if self.pvp then
-		--> pvp timer
-		if self.end_time then --> o tempo do jogador esta trancado
-			local t = self.end_time - self.start_time
-			if t < 3 then
-				t = 3
-			end
-
-			return t
-		elseif self.on_hold then --> o tempo esta em pausa
-			local t = self.delay - self.start_time
-			if t < 3 then
-				t = 3
-			end
-
-			return t
-		else
-			if self.start_time == 0 then
-				return 3
-			end
-
-			local t = _tempo - self.start_time
-			if t < 3 then
-				if _detalhes.in_combat then
-					local combat_time = _detalhes.tabela_vigente:GetCombatTime()
-					if combat_time < 3 then
-						return combat_time
-					end
-				end
-
-				t = 3
-			end
-
-			return t
+	local min_time = self.pvp and 3 or 10
+	if self.end_time then --> o tempo do jogador esta trancado
+		local t = self.end_time - self.start_time
+		if t < min_time then
+			t = min_time
 		end
+
+		return t
+	elseif self.on_hold then --> o tempo esta em pausa
+		local t = self.delay - self.start_time
+		if t < min_time then
+			t = min_time
+		end
+
+		return t
 	else
-		--> pve timer
-		if self.end_time then --> o tempo do jogador esta trancado
-			local t = self.end_time - self.start_time
-			if t < 10 then
-				t = 10
-			end
-
-			return t
-		elseif self.on_hold then --> o tempo esta em pausa
-			local t = self.delay - self.start_time
-			if t < 10 then
-				t = 10
-			end
-
-			return t
-		else
-			if self.start_time == 0 then
-				return 10
-			end
-
-			local t = _tempo - self.start_time
-			if t < 10 then
-				if _detalhes.in_combat then
-					local combat_time = _detalhes.tabela_vigente:GetCombatTime()
-					if combat_time < 10 then
-						return combat_time
-					end
-				end
-
-				t = 10
-			end
-
-			return t
+		if self.start_time == 0 then
+			return min_time
 		end
-	end
-end
 
-function _detalhes:IniciarTempo(tempo)
-	self.start_time = tempo
+		local t = _tempo - self.start_time
+		if t < min_time then
+			if _detalhes.in_combat then
+				local combat_time = _detalhes.tabela_vigente:GetCombatTime()
+				if combat_time < min_time then
+					return combat_time
+				end
+			end
+
+			t = min_time
+		end
+
+		return t
+	end
 end
 
 function _detalhes:TerminarTempo()
@@ -254,15 +167,6 @@ function _detalhes:HoldOn(pausa)
 			self.start_time = self.start_time + diff
 		end
 
---		if _tempo - self.start_time < 20 then
---			self.start_time = self.start_time - 1
---		end
-
 		self.on_hold = false
 	end
-end
-
-function _detalhes:PrintTimeMachineIndexes()
-	print("timemachine damage", #timeMachine.tabelas[1])
-	print("timemachine heal", #timeMachine.tabelas[2])
 end

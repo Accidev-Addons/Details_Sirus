@@ -4522,8 +4522,8 @@ function DF:CreateKeybindBox (parent, name, data, callback, width, height, line_
 		self.MyObject.selectedTexture:Show()
 
 		--feedback ao jogador uma vez que as keybinds podem ter o mesmo valor
-		C_Timer.After (.04, function() new_keybind_frame:Hide() end)
-		C_Timer.After (.06, function() new_keybind_frame:Show() end)
+		C_Timer:After (.04, function() new_keybind_frame:Hide() end)
+		C_Timer:After (.06, function() new_keybind_frame:Show() end)
 
 		--atualiza a scroll
 		keybindScroll:UpdateScroll()
@@ -6887,14 +6887,14 @@ end
 
 function DF:BuildStatusbarAuthorInfo (f, addonBy, authorsNameString)
 
-	local authorName = DF:CreateLabel (f, "" .. (addonBy or "An addon by") .. "|cFFFFFFFF" .. (authorsNameString or "Terciob") .. "|r")
+	local authorName = DF:CreateLabel (f, "" .. (addonBy or "Под Сирус от ") .. "|cFFFFFFFF" .. (authorsNameString or "Accidev") .. "|r")
 	authorName.textcolor = "silver"
 	local discordLabel = DF:CreateLabel (f, "Discord: ")
 	discordLabel.textcolor = "silver"
 
 	local options_dropdown_template = DF:GetTemplate ("dropdown", "OPTIONS_DROPDOWN_TEMPLATE")
 	local discordTextEntry = DF:CreateTextEntry (f, function()end, 200, 18, "DiscordTextBox", _, _, options_dropdown_template)
-	discordTextEntry:SetText ("https://discord.gg/addonsforsirus")
+	discordTextEntry:SetText ("https://discord.gg/wRPF8CCpNV")
 	discordTextEntry:SetFrameLevel (5000)
 
 	authorName:SetPoint ("left", f, "left", 2, 0)
@@ -7939,7 +7939,7 @@ DF.CastFrameFunctions = {
 			self.scheduledHideTime:Cancel()
 		end
 
-		self.scheduledHideTime = C_Timer.NewTicker (delay, self.DoScheduledHide, 1)
+		self.scheduledHideTime = C_Timer:NewTicker (delay, self.DoScheduledHide, 1)
 		self.scheduledHideTime.castBar = self
 	end,
 

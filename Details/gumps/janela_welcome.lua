@@ -29,14 +29,6 @@ function _detalhes:OpenWelcomeWindow()
 		window:SetScript ("OnMouseUp", function() window:StopMovingOrSizing() end)
 		window:SetScript ("OnHide", function()
 			_detalhes.tabela_historico:resetar()
-
-			if (DetailsFramework.IsClassicWow()) then
-				local new_instance = Details:GetWindow (1)
-				new_instance.row_info.use_spec_icons = false
-				new_instance.row_info.icon_file = [[Interface\AddOns\Details\images\classes_small]]
-				new_instance:SetBarSpecIconSettings (false)
-			end
-
 		end)
 
 		local rodape_bg = window:CreateTexture (nil, "artwork")
@@ -129,91 +121,10 @@ function _detalhes:OpenWelcomeWindow()
 
 		function _detalhes:WelcomeSetLoc()
 			local instance = _detalhes.tabela_instancias [1]
-			instance.baseframe:ClearAllPoints()
-			instance.baseframe:SetPoint ("left", DetailsWelcomeWindow, "right", 10, 0)
+			instance.baseframe:ClearAndSetPoint ("left", DetailsWelcomeWindow, "right", 10, 0)
 			DetailsWelcomeWindow.SetLocTimer = nil
 		end
 		DetailsWelcomeWindow.SetLocTimer = _detalhes:ScheduleTimer ("WelcomeSetLoc", 12)
-
---/script local f=CreateFrame("frame");local g=false;f:SetScript("OnUpdate",function(s,e)if not g then local r=math.random for i=1,2500000 do local a=r(1,1000000);a=a+1 end g=true else print(string.format("cpu: %.3f",e));f:SetScript("OnUpdate",nil)end end)
-
-	function _detalhes:CalcCpuPower()
-		local f = CreateFrame ("frame")
-		local got = false
-
-		f:SetScript ("OnUpdate", function (self, elapsed)
-			if (not got and not InCombatLockdown()) then
-				local r = math.random
-				for i = 1, 2500000 do
-					local a = r (1, 1000000)
-					a = a + 1
-				end
-				got = true
-
-			elseif (not InCombatLockdown()) then
-				--print ("process time:", elapsed)
-
-				if (elapsed < 0.295) then
-					_detalhes.use_row_animations = true
-					_detalhes.update_speed = 0.30
-
-				elseif (elapsed < 0.375) then
-					_detalhes.use_row_animations = true
-					_detalhes.update_speed = 0.40
-
-				elseif (elapsed < 0.475) then
-					_detalhes.use_row_animations = true
-					_detalhes.update_speed = 0.5
-
-				elseif (elapsed < 0.525) then
-					_detalhes.update_speed = 0.5
-
-				end
-
-				--> overriting the results
-				_detalhes.update_speed = 0.3
-				_detalhes.use_row_animations = true
-
-				DetailsWelcomeWindowSliderUpdateSpeed.MyObject:SetValue (_detalhes.update_speed)
-				DetailsWelcomeWindowAnimateSlider.MyObject:SetValue (_detalhes.use_row_animations)
-
-				f:SetScript ("OnUpdate", nil)
-			end
-		end)
-	end
-
-	--deprecated
-	--_detalhes:ScheduleTimer ("CalcCpuPower", 10)
-
-	--detect ElvUI
-	--[=[ --deprecated
-	local ElvUI = _G.ElvUI
-	if (ElvUI) then
-		--active elvui skin
-		local instance = _detalhes.tabela_instancias [1]
-		if (instance and instance.ativa) then
-			if (instance.skin ~= "ElvUI Frame Style") then
-				instance:ChangeSkin ("ElvUI Frame Style")
-			end
-		end
-
-		--save standard
-		local savedObject = {}
-		for key, value in pairs (instance) do
-			if (_detalhes.instance_defaults [key] ~= nil) then
-				if (type (value) == "table") then
-					savedObject [key] = table_deepcopy (value)
-				else
-					savedObject [key] = value
-				end
-			end
-		end
-		_detalhes.standard_skin = savedObject
-
-		_detalhes:ApplyPDWSkin ("ElvUI")
-		--_detalhes:SetTooltipBackdrop ("Details BarBorder 3", 14, {0, 0, 0, 1})
-	end
-	--]=]
 
 local window_openned_at = time()
 
@@ -417,8 +328,8 @@ local window_openned_at = time()
 			window.LatinAlphabetCheckBox.OnSwitch = onSelectAlphabet
 			window.LatinAlphabetLabel:SetPoint ("left", window.LatinAlphabetCheckBox, "right", 2, 0)
 
-			tinsert (allAlphabetCheckBoxes, window.LatinAlphabetCheckBox)
-			tinsert (allAlphabetLabels, window.LatinAlphabetLabel)
+			allAlphabetCheckBoxes[#allAlphabetCheckBoxes+1] = window.LatinAlphabetCheckBox
+			allAlphabetLabels[#allAlphabetLabels+1] = window.LatinAlphabetLabel
 
 			--Russian
 			g:NewLabel (window, _, "$parentCyrillicAlphabetLabel", "CyrillicAlphabetLabel", Loc["STRING_WELCOME_75"], "GameFontHighlightLeft")
@@ -428,8 +339,8 @@ local window_openned_at = time()
 			window.CyrillicAlphabetCheckBox:SetTemplate (g:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE"))
 			window.CyrillicAlphabetCheckBox.OnSwitch = onSelectAlphabet
 			window.CyrillicAlphabetLabel:SetPoint ("left", window.CyrillicAlphabetCheckBox, "right", 2, 0)
-			tinsert (allAlphabetCheckBoxes, window.CyrillicAlphabetCheckBox)
-			tinsert (allAlphabetLabels, window.CyrillicAlphabetLabel)
+			allAlphabetCheckBoxes[#allAlphabetCheckBoxes+1] = window.CyrillicAlphabetCheckBox
+			allAlphabetLabels[#allAlphabetLabels+1] = window.CyrillicAlphabetLabel
 
 			--Chinese
 			g:NewLabel (window, _, "$parentChinaAlphabetLabel", "ChinaAlphabetLabel", Loc["STRING_WELCOME_76"], "GameFontHighlightLeft")
@@ -439,8 +350,8 @@ local window_openned_at = time()
 			window.ChinaCheckBox:SetTemplate (g:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE"))
 			window.ChinaCheckBox.OnSwitch = onSelectAlphabet
 			window.ChinaAlphabetLabel:SetPoint ("left", window.ChinaCheckBox, "right", 2, 0)
-			tinsert (allAlphabetCheckBoxes, window.ChinaCheckBox)
-			tinsert (allAlphabetLabels, window.ChinaAlphabetLabel)
+			allAlphabetCheckBoxes[#allAlphabetCheckBoxes+1] = window.ChinaCheckBox
+			allAlphabetLabels[#allAlphabetLabels+1] = window.ChinaAlphabetLabel
 
 			--Korea
 			g:NewLabel (window, _, "$parentKoreanAlphabetLabel", "KoreanAlphabetLabel", Loc["STRING_WELCOME_77"], "GameFontHighlightLeft")
@@ -450,8 +361,8 @@ local window_openned_at = time()
 			window.KoreanCheckBox:SetTemplate (g:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE"))
 			window.KoreanCheckBox.OnSwitch = onSelectAlphabet
 			window.KoreanAlphabetLabel:SetPoint ("left", window.KoreanCheckBox, "right", 2, 0)
-			tinsert (allAlphabetCheckBoxes, window.KoreanCheckBox)
-			tinsert (allAlphabetLabels, window.KoreanAlphabetLabel)
+			allAlphabetCheckBoxes[#allAlphabetCheckBoxes+1] = window.KoreanCheckBox
+			allAlphabetLabels[#allAlphabetLabels+1] = window.KoreanAlphabetLabel
 
 			--Taiwan
 			g:NewLabel (window, _, "$parentTaiwanAlphabetLabel", "TaiwanAlphabetLabel", Loc["STRING_WELCOME_78"], "GameFontHighlightLeft")
@@ -461,8 +372,8 @@ local window_openned_at = time()
 			window.TaiwanCheckBox:SetTemplate (g:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE"))
 			window.TaiwanCheckBox.OnSwitch = onSelectAlphabet
 			window.TaiwanAlphabetLabel:SetPoint ("left", window.TaiwanCheckBox, "right", 2, 0)
-			tinsert (allAlphabetCheckBoxes, window.TaiwanCheckBox)
-			tinsert (allAlphabetLabels, window.TaiwanAlphabetLabel)
+			allAlphabetCheckBoxes[#allAlphabetCheckBoxes+1] = window.TaiwanCheckBox
+			allAlphabetLabels[#allAlphabetLabels+1] = window.TaiwanAlphabetLabel
 
 			window.LatinAlphabetCheckBox:SetPoint ("topleft", texto_alphabet, "bottomleft", 0, -10)
 			window.CyrillicAlphabetCheckBox:SetPoint ("topleft", window.LatinAlphabetCheckBox, "bottomleft", 0, -2)
@@ -598,7 +509,7 @@ local window_openned_at = time()
 				local fontObjects = SharedMedia:HashTable ("font")
 				local fontTable = {}
 				for name, fontPath in pairs (fontObjects) do
-					fontTable[#fontTable+1] = {value = name, label = name, icon = font_select_icon, texcoord = font_select_texcoord, onclick = onSelectFont, font = fontPath, descfont = name, desc = Loc ["STRING_MUSIC_DETAILS_ROBERTOCARLOS"]}
+					fontTable[#fontTable+1] = {value = name, label = name, onclick = onSelectFont, font = fontPath, descfont = name, desc = Loc ["STRING_MUSIC_DETAILS_ROBERTOCARLOS"]}
 				end
 				table.sort (fontTable, function (t1, t2) return t1.label < t2.label end)
 				return fontTable
@@ -664,129 +575,11 @@ local window_openned_at = time()
 
 		pages [#pages+1] = {skins_frame_alert, bg55, texto55, texto_alphabet, texto555, skins_image, changemind, texto_appearance, font_label, font_dropdown, skin_dropdown, skin_label, create_window_button, window_color, window.BarHeightLabel, window.BarHeightSlider, window.TextSizeLabel, window.TextSizeSlider, window.ShowPercentLabel, window.ShowPercentCheckBox}
 		for i, widget in ipairs (allAlphabetCheckBoxes) do
-			tinsert (pages [#pages], widget)
+			pages[#pages][#pages[#pages]+1] = widget
 		end
 		for i, widget in ipairs (allAlphabetLabels) do
-			tinsert (pages [#pages], widget)
+			pages[#pages][#pages[#pages]+1] = widget
 		end
-
-		for _, widget in ipairs (pages[#pages]) do
-			widget:Hide()
-		end
-
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
---> numeral system page 3
-
-		local numeral_image = window:CreateTexture (nil, "overlay")
-
-		numeral_image:SetTexture ([[Interface\MainMenuBar\UI-MainMenuBar-EndCap-Human]])
-		numeral_image:SetPoint ("bottomright", window, "bottomright", -10, 10)
-		numeral_image:SetHeight (125*3)--125
-		numeral_image:SetWidth (89*3)--82
-		numeral_image:SetAlpha (.05)
-		numeral_image:SetTexCoord (1, 0, 0, 1)
-
-		g:NewLabel (window, _, "$parentChangeMindNumeralLabel", "changemindNumeralLabel", Loc ["STRING_WELCOME_2"], "GameFontNormal", 9, "orange")
-		window.changemindNumeralLabel:SetPoint ("center", window, "center")
-		window.changemindNumeralLabel:SetPoint ("bottom", window, "bottom", 0, 19)
-		window.changemindNumeralLabel.align = "|"
-
-		local texto2Numeral = window:CreateFontString (nil, "overlay", "GameFontNormal")
-		texto2Numeral:SetPoint ("topleft", window, "topleft", 20, -80)
-		texto2Numeral:SetText (Loc ["STRING_NUMERALSYSTEM_DESC"] .. ":")
-
-		--numeral 1 - western
-		g:NewLabel (window, _, "$parentWesternNumbersLabel", "WesternNumbersLabel", Loc ["STRING_NUMERALSYSTEM_ARABIC_WESTERN"] .. ": " .. Loc ["STRING_NUMERALSYSTEM_ARABIC_WESTERN_DESC"], "GameFontHighlightLeft")
-		local WesternNumbersCheckbox = g:NewSwitch (window, _, "WesternNumbersCheckbox", "WesternNumbersCheckbox", 20, 20, _, _, true)
-		WesternNumbersCheckbox:SetAsCheckBox()
-		WesternNumbersCheckbox:SetFixedParameter (1)
-		WesternNumbersCheckbox:SetTemplate (g:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE"))
-		WesternNumbersCheckbox:SetPoint ("topleft", window, "topleft", 40, -130)
-		window.WesternNumbersLabel:SetPoint ("left", WesternNumbersCheckbox, "right", 2, 0)
-
-		--numeral 2 asian
-		g:NewLabel (window, _, "$parentAsianNumbersLabel", "AsianNumbersLabel", Loc ["STRING_NUMERALSYSTEM_MYRIAD_EASTASIA"] .. ": " .. Loc ["STRING_NUMERALSYSTEM_ARABIC_MYRIAD_EASTASIA"], "GameFontHighlightLeft")
-		local AsianNumbersCheckbox = g:NewSwitch (window, _, "AsianNumbersCheckbox", "AsianNumbersCheckbox", 20, 20, _, _, true)
-		AsianNumbersCheckbox:SetAsCheckBox()
-		AsianNumbersCheckbox:SetFixedParameter (2)
-		AsianNumbersCheckbox:SetTemplate (g:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE"))
-		AsianNumbersCheckbox:SetPoint ("topleft", window, "topleft", 40, -200)
-		window.AsianNumbersLabel:SetPoint ("left", AsianNumbersCheckbox, "right", 2, 0)
-
-		--western on clicks
-		WesternNumbersCheckbox.OnSwitch = function()
-			WesternNumbersCheckbox:SetValue (true)
-			AsianNumbersCheckbox:SetValue (false)
-			_detalhes.numerical_system = 1
-			_detalhes:SelectNumericalSystem()
-		end
-
-		--asian on click
-		AsianNumbersCheckbox.OnSwitch = function()
-			AsianNumbersCheckbox:SetValue (true)
-			WesternNumbersCheckbox:SetValue (false)
-			_detalhes.numerical_system = 2
-			_detalhes:SelectNumericalSystem()
-		end
-
-		local sword_icon2 = window:CreateTexture (nil, "overlay")
-		sword_icon2:SetTexture ([[Interface\Addons\Details\images\icons2]])
-		sword_icon2:SetPoint ("topright", window, "topright", -30, -10)
-		sword_icon2:SetSize (128*1.4, 64*1.4)
-		sword_icon2:SetTexCoord (330/512, 509/512, 437/512, 509/512)
-		sword_icon2:SetDrawLayer ("overlay", 2)
-
-		local thedude2 = window:CreateTexture (nil, "overlay")
-		--thedude2:SetTexture ([[Interface\TUTORIALFRAME\UI-TutorialFrame-TheDude]])
-		thedude2:SetPoint ("bottomright", sword_icon, "bottomleft", 70, 19)
-		thedude2:SetWidth (128*1.0)
-		thedude2:SetHeight (128*1.0)
-		thedude2:SetTexCoord (0, 1, 0, 1)
-		thedude2:SetDrawLayer ("overlay", 3)
-
-		local NumeralType1_text = window:CreateFontString (nil, "overlay", "GameFontNormal")
-		NumeralType1_text:SetText ("1K = 1.000 |cFFFFCC00| |r10K = 10.000 |cFFFFCC00| |r100K = 100.000 |cFFFFCC00| |r1M = 1.000.000")
-		NumeralType1_text:SetWidth (500)
-		NumeralType1_text:SetHeight (40)
-		NumeralType1_text:SetJustifyH ("left")
-		NumeralType1_text:SetJustifyV ("top")
-		NumeralType1_text:SetTextColor (.8, .8, .8, 1)
-		NumeralType1_text:SetPoint ("topleft", window, "topleft", 40, -150)
-
-		local NumeralType2_text = window:CreateFontString (nil, "overlay", "GameFontNormal")
-
-
-		local asian1K, asian10K, asian1B = _detalhes.gump:GetAsianNumberSymbols()
-		local asianNumerals = "1" .. asian1K .. " = 1.000 \n1" .. asian10K .. " = 10.000 \n10" .. asian10K .. " = 100.000 \n100" .. asian10K .. " = 1.000.000"
-
-		--> if region is western it'll be using Korean symbols, set a font on the dropdown so it won't show ?????
-		local clientRegion = _detalhes.gump:GetClientRegion()
-		if (clientRegion == "western" or clientRegion == "russia") then
-			_detalhes.gump:SetFontFace (NumeralType2_text, _detalhes.gump:GetBestFontForLanguage ("koKR"))
-
-		else
-			_detalhes.gump:SetFontFace (NumeralType2_text, _detalhes.gump:GetBestFontForLanguage())
-		end
-
-		--> set the text
-		NumeralType2_text:SetText (asianNumerals)
-
-		NumeralType2_text:SetWidth (500)
-		NumeralType2_text:SetHeight (80)
-		NumeralType2_text:SetJustifyH ("left")
-		NumeralType2_text:SetJustifyV ("top")
-		NumeralType2_text:SetTextColor (.8, .8, .8, 1)
-		NumeralType2_text:SetPoint ("topleft", window, "topleft", 40, -220)
-
-		if (_detalhes.numerical_system == 1) then --> west
-			WesternNumbersCheckbox:SetValue (true)
-			AsianNumbersCheckbox:SetValue (false)
-		elseif (_detalhes.numerical_system == 2) then --> east
-			WesternNumbersCheckbox:SetValue (false)
-			AsianNumbersCheckbox:SetValue (true)
-		end
-
-		pages [#pages+1] = {thedude2, sword_icon2, numeral_image, texto2Numeral, NumeralType1_text, NumeralType2_text, window.changemindNumeralLabel, window.AsianNumbersLabel, AsianNumbersCheckbox, window.WesternNumbersLabel, WesternNumbersCheckbox}
 
 		for _, widget in ipairs (pages[#pages]) do
 			widget:Hide()
@@ -1000,9 +793,6 @@ local window_openned_at = time()
 		updateColor (window.updatespeedSlider, _detalhes.update_speed)
 
 		window.updatespeedSlider:SetHook ("OnEnter", function()
-		--	_detalhes:CooltipPreset (1)
-		--	GameCooltip:AddLine (Loc ["STRING_WELCOME_15"]) --removed
-		--	GameCooltip:ShowCooltip (window.updatespeedSlider, "tooltip")
 			return true
 		end)
 
@@ -1036,18 +826,6 @@ local window_openned_at = time()
 		window.DpsHpsSlider:SetTemplate (g:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE"))
 		window.DpsHpsSlider:SetAsCheckBox()
 
-		--window.DpsHpsSlider.tooltip = Loc ["STRING_WELCOME_64"]
-	--]]
-	--------------- Max Segments
-	--	g:NewLabel (window, _, "$parentSliderLabel", "segmentsLabel", Loc ["STRING_WELCOME_21"] .. ":", "GameFontNormal")
-	--	window.segmentsLabel:SetPoint (31, -210)
-		--
-	--	g:NewSlider (window, _, "$parentSlider", "segmentsSlider", 120, 20, 1, 25, 1, _detalhes.segments_amount) -- min, max, step, defaultv
-	--	window.segmentsSlider:SetPoint ("left", window.segmentsLabel, "right", 2, 0)
-	--	window.segmentsSlider:SetHook ("OnValueChange", function (self, _, amount) --> slider, fixedValue, sliderValue
-	--		_detalhes.segments_amount = math.floor (amount)
-	--	end)
-	--	window.segmentsSlider.tooltip = Loc ["STRING_WELCOME_22"]
 
 	--------------
 		local mech_icon = window:CreateTexture (nil, "overlay")
@@ -1336,7 +1114,6 @@ local window_openned_at = time()
 			local current_combat = _detalhes:GetCombat ("current")
 			local actors_classes = CLASS_SORT_ORDER
 			local total_damage = 0
-			local total_heal = 0
 
 			local joe = current_combat[1]:PegarCombatente (0x0000000000000, "Joe", 0x114, true)
 			joe.grupo = true
@@ -1347,13 +1124,6 @@ local window_openned_at = time()
 			joe.friendlyfire_total = math.random (100000, 600000)
 
 			total_damage = total_damage + joe.total
-
-			--local joe_death = current_combat[4]:PegarCombatente (0x0000000000000, joe.nome, 0x114, true)
-			--joe_death.grupo = true
-			--joe_death.classe = joe.classe
-			--local esta_morte = {{true, 96648, 100000, time(), 0, "Lady Holenna"}, {true, 96648, 100000, time()-52, 100000, "Lady Holenna"}, {true, 96648, 100000, time()-86, 200000, "Lady Holenna"}, {true, 96648, 100000, time()-101, 300000, "Lady Holenna"}, {false, 55296, 400000, time()-54, 400000, "King Djoffrey"}, {true, 14185, 0, time()-59, 400000, "Lady Holenna"}, {false, 87351, 400000, time()-154, 400000, "King Djoffrey"}, {false, 56236, 400000, time()-158, 400000, "King Djoffrey"} }
-			--local t = {esta_morte, time(), joe.nome, joe.classe, 400000, "52m 12s",  ["dead"] = true}
-			--table.insert (current_combat.last_events_tables, #current_combat.last_events_tables+1, t)
 
 			rawset (_detalhes.spellcache, 300000, {"A Gun in Your Hand", 300000, [[Interface\ICONS\INV_Legendary_Gun]]})
 			rawset (_detalhes.spellcache, 300001, {"Shot", 300001, [[Interface\ICONS\INV_Archaeology_Ogres_HarGunn_Eye]]})
@@ -1483,19 +1253,6 @@ local window_openned_at = time()
 		end
 
 ------------------------------------------------------------------------------------------------------------------------------
-
-	 --[[
-		forward:Click()
-		forward:Click()
-		forward:Click()
-		forward:Click()
-		forward:Click()
-		forward:Click()
-		forward:Click()
-		--forward:Click()
-		--forward:Click()
-		--forward:Click()
-		--]]
 
 	end
 

@@ -36,8 +36,6 @@ do
 		[51411] = 251, -- Howling Blast, Rank 4
 
 		-- Blood Death Knight:
-		-- [49222] = 250, -- Bone Shield
-		-- [49941] = 250, -- vskip
 		[55233] = 250, -- Vampiric Blood
 		[49028] = 250, -- Dancing Rune Weapon
 		-- [48982] = 250, -- Rune Tap
@@ -84,8 +82,6 @@ do
 		[19506] = 254, -- Trueshot Aura
 
 		-- Survival Hunter:
-		-- [60053] = 255, -- razrivnaya
-		-- [63672] = 255, -- Black Arrow
 		[63672] = 255, -- Black Arrow Rank 6
 		[60053] = 255, -- Explosive Shot Rank 4
 		-- Arcane Mage:
@@ -175,10 +171,6 @@ do
 		-- [61882] = 262, -- Earthquake
 		[60188] = 262, -- Elemental Fury
 		[320465] = 262, -- t4 spell
-		--[62099] = 262, -- Shamanism --removed from the game
-		-- [51490] = 262, -- Thunderstorm, Rank 1
-		-- [59156] = 262, -- Thunderstorm, Rank 2
-		-- [59158] = 262, -- Thunderstorm, Rank 3
 		[59159] = 262, -- Thunderstorm, Rank 4
 		[16166] = 262, -- pokorenye
 		[30706] = 262, -- totem
@@ -194,23 +186,11 @@ do
 		-- Enhancement Shaman:
 		-- [77223] = 263, -- Mastery: Enhanced Elements
 		[51533] = 263, -- Feral Spirit
-		-- [58875] = 263, -- Spirit Walk
-		--[51530] = 263, -- Maelstrom Weapon --removed from the game
-		--[1535] = 263, -- Fire Nova --removed from the game
-		--[8190] = 263, -- Magma Totem --removed from the game
 		[25504] = 263, -- Windfury
 		[17364] = 263, -- Stormstrike
-		-- [32175] = 263, -- Stormstrike
-		-- [32176] = 263, -- Stormstrike off hand
-		-- [16282] = 263, -- Flurry --
-		-- [10444] = 263, -- Flametongue attack
 		[60103] = 263, -- Lava Lash
 		-- [30812] = 263, -- Mental Quickness, Rank 1
 		[30823] = 263, -- lomai menya esli smo
-		-- [30813] = 263, -- Mental Quickness, Rank 2
-		-- [30814] = 263, -- Mental Quickness, Rank 3
-		-- [51521] = 263, -- Improved Stormstrike, Rank 1
-		-- [51522] = 263, -- Improved Stormstrike, Rank 2
 
 		-- Restoration Shaman:
 		[51566] = 264, -- Tidal Waves, Rank 5
@@ -248,7 +228,6 @@ do
 		-- Destruction Warlock:
 		[59172] = 267, -- Chaos Bolt, Rank 4
 		[17877] = 267, -- Shadowburn
-		[80240] = 267, -- Havoc
 		[5740] = 267, -- Rain of Fire
 		[348] = 267, -- Immolate
 		[17962] = 267, -- Conflagrate
@@ -256,14 +235,6 @@ do
 		[309235] = 267, -- t5
 
 		-- Arms Warrior:
-		-- [12328] = 71, -- Sweeping Strikes
-		-- [1464] = 71, -- Slam
-		-- [56636] = 71, -- Taste for Blood, Rank 1
-		-- [56637] = 71, -- Taste for Blood, Rank 2
-		-- [56638] = 71, -- Taste for Blood, Rank 3
-		-- [12294] = 71, -- Mortal Strike
-		-- --[12712] = 71, -- Seasoned Soldier --removed from the game
-		-- [772] = 71, -- Rend
 		[47486] = 71, -- mortal
 		[46924] = 71, -- vihr
 		[7384] = 71, -- over
@@ -278,8 +249,6 @@ do
 		--[46917] = 72, -- Titan's Grip --removed from the game
 
 		-- Protection Warrior:
-		[165393] = 73, -- Shield Mastery
-		[76857] = 73, -- Mastery: Critical Block
 		[871] = 73, -- Shield Wall
 		[12975] = 73, -- Last Stand
 		[20243] = 73, -- Devastate
@@ -404,12 +373,6 @@ do
 		[66196]	= "DEATHKNIGHT", -- "Frost Strike Off-Hand"
 		[66198]	= "DEATHKNIGHT", -- "Obliterate Off-Hand"
 		[66216]	= "DEATHKNIGHT", -- "Plague Strike Off-Hand"
-		[73975]	= "DEATHKNIGHT", -- Necrotic Strike
-		[77535]	= "DEATHKNIGHT", -- Blood Shield(heal)
-		[77575]	= "DEATHKNIGHT", -- Outbreak
-		[77606]	= "DEATHKNIGHT", -- Dark Simulacrum
-		[85948]	= "DEATHKNIGHT", -- Festering Strike
-		[96268]	= "DEATHKNIGHT", -- Death's Advance
 
 
 
@@ -513,7 +476,6 @@ do
 		[53353]	= "HUNTER", -- "Chimaera Shot"
 		[56641]	= "HUNTER", -- Steady Shot
 		[60192]	= "HUNTER", -- "Freezing Trap"
-		[77767]	= "HUNTER", -- cobra shot
 
 	-- Mage
 		[44781]	= "MAGE", -- Arcane Barrage, Rank 3
@@ -844,30 +806,6 @@ do
 		[44949]	= "WARRIOR", -- Whirlwind
 	}
 
-	_detalhes.HardCrowdControlSpells = {
-		--> death knight
-
-		--> druid
-		[33786] = true, -- Cyclone
-
-		--> hunter
-
-		--> mage
-
-		--> paladin
-
-		--> priest
-
-		--> rogue
-
-		--> shaman
-
-		--> warlock
-
-		--> warrior
-
-	}
-
 	_detalhes.CrowdControlSpells = {
 		--Racials
 		[28730]	= true, -- Arcane Torrent(be)
@@ -1071,21 +1009,6 @@ do
 		-- Druid
 		[62606] = 10, -- Savage Defense proc. (Druid) Tooltip of the original spell doesn't clearly state that this is an absorb, but the buff does.
 		-- Mage
-		[11426] = 60, -- Ice Barrier (Mage) Rank 1
-		[13031] = 60,
-		[13032] = 60,
-		[13033] = 60,
-		[27134] = 60,
-		[33405] = 60,
-		[43038] = 60,
-		[43039] = 60, -- Rank 8
-		[6143] = 30, -- Frost Ward (Mage) Rank 1
-		[8461] = 30,
-		[8462] = 30,
-		[10177] = 30,
-		[28609] = 30,
-		[32796] = 30,
-		[43012] = 30, -- Rank 7
 		[1463] = 60, --  Mana shield (Mage) Rank 1
 		[8494] = 60,
 		[8495] = 60,
@@ -1095,13 +1018,6 @@ do
 		[27131] = 60,
 		[43019] = 60,
 		[43020] = 60, -- Rank 9
-		[543] = 30 , -- Fire Ward (Mage) Rank 1
-		[8457] = 30,
-		[8458] = 30,
-		[10223] = 30,
-		[10225] = 30,
-		[27128] = 30,
-		[43010] = 30, -- Rank 7
 		-- Paladin
 		-- [58597] = 6, -- Sacred Shield (Paladin) proc (Fixed, thanks to Julith)
 		-- Priest
@@ -1120,28 +1036,9 @@ do
 		[48065] = 30,
 		[48066] = 30, -- Rank 14
 		[308143] = 30, -- Rank 15 shild word t5
-		-- [47509] = 12, -- Divine Aegis (Priest) Rank 1
-		-- [47511] = 12,
-		-- [47515] = 12, -- Divine Aegis (Priest) Rank 3 (Some of these are not actual buff spellIDs)
 		[47753] = 12, -- Divine Aegis (Priest) Rank 3 ------ true
 		-- [54704] = 12, -- Divine Aegis (Priest) Rank 1
 		[47788] = 10, -- Guardian Spirit  (Priest) (50 nominal absorb, this may not show in the CL)
-		-- Warlock
-		[7812] = 30, -- Sacrifice (warlock) Rank 1
-		[19438] = 30,
-		[19440] = 30,
-		[19441] = 30,
-		[19442] = 30,
-		[19443] = 30,
-		[27273] = 30,
-		[47985] = 30,
-		[47986] = 30, -- rank 9
-		[6229] = 30, -- Shadow Ward (warlock) Rank 1
-		[11739] = 30,
-		[11740] = 30,
-		[28610] = 30,
-		[47890] = 30,
-		[47891] = 30, -- Rank 6
 		-- Consumables
 		[29674] = 86400, -- Lesser Ward of Shielding
 		[29719] = 86400, -- Greater Ward of Shielding (these have infinite duration, set for a day here :P)
@@ -1156,7 +1053,6 @@ do
 		[7239] = 120, -- Frost
 		[7242] = 120, -- Shadow Protection Potion
 		[7245] = 120, -- Holy
-		[6052] = 120, -- Nature Protection Potion
 		[53915] = 120, -- Mighty Shadow Protection Potion
 		[53914] = 120, -- Mighty Nature Protection Potion
 		[53913] = 120, -- Mighty Frost Protection Potion
@@ -1222,51 +1118,51 @@ do
 		[371908] = 30,
 		[371907] = 30,
 		[322293] = 30,
-
-		-- Sirus enchants
-		[381832] = 10, -- rdru, Природное буйство
-		[381375] = 10, -- dc, Принятие божественности
-		[381436] = 15, -- shp, Крепкие объятия
-		[381083] = 15, -- pwar, Магическая защита
-		[381085] = 15, -- pwar, Магическая защита
-		[381087] = 15, -- pwar, Магическая защита
-		[381113] = 15, -- hpal, Шок спасающий
-		[381144] = 10, -- prot pal, Небесный оберег
-		[381172] = 15, -- retri pal, Двойной щит
-		[381203] = 15, -- bm, Крепкий дух
-		[381232] = 15, -- mm, В укрытие
-		[381261] = 15, -- surv, Максимальное удержание
-		[381292] = 10, -- mutilate, Обманный маневр
-		[381329] = 10, -- combat, Регенерирующее ускользание
-		[381359] = 15, -- sd, Тактика защиты
-		[381383] = 15, -- dc, Теневая защита
-		[381410] = 15, -- hpriest, Молитва в отчаянии
-		[381465] = 15, -- bdk, Кровавый пузырь
-		[381494] = 10, -- fdk, Ледяная эгида
-		[381520] = 45, -- adk, Крепкие кости
-		[381550] = 15, -- elem, Огнестойкость
-		[381579] = 15, -- enh, Опека предков
-		[381584] = 10, -- rsham, Земляная корка
-		[381593] = 10, -- rsham, Водная преграда
-		[381601] = 10, -- rsham, Водный покров
-		[381629] = 15, -- arcane, Апофеоз магии
-		[381658] = 15, -- fire, Магический оберег
-		[381684] = 15, -- frost, Щит в щите
-		[381713] = 15, -- affli, Темная опека
-		[381743] = 15, -- demo, Портальная нестабильность
-		[381772] = 15, -- destro, Защитный камень
-		[381806] = 15, -- boomkin, Железные корни
-		[381827] = 15, -- feral, Волшебный щит
-		[381855] = 15, -- resto druid, Крепкость дуба
-
-		[383168] = 10, -- t6, Природный щит
-		[383064] = 10, -- t6, Духовный щит
-
-		[383034] = 10, -- t6, Нечестивая оболочка
-		[382979] = 10, -- t6, Защита небес
-		[382884] = 15, -- t6, оплот света
-
+		[381832] = 10,
+		[381375] = 10,
+		[381436] = 15,
+		[381083] = 15,
+		[381085] = 15,
+		[381087] = 15,
+		[381113] = 15,
+		[381144] = 10,
+		[381172] = 15,
+		[381203] = 15,
+		[381232] = 15,
+		[381261] = 15,
+		[381292] = 10,
+		[381329] = 10,
+		[381359] = 15,
+		[381383] = 15,
+		[381410] = 15,
+		[381465] = 15,
+		[381494] = 10,
+		[381520] = 45,
+		[381550] = 15,
+		[381579] = 15,
+		[381584] = 10,
+		[381593] = 10,
+		[381601] = 10,
+		[381629] = 15,
+		[381658] = 15,
+		[381684] = 15,
+		[381713] = 15,
+		[381743] = 15,
+		[381772] = 15,
+		[381806] = 15,
+		[381827] = 15,
+		[381855] = 15,
+		[383168] = 10,
+		[383064] = 10,
+		[383034] = 10,
+		[382979] = 10,
+		[382884] = 15,
 	}
+	for _, list in ipairs({_detalhes.MageFireWardSpells, _detalhes.MageFrostWardSpells, _detalhes.WarlockShadowWardSpells, _detalhes.MageIceBarrierSpells, _detalhes.WarlockSacrificeSpells}) do
+		for spellid, duration in pairs(list) do
+			_detalhes.AbsorbSpells[spellid] = duration
+		end
+	end
 	-- /run for i = 1,30 do local name, rank, icon, count, dbf, dur, expt, caster, issteal,scons, spellId = UnitBuff("player",i) print(name, rank, spellId) end
 
 
@@ -1295,7 +1191,6 @@ do
 		[31821]	= {180, 6, 0}, -- Devotion Aura
 
 --		["PRIEST"] = {},
-		[62618]	= {180, 10, 0}, -- Power Word: Barrier
 		[64843]	= {180, 8, 0}, -- Divine Hymn
 
 --		["ROGUE"] = {},
@@ -1371,778 +1266,6 @@ do
 		["WARRIOR"] = {871, 12975, 23920, 2565}
 	}
 
-	_detalhes.HarmfulSpells = {
-		--death knight
-		[49020] 	= 	true, -- obliterate
-		[49143] 	=	true, -- frost strike
-		[55095] 	= 	true, -- frost fever
-		[55078] 	= 	true, -- blood plague
-		[49184] 	= 	true, -- howling blast
-		[49998] 	= 	true, -- death strike
-		[55090] 	= 	true, -- scourge strike
-		[47632] 	= 	true, -- death coil
-		[108196]	=	true, --Death Siphon
-		[47541]	=	true, -- Death Coil
-		--[48721]	=	true, -- Blood Boil
-		[42650]	=	true, -- Army of the Dead
-		[130736]	=	true, -- Soul Reaper
-		[45524]	=	true, -- Chains of Ice
-		[45462]	=	true, -- Plague Strike
-		[85948]	=	true, -- Festering Strike
-		--[56815]	=	true, -- Rune Strike
-		[108200]	=	true, -- Remorseless Winter
-		[45477]	=	true, -- Icy Touch
-		[43265]	=	true, -- Death and Decay
-		[77575]	=	true, -- Outbreak
-		[115989]	=	true, -- Unholy Blight
-		--[55050]	=	true, -- Heart Strike
-		[114866]	=	true, -- Soul Reaper
-		--[73975]	=	true, -- Necrotic Strike
-		[130735]	=	true, -- Soul Reaper
-		[50842]	=	true, -- Pestilence
-		--[45902]	=	true, -- Blood Strike
-		[108194]	=	true, -- Asphyxiate
-		[77606]	=	true, -- Dark Simulacrum
-
-		--druid
-		--[80965]	=	 true, -- Skull Bashs
-		[78675]	=	 true, -- Solar Beam
-		[22570]	=	 true, -- Maim
-		[33831]	=	 true, -- Force of Nature
-		[102706]	=	 true, -- Force of Nature
-		[102355]	=	 true, -- Faerie Swarm
-		[16914]	=	 true, -- Hurricane
-		[2908]	=	 true, -- Soothe
-		--[62078]	=	 true, -- Swipe
-		[106996]	=	 true, -- Astral Storm
-		--[6785]	=	 true, -- Ravage
-		[33891]	=	 true, -- Incarnation: Tree of Life
-		[102359]	=	 true, -- Mass Entanglement
-		[5211]	=	 true, -- Mighty Bash
-		--[102795]	=	 true, -- Bear Hug
-		[1822] 	= 	true, --rake
-		[1079] 	= 	true, --rip
-		[5221] 	= 	true, --shred
-		--[33876] 	=	true, --mangle
-		--[102545] 	= 	true, --ravage!
-		[5176]	=	true, --wrath
-		[93402]	=	true, --sunfire
-		[2912]	=	true, --starfire
-		[8921]	=	true, --moonfire
-		[6807]	=	 true, -- Maul
-		[33745]	=	 true, -- Lacerate
-		[770]	=	 true, -- Faerie Fire
-		[22568]	=	 true, -- Ferocious Bite
-		--[779]	=	 true, -- Swipe
-		[77758]	=	 true, -- Thrash
-		[106830]	=	 true, -- Thrash
-		--[114236]	=	 true, -- Shred!
-		[48505]	=	 true, -- Starfall
-		[78674]	=	 true, -- Starsurge
-		--[80964]	=	 true, -- Skull Bash
-
-		--hunter
-		--[19503]	=	true,-- Scatter Shot
-		[109259]	=	true,-- Powershot
-		[20736]	=	true,-- Distracting Shot
-		[131900]	=	true, --a murder of crows
-		[118253]	=	true, --serpent sting
-		[77767]	=	true, --cobra shot
-		[3044]	=	true, --arcane shot
-		[53301]	=	true, --explosive shot
-		[120361]	=	true, --barrage
-		[53351]	=	true, --kill shot
-		[3674]	=	true,-- Black Arrow
-		[117050]	=	true,-- Glaive Toss
-		--[1978]	=	true,-- Serpent Sting
-		[34026]	=	true,-- Kill Command
-		[2643]	=	true,-- Multi-Shot
-		[109248]	=	true,-- Binding Shot
-		[149365]	=	true,-- Dire Beast
-		[120679]	=	true,-- Dire Beast
-		[3045]	=	true,-- Rapid Fire
-		[19574]	=	true,-- Bestial Wrath
-		[19386]	=	true,-- Wyvern Sting
-		[19434]	=	true,-- Aimed Shot
-		[120697]	=	true,-- Lynx Rush
-		[56641]	=	true,-- Steady Shot
-		--[34490]	=	true,-- Silencing Shot
-		[53209]	=	true,-- Chimera Shot
-		--[82928]	=	true,-- Aimed Shot!
-		[5116]	=	true,-- Concussive Shot
-		[147362]	=	true,-- Counter Shot
-		[19801]	=	true,-- Tranquilizing Shot
-		--[82654]	=	true,-- Widow Venom
-
-		--mage
-		[116]	=	true, --frost bolt
-		[30455]	=	true, --ice lance
-		[84721]	=	true, --frozen orb
-		[1449]	=	true, --arcane explosion
-		[113092]	=	true, --frost bomb
-		[115757]	=	true, --frost nova
-		[44614]	=	true, --forstfire bolt
-		[42208]	=	true, --blizzard
-		[11366]	=	true, --pyroblast
-		[133]	=	true, --fireball
-		[108853]	=	true, --infernoblast
-		[2948]	=	true, --scorch
-		[30451]	=	true, --arcane blase
-		[44457]	=	true,-- Living Bomb
-		[84714]	=	true,-- Frozen Orb
-		[11129]	=	true,-- Combustion
-		[112948]	=	true,-- Frost Bomb
-		[2139]	=	true,-- Counterspell
-		[2136]	=	true,-- Fire Blast
-		[7268]	=	true,-- Arcane Missiles
-		[114923]	=	true,-- Nether Tempest
-		[2120]	=	true,-- Flamestrike
-		[44425]	=	true,-- Arcane Barrage
-		[44572]	=	true,-- Deep Freeze
-		[113724]	=	true,-- Ring of Frost
-		[31661]	=	true,-- Dragon's Breath
-
-		--paladin
-		[35395]	=	true,--cruzade strike
-		[879]	=	true,--exorcism
-		[85256]	=	true,--templar's verdict
-		[31935]	=	true,--avenger's shield
-		[20271]	=	true, --judgment
-		[35395]	=	true, --cruzader strike
-		[81297]	=	true, --consacration
-		[31803]	=	true, --censure
-		[20473]	=	true,-- Holy Shock
-		[114158]	=	true,-- Light's Hammer
-		[24275]	=	true,-- Hammer of Wrath
-		[88263]	=	true,-- Hammer of the Righteous
-		[53595]	=	true,-- Hammer of the Righteous
-		[53600]	=	true,-- Shield of the Righteous
-		[26573]	=	true,-- Consecration
-		[119072]	=	true,-- Holy Wrath
-		[105593]	=	true,-- Fist of Justice
-		[122032]	=	true,-- Exorcism
-		[96231]	=	true,-- Rebuke
-		[115750]	=	true,-- Blinding Light
-		[53385]	=	true,-- Divine Storm
-		[116467] 	= 	true, -- Consecration
-		[31801] 	= 	true, -- Seal of Truth
-		[20165] 	= 	true, -- Seal of Insight
-
-		--priest
-		[589]	=	true, --shadow word: pain
-		[34914]	=	true, --vampiric touch
-		[15407]	=	true, --mind flay
-		[8092]	=	true, --mind blast
-		[15290]	=	true,-- Vampiric Embrace
-		[2944]	=	true,--devouring plague(damage)
-		[585]	=	true, --smite
-		[47666]	=	true, --penance
-		[14914]	=	true, --holy fire
-		[48045]	=	true, -- Mind Sear
-		[49821]	=	true, -- Mind Sear
-		[32379]	=	true, -- Shadow Word: Death
-		[129176]	=	true, -- Shadow Word: Death
-		[120517]	=	true, -- Halo
-		[120644]	=	true, -- Halo
-		[15487]	=	true, -- Silence
-		[129197]	=	true, -- Mind Flay(Insanity)
-		[108920]	=	true, -- Void Tendrils
-		[73510] 	= 	true, -- Mind Spike
-		[127632] 	= 	true, -- Cascade
-		--[108921] 	= 	true, -- Psyfiend
-		[88625] 	= 	true, -- Holy Word: Chastise
-
-		--rogue
-		[53]		= 	true, --backstab
-		[2098]	= 	true, --eviscerate
-		[51723]	=	true, --fan of knifes
-		[111240]	=	true, --dispatch
-		[703]	=	true, --garrote
-		[1943]	=	true, --rupture
-		[114014]	=	true, --shuriken toss
-		[16511]	=	true, --hemorrhage
-		[89775]	=	true, --hemorrhage
-		[8676]	=	true, --amcush
-		[5374]	=	true, --mutilate
-		[32645]	=	true, --envenom
-		[1943]	=	true, --rupture
-		[27576]	=	true, -- Mutilate Off-Hand
-		[1329]	=	true, -- Mutilate
-		[84617]	=	true, -- Revealing Strike
-		[1752]	=	true, -- Sinister Strike
-		--[121473]	=	true, -- Shadow Blade
-		--[121474]	=	true, -- Shadow Blade Off-hand
-		[1766]	=	true, -- Kick
-		--[8647]	=	true, -- Expose Armor
-		[2094]	=	true, -- Blind
-		[121411]	=	true, -- Crimson Tempest
-		[137584] 	= 	true, -- Shuriken Toss
-		[137585] 	= 	true, -- Shuriken Toss Off-hand
-		[1833] 	= 	true, -- Cheap Shot
-		[121733] 	= 	true, -- Throw
-		[1776] 	= 	true, -- Gouge
-
-		--shaman
-		[51505]	=	true, --lava burst
-		[8050]	=	true, --flame shock
-		-- [117014]	=	true, --elemental blast
-		[403]	=	true, --lightning bolt
-		--[45284]	=	true, --lightning bolt
-		[421]	=	true, --chain lightining
-		[32175]	=	true, --stormstrike
-		[25504]	=	true, --windfury
-		[8042]	=	true, --earthshock
-		[26364]	=	true, --lightning shield
-		-- [117014]	=	true, --elemental blast
-		[73683]	=	true, --unleash flame
-		[115356]	=	true, -- Stormblast
-		[60103]	=	true, -- Lava Lash
-		[17364]	=	true, -- Stormstrike
-		[61882]	=	true, -- Earthquake
-		[57994]	=	true, -- Wind Shear
-		[8056]	=	true, -- Frost Shock
-		[114074] 	= 	true, -- Lava Beam
-		[16190] 	= 	true, -- totem mana
-
-		--warlock
-		--[77799]	=	true, --fel flame
-		[63106]	=	true, --siphon life
-		[103103]	=	true, --malefic grasp
-		[980]	=	true, --agony
-		[30108]	=	true, --unstable affliction
-		[172]	=	true, --corruption
-		[48181]	=	true, --haunt
-		[29722]	=	true, --incenerate
-		[348]	=	true, --Immolate
-		[116858]	=	true, --Chaos Bolt
-		[114654]	=	true, --incinerate
-		[108686]	=	true, --immolate
-		[108685]	=	true, --conflagrate
-		[104233]	=	true, --rain of fire
-		[103964]	=	true, --touch os chaos
-		[686]	=	true, --shadow bolt
-		--[114328]	=	true, --shadow bolt glyph
-		[140719]	=	true, --hellfire
-		[104027]	=	true, --soul fire
-		[603]	=	true, --doom
-		[108371]	=	true, --Harvest life
-		[17962]	=	true, -- Conflagrate
-		-- [105174]	=	true, -- Hand of Gul'dan
-		[146739]	=	true, -- Corruption
-		[30283]	=	true, -- Shadowfury
-		[104232]	=	true, -- Rain of Fire
-		[6353]	=	true, -- Soul Fire
-		[689]	=	true, -- Drain Life
-		[17877]	=	true, -- Shadowburn
-		--[1490]	=	true, -- Curse of the Elements
-		[27243]	=	true, -- Seed of Corruption
-		[6789]	=	true, -- Mortal Coil
-		[124916]	=	true, -- Chaos Wave
-		--[1120]	=	true, -- Drain Soul
-		[5484]	=	true, -- Howl of Terror
-		--[89420]	=	true, -- Drain Life
-		--[109466]	=	true, -- Curse of Enfeeblement
-		--[112092] 	= 	true, -- Shadow Bolt
-		--[103967] 	= 	true, -- Carrion Swarm
-
-		--warrior
-		[100130]	=	true, --wild strike
-		[96103]	=	true, --raging blow
-		[12294]	=	true, --mortal strike
-		[1464]	=	true, --Slam
-		[23922]	=	true, --shield slam
-		[20243]	=	true, --devastate
-		--[11800]	=	true, --dragon roar
-		[115767]	=	true, --deep wounds
-		[109128]	=	true, --charge
-		--[11294]	=	true, --mortal strike
-		--[29842]	=	true, --undribled wrath
-		[86346]	=	true, -- Colossus Smash
-		[107570]	=	true, -- Storm Bolt
-		[1680]	=	true, -- Whirlwind
-		[85384]	=	true, -- Raging Blow Off-Hand
-		[85288]	=	true, -- Raging Blow
-		--[7384]	=	true, -- Overpower
-		[23881]	=	true, -- Bloodthirst
-		[118000]	=	true, -- Dragon Roar
-		[50622]	=	true, -- Bladestorm
-		[46924]	=	true, -- Bladestorm
-		[103840]	=	true, -- Impending Victory
-		[5308]	=	true, -- Execute
-		[57755]	=	true, -- Heroic Throw
-		[1715]	=	true, -- Hamstring
-		[46968]	=	true, -- Shockwave
-		[6343]	=	true, -- Thunder Clap
-		[64382]	=	true, -- Shattering Throw
-		[6552]	=	true, -- Pummel
-		[6572]	=	true, -- Revenge
-		[102060]	=	true, -- Disrupting Shout
-		[12323] 	= 	true, -- Piercing Howl
-		--[122475] 	= 	true, -- Throw
-		--[845] 	= 	true, -- Cleave
-		[5246] 	= 	true, -- Intimidating Shout
-		[7386] 	= 	true, -- Sunder Armor
-		[107566] 	= 	true, -- Staggering Shout
-	}
-
-	_detalhes.MiscClassSpells = {
-		--death knight
-		[49576]	=	true, -- Death Grip
-		[56222]	=	true, -- Dark Command
-		[47528]	=	true, -- Mind Freeze(interrupt)
-		[123693]	=	true, -- Plague Leech(consume plegue, get 2 deathrunes)
-		[3714]	=	true, -- Path of Frost
-		[48263]	=	true, -- Blood Presence
-		[47568]	=	true, -- Empower Rune Weapon
-		[57330]	=	true, -- Horn of Winter(buff)
-		[45529]	=	true, -- Blood Tap
-		[96268]	=	true, -- Death's Advance(walk faster)
-		[48266]	=	true, -- Frost Presence
-		[50977]	=	true, -- Death Gate
-		[108199]	=	true, -- Gorefiend's Grasp
-		[108201]	=	true, -- Desecrated Ground
-		[48265]	=	true, -- Unholy Presence
-		[61999]	=	true, -- Raise Ally
-
-		--druid
-		--[16689]	=	 true, -- Nature's Grasp
-		[102417]	=	 true, -- Wild Charge
-		--[5229]	=	 true, -- Enrage
-		--[9005]	=	 true, -- Pounce
-		[114282]	=	 true, -- Treant Form
-		[5215]	=	 true, -- Prowl
-		[52610]	=	 true, -- Savage Roar
-		[102401]	=	 true, -- Wild Charge
-		[102793]	=	 true, -- Ursol's Vortex
-		[106898]	=	 true, -- Stampeding Roar
-		[132158]	=	 true, -- Nature's Swiftness(misc)
-		[1126]	=	 true, -- Mark of the Wild(buff)
-		[77761]	=	 true, -- Stampeding Roar
-		[77764]	=	 true, -- Stampeding Roar
-		[16953]	=	 true, -- Primal Fury
-		[102693]	=	 true, -- Force of Nature
-		[145518]	=	 true, -- Genesis
-		[5225]	=	 true, -- Track Humanoids
-		[102280]	=	 true, -- Displacer Beast
-		[1850]	=	 true, -- Dash
-		[108294]	=	 true, -- Heart of the Wild
-		[108292]	=	 true, -- Heart of the Wild
-		[768]	=	 true, -- Cat Form
-		--[127538]	=	 true, -- Savage Roar
-		[16979]	=	 true, -- Wild Charge
-		[49376]	=	 true, -- Wild Charge
-		[6795]	=	 true, -- Growl
-		[61391]	=	 true, -- Typhoon
-		[24858]	=	 true, -- Moonkin Form
-		--[81070]	=	true, --eclipse
-		--[29166]	=	true, --innervate
-
-		--hunter
-		[781]	=	true,-- Disengage
-		[82948]	=	true,-- Snake Trap
-		[82939]	=	true,-- Explosive Trap
-		[82941]	=	true,-- Ice Trap
-		[883]	=	true,-- Call Pet 1
-		[83242]	=	true,-- Call Pet 2
-		[83243]	=	true,-- Call Pet 3
-		[83244]	=	true,-- Call Pet 4
-		[2641]	=	true,-- Dismiss Pet
-		[82726]	=	true,-- Fervor
-		[13159]	=	true,-- Aspect of the Pack
-		[109260]	=	true,-- Aspect of the Iron Hawk
-		[1130]	=	true,--'s Mark
-		[5118]	=	true,-- Aspect of the Cheetah
-		[34477]	=	true,-- Misdirection
-		[19577]	=	true,-- Intimidation
-		[83245]	=	true,-- Call Pet 5
-		[51753]	=	true,-- Camouflage
-		--[13165]	=	true,-- Aspect of the Hawk
-		[53271]	=	true,-- Master's Call
-		[1543]	=	true,-- Flare
-
-		--mage
-		[1953]	=	true,-- Blink
-		[108843]	=	true,-- Blazing Speed
-		[55342]	=	true,-- Mirror Image
-		[110960]	=	true,-- Greater Invisibility
-		[110959]	=	true,-- Greater Invisibility
-		[11958]	=	true,-- Cold Snap
-		[61316]	=	true,-- Dalaran Brilliance
-		[1459]	=	true,-- Arcane Brilliance
-		[116011]	=	true,-- Rune of Power
-		[116014]	=	true,-- Rune of Power
-		[132627]	=	true,-- Teleport: Vale of Eternal Blossoms
-		[31687]	=	true,-- Summon Water Elemental
-		[3567]	=	true,-- Teleport: Orgrimmar
-		[30449]	=	true,-- Spellsteal
-		[132626]	=	true,-- Portal: Vale of Eternal Blossoms
-		[12051]	=	true, --evocation
-		[108839]	=	true,-- Ice Floes
-		[7302]	=	true,-- Frost Armor
-		[53140]	=	true,-- Teleport: Dalaran
-		[11417]	=	true,-- Portal: Orgrimmar
-		[42955]	=	true,-- Conjure Refreshment
-
-		--paladin
-		[85499]	=	true,-- Speed of Light
-		--[84963]	=	true,-- Inquisition
-		[62124]	=	true,-- Reckoning
-		[121783]	=	true,-- Emancipate
-		[98057]	=	true,-- Grand Crusader
-		[20217]	=	true,-- Blessing of Kings
-		[25780]	=	true,-- Righteous Fury
-		[20154]	=	true,-- Seal of Righteousness
-		[19740]	=	true,-- Blessing of Might
-		--[54428] 	= 	true, -- Divine Plea --misc
-		[7328] 	= 	true, -- Redemption
-
-		--priest
-		[8122]	=	true, -- Psychic Scream
-		[81700]	=	true, -- Archangel
-		[586]	=	true, -- Fade
-		[121536]	=	true, -- Angelic Feather
-		[121557]	=	true, -- Angelic Feather
-		--[64901]	=	true, -- Hymn of Hope
-		--[89485]	=	true, -- Inner Focus
-		[112833]	=	true, -- Spectral Guise
-		--[588]	=	true, -- Inner Fire
-		[21562]	=	true, -- Power Word: Fortitude
-		--[73413]	=	true, -- Inner Will
-		[15473]	=	true, -- Shadowform
-		[126135] 	= 	true, -- Lightwell
-		[81209] 	= 	true, -- Chakra: Chastise
-		[81208] 	= 	true, -- Chakra: Serenity
-		[2006] 	= 	true, -- Resurrection
-		[1706] 	= 	true, -- Levitate
-
-		--rogue
-		[108212]	=	true, -- Burst of Speed(misc)
-		[5171]	=	true, -- Slice and Dice
-		[2983]	=	true, -- Sprint
-		[36554]	=	true, -- Shadowstep
-		[1784]	=	true, -- Stealth
-		[115191]	=	true, -- Stealth
-		[2823]	=	true, -- Deadly Poison
-		--[108215]	=	true, -- Paralytic Poison
-		[14185]	=	true, -- Preparation
-		[74001] 	= 	true, -- Combat Readiness
-		[14183] 	= 	true, -- Premeditation
-		[108211] 	= 	true, -- Leeching Poison
-		--[5761] 	= 	true, -- Mind-numbing Poison
-		[8679] 	= 	true, -- Wound Poison
-
-		--shaman
-		[73680]	=	true, -- Unleash Elements(misc)
-		[3599]	=	true, -- Searing Totem
-		[2645]	=	true, -- Ghost Wolf
-		[108285]	=	true, -- Call of the Elements
-		--[8024]	=	true, -- Flametongue Weapon
-		--[51730]	=	true, -- Earthliving Weapon
-		[51485]	=	true, -- Earthgrab Totem
-		[108269]	=	true, -- Capacitor Totem
-		[79206]	=	true, -- Spiritwalker's Grace
-		[58875]	=	true, -- Spirit Walk
-		[36936]	=	true, -- Totemic Recall
-		[8177] 	= 	true, -- Grounding Totem
-		[8143] 	= 	true, -- Tremor Totem
-		[108273] 	= 	true, -- Windwalk Totem
-		[51514] 	= 	true, -- Hex
-		--[73682] 	= 	true, -- Unleash Frost
-		--[8033] 	= 	true, -- Frostbrand Weapon
-
-		--warlock
-		[697]	=	true, -- Summon Voidwalker
-		[6201]	=	true, -- Create Healthstone
-		[109151]	=	true, -- Demonic Leap
-		[103958]	=	true, -- Metamorphosis
-		[119678]	=	true, -- Soul Swap
-		[74434]	=	true, -- Soulburn
-		[108503]	=	true, -- Grimoire of Sacrifice
-		[111400]	=	true, -- Burning Rush
-		[109773]	=	true, -- Dark Intent
-		[112927]	=	true, -- Summon Terrorguard
-		[1122]	=	true, -- Summon Infernal
-		[18540]	=	true, -- Summon Doomguard
-		[29858]	=	true, -- Soulshatter
-		[20707]	=	true, -- Soulstone
-		[48018]	=	true, -- Demonic Circle: Summon
-		[80240] 	= 	true, -- Havoc
-		[112921] 	= 	true, -- Summon Abyssal
-		[48020] 	= 	true, -- Demonic Circle: Teleport
-		[111397] 	= 	true, -- Blood Horror
-		[112869] 	= 	true, -- Summon Observer
-		[1454] 	= 	true, -- Life Tap
-		[112868] 	= 	true, -- Summon Shivarra
-		[112869] 	= 	true, -- Summon Observer
-		[120451] 	= 	true, -- Flames of Xoroth
-		[29893] 	= 	true, -- Create Soulwell
-		[112866] 	= 	true, -- Summon Fel Imp
-		[108683] 	= 	true, -- Fire and Brimstone
-		[688] 	= 	true, -- Summon Imp
-		[112870] 	= 	true, -- Summon Wrathguard
-		[104316] 	= 	true, -- Imp Swarm
-
-		--warrior
-		[18499]	=	true, -- Berserker Rage(class)
-		[100]	=	true, -- Charge
-		[6673]	=	true, -- Battle Shout
-		[52174]	=	true, -- Heroic Leap
-		[355]	=	true, -- Taunt
-		[2457] 	= 	true, -- Battle Stance
-		[12328] 	= 	true, -- Sweeping Strikes
-		[114192] 	= 	true, -- Mocking Banner
-		-- [7386] 	= 	true, -- sunder
-
-	}
-
-	_detalhes.DualSideSpells = {
-		[114165]	=	true,-- Holy Prism(paladin)
-		[47750]	=	true, -- Penance(priest)
-	}
-
-	_detalhes.AttackCooldownSpells = {
-		--death knight
-		--[49016]	=	true, -- Unholy Frenzy(attack cd)
-		[49206]	=	true, -- Summon Gargoyle(attack cd)
-		[49028]	=	true, -- Dancing Rune Weapon(attack cd)
-		[51271]	=	true, -- Pillar of Frost(attack cd)
-		[63560]	=	true, -- Dark Transformation(pet)
-
-		--druid
-		[106951]	=	 true, -- Berserk(attack cd)
-		[124974]	=	 true, -- Nature's Vigil(attack cd)
-		[102543]	=	 true, -- Incarnation: King of the Jungle
-		[50334]	=	 true, -- Berserk
-		[102558]	=	 true, -- Incarnation: Son of Ursoc
-		[102560]	=	 true, -- Incarnation: Chosen of Elune
-		[112071]	=	 true, -- Celestial Alignment
-		[127663]	=	 true, -- Astral Communion
-		[108293]	=	 true, -- Heart of the Wild(attack cd)
-		[108291]	=	 true, -- Heart of the Wild
-
-		--hunter
-		[131894]	=	true,-- A Murder of Crows(attack cd)
-		[121818]	=	true,-- Stampede(attack cd)
-		[82692]	=	true,-- Focus Fire
-		[120360]	=	true,-- Barrage
-
-		--mage
-		[80353]	=	true,-- Time Warp
-		--[131078]	=	true,-- Icy Veins
-		[12472]	=	true,-- Icy Veins
-		[12043]	=	true,-- Presence of Mind
-		[108978]	=	true,-- Alter Time
-		[127140]	=	true,-- Alter Time
-		[12042]	=	true,-- Arcane Power
-
-		--paladin
-		[31884]	=	true,-- Avenging Wrath
-		[105809]	=	true,-- Holy Avenger
-		[31842] 	= 	true, -- Divine Favor
-
-		--priest
-		[34433]	= true, -- Shadowfiend
-		[10060]	= true, -- Power Infusion
-
-		--rogue
-		[13750]	=	true, -- Adrenaline Rush(attack cd)
-		--[121471]	=	true, -- Shadow Blades
-		[137619]	=	true, -- Marked for Death
-		[79140]	=	true, -- Vendetta
-		[51690]	=	true, -- Killing Spree
-		[51713]	=	true, -- Shadow Dance
-		[152151]	=	true, -- "Shadow Reflection"
-
-		--shaman
-		--[120668]	=	true, --Stormlash Totem(attack cd)
-		[2894]	=	true, -- Fire Elemental Totem
-		[2825]	=	true, -- Bloodlust
-		[114049]	=	true, -- Ascendance
-		[16166]	=	true, -- Elemental Mastery
-		[51533]	=	true, -- Feral Spirit
-		[16188]	=	true, -- Ancestral Swiftness
-		[2062]	=	true, -- Earth Elemental Totem
-
-		--warlock
-		[113860]	=	true, -- Dark Soul: Misery(attack cd)
-		[113858]	=	true, -- Dark Soul: Instability
-		[113861] 	= 	true, -- Dark Soul: Knowledge
-
-		--warrior
-		[1719]	=	true, -- Recklessness(attack cd)
-		--[114207]	=	true, -- Skull Banner
-		[107574]	=	true, -- Avatar
-		[12292]	=	true, -- Bloodbath
-		-- [7386]	=	true, -- sunder
-	}
-
-	_detalhes.HelpfulSpells = {
-		--t5 absorb
-		--t5 dk absorb
-		[308136] = true, -- bdk absorb
-		[308133] = true, -- bdk heal
-
-		[308125] = true, -- Death Knight, Ice Armor, T5
-		-- t5 pal absorb
-		[307921] = true, --pal
-		-- t5 war absorb
-		[310210] = true, -- t5 war absorb
-
-
-		--death knight
-		[45470] = true, -- Death Strike(heal)
-		[77535] = true, -- Blood Shield(heal)
-		[53365] = true, -- Unholy Strength(heal)
-		[48707] = true, -- Anti-Magic Shell(heal)
-		[48982] = true, -- rune tap
-		[119975]	=	true, -- Conversion(heal)
-		[48743]	=	true, -- Death Pact(heal)
-
-		--druid
-		--[33878] =	true, --mangle(energy gain)
-		[17057] =	true, --bear form(energy gain)
-		[16959] =	true, --primal fury(energy gain)
-		[5217] = true, --tiger's fury(energy gain)
-		[68285] =	true, --leader of the pack(mana)
-		[774]	=	true, --rejuvenation
-		--[44203]	=	true, --tranquility
-		[48438]	=	true, --wild growth
-		[81269]	=	true, --shiftmend
-		--[102792]	=	true, --wind moshroom: bloom
-		[5185]	=	true, --healing touch
-		[8936]	=	true, --regrowth
-		[33778]	=	true, --lifebloom
-		[48503]	=	true, --living seed
-		--[50464]	=	true, --nourish
-		[18562]	=	 true, --Swiftmend(heal)
-		[145205]	=	 true, -- Wild Mushroom(heal)
-		[33763]	=	 true, -- Lifebloom(heal)
-		--[102791]	=	 true, -- Wild Mushroom: Bloom
-		[147349]	=	 true, -- Wild Mushroom
-		[108238]	=	 true, -- Renewal
-		[102351]	=	 true, -- Cenarion Ward
-
-
-		--hunter
-		[109304]	=	true,-- Exhilaration(heal)
-
-		--mage
-		[11426]	=	true, --Ice Barrier(heal)
-		[115610]	=	true,-- Temporal Shield
-		[111264]	=	true,-- Ice Ward
-
-		--paladin
-		[85673]	=	true,-- Word of Glory(heal)
-		[20925]	=	true,-- Sacred Shield
-		[53563]	=	true,-- Beacon of Light
-		[633]	=	true,-- Lay on Hands
-		[114163]	=	true,-- Eternal Flame
-		[642]	=	true,-- Divine Shield
-		[31821]	=	true,-- Devotion Aura
-		[148039]	=	true,-- Sacred Shield
-		[82326]	=	true,-- Divine Light
-		[20167]	=	true,--seal of insight(mana)
-		[65148]	=	true, --Sacred Shield
-		[20167]	=	true, --Seal of Insight
-		[86273]	=	true, --illuminated healing
-		[85222]	=	true, --light of dawn
-		[53652]	=	true, --beacon of light
-		[82327]	=	true, --holy radiance
-		[119952]	=	true, --arcing light
-		[25914]	=	true, --holy shock
-		[19750]	=	true, --flash of light
-		[31850] 	= 	true, -- Ardent Defender --defensive cd
-		[1044] 	= 	true, -- Hand of Freedom --helpful
-		[114039] 	= 	true, -- Hand of Purity
-		[4987] 	= 	true, -- Cleanse
-		[136494] 	= 	true, -- Word of Glory
-
-	--priest
-		[48173]	= true, -- Desperate Prayer, Rank 9
-		[47788]	= true, -- Guardian Spirit
-		[32375]	= true, -- Mass Dispel
-		[48120]	= true, -- Binding Heal, Rank 3
-		[33110]	= true, -- prayer of mending
-		[48072]	= true, -- prayer of healing, Rank 7
-		[48089]	= true, -- circle of healing, Rank 7
-		[48068]	= true, -- renew, Rank 14
-		[48063]	= true, -- greater heal, Rank 9
-		[48071]	= true, -- flash heal, Rank 11
-		-- [47753]	= true, -- power word: shield, Rank 14
-		[48066]	= true, -- power word: shield, Rank 14
-		[308143] = true, -- power word: shield, Rank 15
-		[64904] = true, -- hymn of hope
-		[48113] = true, -- Prayer of Mending
-		[2053]	= true, -- Heal, Rank 3
-
-		--rogue
-		[73651]	=	true, --Recuperate(heal)
-		[35546]	=	true, --combat potency(energy)
-		[98440]	=	true, --relentless strikes(energy)
-		[51637]	=	true, --venomous vim(energy)
-		[31224]	=	true, -- Cloak of Shadows(cooldown)
-		[1966]	=	true, -- Feint(helpful)
-		[76577]	=	true, -- Smoke Bomb
-		[5277]	=	true, -- Evasion
-
-		--shaman
-		--[88765]	=	true, --rolling thunder(mana)
-		[51490]	=	true, --thunderstorm(mana)
-		--[82987]	=	true, --telluric currents glyph(mana)
-		[101033]	=	true, --resurgence(mana)
-		[51522]	=	true, --primal wisdom(mana)
-		--[63375]	=	true, --primal wisdom(mana)
-		[114942]	=	true, --healing tide
-		[73921]	=	true, --healing rain
-		[1064]	=	true, --chain heal
-		[52042]	=	true, --healing stream totem
-		[61295]	=	true, --riptide
-		--[51945]	=	true, --earthliving
-		[114083]	=	true, --restorative mists
-		[8004]	=	true, --healing surge
-		[5394]	=	true, -- Healing Stream Totem(heal)
-		[73920]	=	true, -- Healing Rain
-		[108270]	=	true, -- Stone Bulwark Totem
-		--[331]	=	true, -- Healing Wave
-		[52127]	=	true, -- Water Shield
-		[77472]	=	true, -- Greater Healing Wave
-		[108271]	=	true, -- Astral Shift
-		[30823]	=	true, --Shamanistic Rage
-		[77130]	=	true, -- Purify Spirit
-		[51886] 	= 	true, -- Cleanse Spirit
-		[98008] 	= 	true, -- Spirit Link Totem
-
-		--warlock
-		[108359]	=	true, -- Dark Regeneration(helpful)
-		[110913]	=	true, -- Dark Bargain
-		[104773]	=	true, -- Unending Resolve
-		--[6229]	=	true, -- Twilight Ward
-		[114635]	=	true, -- Ember Tap
-		--[131623]	=	true, -- Twilight Ward
-		[108416]	=	true, -- Sacrificial Pact
-		[132413]	=	true, -- Shadow Bulwark
-		[114189] 	= 	true, -- Health Funnel
-
-		--warrior
-		[871]	=	true, -- Shield Wall
-		[97462]	=	true, -- Rallying Cry
-		[118038]	=	true, -- Die by the Sword
-		--[114203]	=	true, -- Demoralizing Banner
-		[114028]	=	true, -- Mass Spell Reflection
-		[55694]	=	true, -- Enraged Regeneration
-		[112048]	=	true, -- Shield Barrier
-		[23920]	=	true, -- Spell Reflection
-		[12975]	=	true, -- Last Stand
-		[2565] 	= 	true, -- Shield Block
-		-- [7386]	=	true, -- sunder
-	}
-
-
-	local Loc = LibStub("AceLocale-3.0"):GetLocale( "Details" )
-	_detalhes.SpellOverwrite = {
-		--[124464] = {name = GetSpellInfo(124464).."("..Loc["STRING_MASTERY"]..")"}, --> shadow word: pain mastery proc(priest)
-	}
-
 	function _detalhes:IsCooldown(spellid)
 		return _detalhes.DefensiveCooldownSpellsNoBuff[spellid] or _detalhes.DefensiveCooldownSpells[spellid]
 	end
@@ -2201,7 +1324,9 @@ do
 	end
 
 	function _detalhes:GetCooldownList(class)
-		class = class or select(2, UnitClass("player"))
+		if (not class) then
+			_, class = UnitClass("player")
+		end
 		return _detalhes.DefensiveCooldownSpells[class]
 	end
 end

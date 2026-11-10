@@ -1,5 +1,4 @@
 local Loc = LibStub("AceLocale-3.0"):GetLocale("Details_TimeLine")
-local SharedMedia = LibStub:GetLibrary("LibSharedMedia-3.0")
 
 --> create the plugin object
 local TimeLine = _detalhes:NewPluginObject("Details_TimeLine", DETAILSPLUGIN_ALWAYSENABLED)
@@ -7,11 +6,8 @@ tinsert(UISpecialFrames, "Details_TimeLine")
 --> main frame(shortcut)
 local TimeLineFrame = TimeLine.Frame
 
-local debugmode = false
 local _
 
-local COMBATLOG_OBJECT_REACTION_FRIENDLY = COMBATLOG_OBJECT_REACTION_FRIENDLY
-local COMBATLOG_OBJECT_TYPE_PLAYER = COMBATLOG_OBJECT_TYPE_PLAYER
 local _bit_band = bit.band
 local tinsert = tinsert
 
@@ -31,10 +27,7 @@ local _is_in_combat = false
 
 TimeLine:SetPluginDescription(Loc["STRING_PLUGIN_DESC"])
 
-TimeLine.version_string = "v3.3"
-
-local menu_wallpaper_tex = {.6, 0.1, 0, 0.64453125}
-local menu_wallpaper_color = {1, 1, 1, 0.15}
+TimeLine.version_string = "v3.4"
 
 local function CreatePluginFrames()
 	TimeLine.combat_data = {} --temp avoid errors on initialization
@@ -48,11 +41,7 @@ local function CreatePluginFrames()
 	local DetailsFrameWork = _detalhes.gump
 
 	local framework = _detalhes:GetFramework()
-	local options_text_template = framework:GetTemplate("font", "OPTIONS_FONT_TEMPLATE")
 	local options_dropdown_template = framework:GetTemplate("dropdown", "OPTIONS_DROPDOWN_TEMPLATE")
-	local options_switch_template = framework:GetTemplate("switch", "OPTIONS_CHECKBOX_TEMPLATE")
-	local options_slider_template = framework:GetTemplate("slider", "OPTIONS_SLIDER_TEMPLATE")
-	local options_button_template = framework:GetTemplate("button", "OPTIONS_BUTTON_TEMPLATE")
 
 	framework.button_templates["ADL_BUTTON_TEMPLATE"] = {
 		backdrop = {
@@ -65,18 +54,15 @@ local function CreatePluginFrames()
 		onenterbordercolor = {0, 0, 0, 1},
 	}
 
-	options_button_template = framework:GetTemplate("button", "ADL_BUTTON_TEMPLATE")
+	local options_button_template = framework:GetTemplate("button", "ADL_BUTTON_TEMPLATE")
 
 	local all_types = {type_cooldown, type_debuff, type_enemy_spells, type_boss_spells}
-	local all_types_names = {Loc["STRING_TYPE_COOLDOWN"], Loc["STRING_TYPE_DEBUFF"], "Enemy Spell Cast", "Spell Timeline"}
 	local current_type = all_types[2]
 	local current_segment = 1
 
 	local class_icons_with_alpha = [[Interface\AddOns\Details\images\classes_small_alpha]]
 	local BUTTON_BACKGROUND_COLOR = {.5, .5, .5, .3}
-	local BUTTON_BACKGROUND_COLORHIGHLIGHT = {.5, .5, .5, .8}
 	local BUTTON_BACKGROUND_COLOR2 = {.4, .4, .4, .3}
-	local BUTTON_BACKGROUND_COLORHIGHLIGHT2 = {.4, .4, .4, .8}
 
 	local c = CreateFrame("Button", nil, TimeLineFrame, "UIPanelCloseButton")
 	c:SetWidth(20)
@@ -87,16 +73,7 @@ local function CreatePluginFrames()
 	c:SetAlpha(1)
 
 	--title bar
-	local titlebar = CreateFrame("Frame", nil, TimeLineFrame)
-	titlebar:SetPoint("TOPLEFT", TimeLineFrame, "TOPLEFT", 2, -3)
-	titlebar:SetPoint("TOPRIGHT", TimeLineFrame, "TOPRIGHT", -2, -3)
-	titlebar:SetHeight(20)
-	titlebar:SetBackdrop({
-		edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1,
-		bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true
-	})
-	titlebar:SetBackdropColor(.5, .5, .5, 1)
-	titlebar:SetBackdropBorderColor(0, 0, 0, 1)
+	local titlebar = _detalhes:CreateWindowTitleBar (TimeLineFrame)
 
 	local name_bg_texture = TimeLineFrame:CreateTexture(nil, "BACKGROUND")
 	name_bg_texture:SetTexture([[Interface\AddOns\Details_TimeLine\textures\PetBattles\_PetBattleHorizTile]], true)
@@ -126,9 +103,6 @@ local function CreatePluginFrames()
 	TimeLine.showing = false
 	TimeLine.open = false
 
-	--> record if boss window is open or not
-	TimeLine.window_open = false
-
 	--> rows
 	TimeLine.rows = {}
 
@@ -151,17 +125,6 @@ local function CreatePluginFrames()
 	end
 
 	function TimeLine:FinishCombat()
-		--> is in debug mode?
-		if debugmode and _combat_object and not _combat_object.is_boss then
-			_combat_object.is_boss = {
-				index = 1,
-				name = _detalhes:GetBossName(1098, 1),
-				zone = "Throne of Thunder",
-				mapid = 1098,
-				encounter = "Jin'Rohk the Breaker"
-			}
-		end
-
 		--> is a boss encounter?
 		if _combat_object and _combat_object.is_boss then
 			--> combat information
@@ -191,7 +154,7 @@ local function CreatePluginFrames()
 				for spellid, spell_table in pairs(player_table) do
 					if spell_table.active then
 						spell_table.active = false
-						tinsert(spell_table, _combat_object:GetCombatTime())
+						spell_table[#spell_table+1] = _combat_object:GetCombatTime()
 					end
 				end
 			end
@@ -235,7 +198,7 @@ local function CreatePluginFrames()
 					deaths[player_name] = {}
 				end
 
-				tinsert(deaths[player_name], this_death)
+				deaths[player_name][#deaths[player_name]+1] = this_death
 			end
 
 			tinsert(TimeLine.deaths_data, 1, deaths)
@@ -247,6 +210,7 @@ local function CreatePluginFrames()
 				table.remove(TimeLine.combat_data, TimeLine.db.max_segments + 1)
 				table.remove(TimeLine.deaths_data, TimeLine.db.max_segments + 1)
 				table.remove(TimeLine.spellcast_boss, TimeLine.db.max_segments + 1)
+				table.remove(TimeLine.boss_spells, TimeLine.db.max_segments + 1)
 			end
 
 			--> show icon
@@ -269,8 +233,6 @@ local function CreatePluginFrames()
 			self.open = false
 		elseif event == "SHOW" then --> plugin hidded, disabled
 			self.open = true
-
-			TimeLine:RefreshScale()
 		elseif event == "COMBAT_PLAYER_ENTER" then --> combat started
 			_combat_object = ...
 
@@ -293,7 +255,7 @@ local function CreatePluginFrames()
 			table.wipe(TimeLine.cooldowns_timeline)
 			table.wipe(TimeLine.combat_data)
 			table.wipe(TimeLine.debuff_timeline)
-			table.wipe(TimeLine.deaths_data)
+			table.wipe(TimeLine.deaths_data) table.wipe(TimeLine.spellcast_boss) table.wipe(TimeLine.boss_spells)
 
 			TimeLine:Refresh()
 			TimeLine:CloseWindow()
@@ -375,18 +337,7 @@ local function CreatePluginFrames()
 	local cooltip_menu = function()
 		local CoolTip = GameCooltip2
 
-		CoolTip:Reset()
-		CoolTip:SetType("menu")
-
-		CoolTip:SetOption("TextSize", Details.font_sizes.menus)
-		CoolTip:SetOption("TextFont", Details.font_faces.menus)
-
-		CoolTip:SetOption("LineHeightSizeOffset", 3)
-		CoolTip:SetOption("VerticalOffset", 2)
-		CoolTip:SetOption("VerticalPadding", -4)
-		CoolTip:SetOption("FrameHeightSizeOffset", -3)
-
-		Details:SetTooltipMinWidth()
+		Details:SetPluginMenuCooltip()
 
 		--build the menu options
 		--> debuffs
@@ -571,25 +522,6 @@ local function CreatePluginFrames()
 		end
 	end
 
-	--> dropdown select type(label)
-	local select_type_label = DetailsFrameWork:NewLabel(TimeLineFrame, nil, "$parentTypeLabel", nil, Loc["STRING_TYPE"])
-	--> dropdown select type(dropdown)
-	local selectTypeOption = function(_, _, selected)
-		current_type = selected
-		TimeLine:Refresh()
-	end
-
-	local type_menu = {
-		{value = type_cooldown, label = Loc["STRING_TYPE_COOLDOWN"], onclick = selectTypeOption, icon =[[Interface\ICONS\Spell_Holy_GuardianSpirit]]},
-		{value = type_debuff, label = Loc["STRING_TYPE_DEBUFF"], onclick = selectTypeOption, icon =[[Interface\ICONS\Spell_Shadow_ShadowWordPain]]}
-	}
-
-	local buildTypeMenu = function()
-		return type_menu
-	end
-
-	local select_type_dropdown = DetailsFrameWork:NewDropDown(TimeLineFrame, nil, "$parentTypeDropdown", nil, 120, 20, buildTypeMenu, 1, options_dropdown_template)
-
 	--> dropdown select combat(label)
 	local select_segment_label = DetailsFrameWork:NewLabel(TimeLineFrame, nil, "$parentSegmentLabel", nil, Loc["STRING_SELECT_SEGMENT"], "GameFontNormal", nil, "orange")
 	select_segment_label.textsize = 9
@@ -670,7 +602,7 @@ local function CreatePluginFrames()
 		table.wipe(TimeLine.cooldowns_timeline)
 		table.wipe(TimeLine.combat_data)
 		table.wipe(TimeLine.debuff_timeline)
-		table.wipe(TimeLine.deaths_data)
+		table.wipe(TimeLine.deaths_data) table.wipe(TimeLine.spellcast_boss) table.wipe(TimeLine.boss_spells)
 
 		TimeLine:Refresh()
 
@@ -788,7 +720,6 @@ local function CreatePluginFrames()
 	local block_backdrop_onenter = {bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16,
 		edgeFile =[[Interface\AddOns\Details\images\border_2]], edgeSize = 8,
 		insets = {left = 0, right = 0, top = 0, bottom = 0}}
-	local block_backdrop_cooltip_white = {1, 1, 1, 1}
 
 	local block_on_enter = function(self)
 
@@ -884,39 +815,7 @@ local function CreatePluginFrames()
 				end
 			end
 
-		elseif(current_type == type_enemy_spells) then
-
-			GameCooltip:AddLine(spell_name, nil, 1, "white")
-			GameCooltip:AddIcon(spell_icon, 1, 1, 14, 14, .1, .9, .1, .9)
-
-			local minutos, segundos = math.floor(spell[2]/60), math.floor(spell[2]%60)
-			GameCooltip:AddLine(Loc["STRING_TIME"] .. ": |cFFFFFFFF" .. minutos .. "m " .. segundos .. "s |r")
-			GameCooltip:AddLine(Loc["STRING_SOURCE"] .. ": |cFFFFFFFF" ..(spell[6].source or Loc["STRING_UNKNOWN"]) .. "|r")
-
-			local class = TimeLine:GetClass(self.TargetName or "")
-			local formatedTargetName = DetailsFrameWork:AddClassColorToText(self.TargetName or "", class)
-			GameCooltip:AddLine(Loc["STRING_TARGET"] .. ": |cFFFFFFFF" .. formatedTargetName .. "|r")
-
-			local blocks = self:GetParent().blocks
-			for _, block in ipairs(blocks) do
-				if(block.cast_start and block:IsShown() and block ~= self and((block.cast_start <= time and block.cast_start + 8 >= time) or(block.cast_start >= time and block.cast_start - 8 <= time))) then
-					GameCooltip:AddLine("")
-					local spell_name, _, spell_icon = GetSpellInfo(block.spell[1])
-					GameCooltip:AddLine(spell_name)
-					GameCooltip:AddIcon(spell_icon, 1, 1, 14, 14, .1, .9, .1, .9)
-
-					local minutos, segundos = math.floor(block.cast_start / 60), math.floor(block.cast_start % 60)
-					GameCooltip:AddLine(Loc["STRING_TIME"] .. ": |cFFFFFFFF" .. minutos .. "m " .. segundos .. "s ")
-					GameCooltip:AddLine(Loc["STRING_SOURCE"] .. ": |cFFFFFFFF" ..(block.SourceName or Loc["STRING_UNKNOWN"]))
-
-					local targetName = block.TargetName or ""
-					local class = TimeLine:GetClass(targetName)
-					local formatedTargetName = DetailsFrameWork:AddClassColorToText(targetName, class)
-					GameCooltip:AddLine(Loc["STRING_TARGET"] .. ": |cFFFFFFFF" .. formatedTargetName .. "|r")
-				end
-			end
-
-		elseif(current_type == type_boss_spells) then
+		elseif(current_type == type_enemy_spells or current_type == type_boss_spells) then
 
 			GameCooltip:AddLine(spell_name, nil, 1, "white")
 			GameCooltip:AddIcon(spell_icon, 1, 1, 14, 14, .1, .9, .1, .9)
@@ -1005,8 +904,7 @@ local function CreatePluginFrames()
 
 		local where = pixel_per_sec * time_used
 
-		block:ClearAllPoints()
-		block:SetPoint("left", row, "left", where + CONST_PLAYERFIELD_SIZE, 0)
+		block:ClearAndSetPoint("left", row, "left", where + CONST_PLAYERFIELD_SIZE, 0)
 
 		if(effect_time < 5) then
 			effect_time = 5
@@ -1033,7 +931,7 @@ local function CreatePluginFrames()
 		if(search) then
 			local spellname = GetSpellInfo(spellid)
 			spellname = string.lower(spellname)
-			if(spellname:find(search)) then
+			if(spellname:find(search, 1, true)) then
 				block:Show()
 			else
 				block:Hide()
@@ -1093,8 +991,7 @@ local function CreatePluginFrames()
 		end
 
 		local where = pixel_per_sec * death.time
-		pin:ClearAllPoints()
-		pin:SetPoint("left", row, "left", where + CONST_PLAYERFIELD_SIZE, 0)
+		pin:ClearAndSetPoint("left", row, "left", where + CONST_PLAYERFIELD_SIZE, 0)
 		pin.time = death.time
 
 		for event = 1, #death.events do
@@ -1226,7 +1123,6 @@ local function CreatePluginFrames()
 						local debuff_elapsed =(end_time or 0) -(start_time or 0)
 
 						block.debuff_start = start_time
-						block.debuff_end = end_time
 						SetSpellBlock(row, block, start_time, spell_id, debuff_elapsed, myname, total_time, pixel_per_sec, player_name, debuff_timers, red, o)
 
 						o = o + 1
@@ -1238,7 +1134,7 @@ local function CreatePluginFrames()
 			end
 
 
-		elseif(current_type == type_enemy_spells and player_table) then
+		elseif((current_type == type_enemy_spells or current_type == type_boss_spells) and player_table) then
 			local o = 1
 			for index, spellTable in ipairs(player_table) do
 				local combatTime, sourceName, spellID, token, targetName = unpack(spellTable)
@@ -1250,33 +1146,6 @@ local function CreatePluginFrames()
 				end
 
 				block.cast_start = combatTime
-				block.cast_end = combatTime + 8
-
-				local spellName, _, spellIcon = GetSpellInfo(spellID)
-
-				player_table.source = sourceName or ""
-				player_table.target = targetName or ""
-				block.SourceName = sourceName or ""
-				block.TargetName = targetName or ""
-
-				SetSpellBlock(row, block, combatTime, spellID, 8, spellName, total_time, pixel_per_sec, player_name, player_table, red, o)
-				o = o + 1
-			end
-
-
-		elseif(current_type == type_boss_spells and player_table) then
-			local o = 1
-			for index, spellTable in ipairs(player_table) do
-				local combatTime, sourceName, spellID, token, targetName = unpack(spellTable)
-
-				local block = row.blocks[o]
-				if(not block) then
-					row.blocks[o] = TimeLine:CreateSpellBlock(row)
-					block = row.blocks[o]
-				end
-
-				block.cast_start = combatTime
-				block.cast_end = combatTime + 8
 
 				local spellName, _, spellIcon = GetSpellInfo(spellID)
 
@@ -1291,19 +1160,6 @@ local function CreatePluginFrames()
 
 		end
 
-	end
-
-	local on_row_mousedown = function(self, button)
-		if(button == "LeftButton") then
-			self:GetParent():StartMoving()
-			self:GetParent().isMoving = true
-		end
-	end
-	local on_row_mouseup = function(self)
-		if(self:GetParent().isMoving) then
-			self:GetParent():StopMovingOrSizing()
-			self:GetParent().isMoving = false
-		end
 	end
 
 	function TimeLine:CreateRow()
@@ -1356,6 +1212,9 @@ local function CreatePluginFrames()
 			return
 		end
 
+		if(not TimeLine.combat_data[current_segment]) then
+			current_segment = 1
+		end
 		local _table_to_use = TimeLine[current_type][current_segment]
 		local total_time = TimeLine.combat_data[current_segment].total_time
 		local pixel_per_sec = CONST_VALID_WIDHT / total_time
@@ -1422,25 +1281,6 @@ local function CreatePluginFrames()
 	end
 end
 
---<
-function TimeLine:ArrangeCooldownsInOrder(auraType, auraList)
-	if auraType == "BUFF" then
-		local newTable = {}
-		for _, spellid in ipairs(auraList) do
-			tinsert(newTable, {spellid, GetSpellInfo(spellid)})
-		end
-		table.sort(newTable, function(a, b) return a[2] < b[2] end)
-		return newTable
-	elseif auraType == "DEBUFF" then
-		local newTable = {}
-		for _, spellid in ipairs(auraList) do
-			tinsert(newTable, {spellid, GetSpellInfo(spellid)})
-		end
-		table.sort(newTable, function(a, b) return a[2] < b[2] end)
-		return newTable
-	end
-end
-
 function TimeLine:OnCooldown(token, time, who_serial, who_name, who_flags, target_serial, target_name, target_flags, spellid, spellname)
 	--> hooks run inside parser and do not check if the plugin is enabled or not.
 	--> we need to check this here before continue.
@@ -1500,7 +1340,7 @@ function TimeLine:AuraOn(time, _, who_serial, who_name, who_flags, target_serial
 		--> is the target a player?
 		if _bit_band(target_flags, 0x00000400) ~= 0 then
 			--> is the source an enemy?
-			if not _bit_band(who_flags, 0x00000010) == 0 or (not who_serial or not who_name) then
+			if _bit_band(who_flags, 0x00000010) == 0 or (not who_serial or not who_name) then
 				local player_table = TimeLine.debuff_temp_table[target_name]
 				if not player_table then
 					player_table = {}
@@ -1523,7 +1363,7 @@ function TimeLine:AuraOn(time, _, who_serial, who_name, who_flags, target_serial
 				end
 
 				--array
-				tinsert(spell_table, _combat_object:GetCombatTime())
+				spell_table[#spell_table+1] = _combat_object:GetCombatTime()
 
 				--hash
 				spell_table.active = true
@@ -1537,7 +1377,7 @@ function TimeLine:AuraOff(time, _, who_serial, who_name, who_flags, target_seria
 		--> is the target a player?
 		if _bit_band(target_flags, 0x00000400) ~= 0 then
 			--> is the source an enemy?
-			if not _bit_band(who_flags, 0x00000010) == 0 or (not who_serial or not who_name) then
+			if _bit_band(who_flags, 0x00000010) == 0 or (not who_serial or not who_name) then
 				local player_table = TimeLine.debuff_temp_table[target_name]
 				if not player_table then
 					return
@@ -1553,7 +1393,7 @@ function TimeLine:AuraOff(time, _, who_serial, who_name, who_flags, target_seria
 				end
 
 				--array
-				tinsert(spell_table, _combat_object:GetCombatTime())
+				spell_table[#spell_table+1] = _combat_object:GetCombatTime()
 				--hash
 				spell_table.active = false
 			end
@@ -1586,18 +1426,6 @@ local build_options_panel = function()
 			desc = Loc["STRING_OPTIONS_BGCOLOR_DESC"],
 			name = Loc["STRING_OPTIONS_BGCOLOR"]
 		},
-		{
-			type = "range",
-			get = function() return TimeLine.db.window_scale end,
-			set = function(self, fixedparam, value)
-				TimeLine.db.window_scale = value
-				TimeLine:RefreshScale()
-			end,
-			min = 0.65, max = 1.50, step = 0.1,
-			desc = Loc["STRING_OPTIONS_WINDOWCOLOR_DESC"],
-			name = Loc["STRING_OPTIONS_WINDOWCOLOR"],
-			usedecimals = true,
-		},
 	}
 
 	local options_text_template = TimeLine:GetFramework():GetTemplate("font", "OPTIONS_FONT_TEMPLATE")
@@ -1621,15 +1449,8 @@ function TimeLine:RefreshBackgroundColor()
 	TimeLineFrame:SetBackdropColor(unpack(TimeLine.db.backdrop_color))
 end
 
-function TimeLine:RefreshScale()
-	local scale = TimeLine.db.window_scale
-	if TimeLineFrame then
-		TimeLineFrame:SetScale(scale)
-	end
-end
-
 function TimeLine:OnEvent(_, event, ...)
-	if event == "COMBAT_LOG_EVENT_UNFILTERED" and _combat_object then
+	if event == "COMBAT_LOG_EVENT_UNFILTERED" and _is_in_combat then
 		local time, token, sourceGUID, sourceName, sourceFlag, targetGUID, targetName, targetFlag, spellID, spellName, spellType, amount, overKill, school, resisted, blocked, absorbed, isCritical = ...
 
 		if token == "SPELL_AURA_APPLIED" or token == "SPELL_AURA_REFRESH" then
@@ -1651,7 +1472,7 @@ function TimeLine:OnEvent(_, event, ...)
 				local db = DetailsTimeLineDB
 
 				--> Install
-				local install, saveddata, is_enabled = _G._detalhes:InstallPlugin("TOOLBAR", Loc["STRING_PLUGIN_NAME"], [[Interface\CHATFRAME\ChatFrameExpandArrow]], TimeLine, "DETAILS_PLUGIN_TIME_LINE", MINIMAL_DETAILS_VERSION_REQUIRED, "Details! Team", TimeLine.version_string)
+				local install, saveddata, is_enabled = _G._detalhes:InstallPlugin("TOOLBAR", Loc["STRING_PLUGIN_NAME"], [[Interface\CHATFRAME\ChatFrameExpandArrow]], TimeLine, "DETAILS_PLUGIN_TIME_LINE", MINIMAL_DETAILS_VERSION_REQUIRED, "Accidev", TimeLine.version_string)
 				if type(install) == "table" and install.error then
 					print(install.error)
 					return
@@ -1661,11 +1482,9 @@ function TimeLine:OnEvent(_, event, ...)
 					db = {}
 					DetailsTimeLineDB = db
 
-					db.hide_on_combat = false
 					db.useicons = true
 					db.max_segments = 4
 					db.backdrop_color = {0, 0, 0, .4}
-					db.window_scale = 1
 
 					db.cooldowns_timeline = {}
 					db.debuff_timeline = {}
@@ -1720,9 +1539,7 @@ function TimeLine:OnEvent(_, event, ...)
 				TimeLine:UpdateShowSpellIconState()
 
 				--> embed the plugin into the plugin window
-				if DetailsPluginContainerWindow then
-					DetailsPluginContainerWindow.EmbedPlugin(TimeLine, TimeLine.Frame)
-				end
+				DetailsPluginContainerWindow.EmbedPlugin(TimeLine, TimeLine.Frame)
 			end
 		end
 	end

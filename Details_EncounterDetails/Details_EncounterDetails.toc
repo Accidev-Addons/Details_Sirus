@@ -1,18 +1,13 @@
 ## Interface: 30300
-## Title: Details!: Encounter Breakdown (plugin)
+## Title: |cFF9B59B6D|cFFAA77CCe|cFFBB99DDt|cFFAA77CCa|cFF9B59B6i|cFFAA77CCl|cFFBB99DDs|cFFAA77CC!|cFFDDBBEE Encounter Breakdown|r
 ## Notes: Show detailed information about a boss encounter. Also provide damage per phase, graphic charts, easy weakauras creation.
-## Notes-ruRU: Показывает подробную информацию о битве с боссом. Урон от способностей босса, смерти, рассеивания. Предоставляет графические диаграммы. 
+## Notes-ruRU: Показывает подробную информацию о битве с боссом. Урон от способностей босса, смерти, рассеивания. Предоставляет графические диаграммы.
+## Author: Accidev
 ## RequiredDeps: Details
 ## OptionalDeps: Ace3
 ## SavedVariablesPerCharacter: EncounterDetailsDB
-## X-Sirus-Update: https://github.com/fxpw/Details_Sirus/tree/master/Details_EncounterDetails
-
-#@no-lib-strip@
-embeds.xml
-#@end-no-lib-strip@
 
 enUS.lua
-ptBR.lua
 frames.lua
 
 Details_EncounterDetails.lua

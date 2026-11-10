@@ -11,28 +11,10 @@ local _
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> local pointers
 
-	local _cstr = string.format --lua local
-	local _math_floor = math.floor --lua local
 	local _table_sort = table.sort --lua local
-	local _table_insert = table.insert --lua local
-	local _table_size = table.getn --lua local
-	local _setmetatable = setmetatable --lua local
-	local _ipairs = ipairs --lua local
 	local _pairs = pairs --lua local
-	local _rawget= rawget --lua local
-	local _math_min = math.min --lua local
-	local _math_max = math.max --lua local
-	local _bit_band = bit.band --lua local
-	local _unpack = unpack --lua local
-	local _type = type --lua local
 
 	local _GetSpellInfo = _detalhes.getspellinfo -- api local
-	local _IsInRaid = IsInRaid -- api local
-	local _IsInGroup = IsInGroup -- api local
-	local _GetNumGroupMembers = GetNumGroupMembers -- api local
-	local _GetNumPartyMembers = GetNumPartyMembers or GetNumSubgroupMembers -- api local
-	local _GetNumRaidMembers = GetNumRaidMembers or GetNumGroupMembers -- api local
-	local _GetUnitName = GetUnitName -- api local
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> constants
@@ -40,14 +22,10 @@ local _
 	local atributo_custom = _detalhes.atributo_custom
 
 	local ToKFunctions = _detalhes.ToKFunctions
-	local SelectedToKFunction = ToKFunctions [1]
 	local FormatTooltipNumber = ToKFunctions [8]
-	local TooltipMaximizedMethod = 1
 
 	function atributo_custom:UpdateDamageDoneBracket()
-		SelectedToKFunction = ToKFunctions [_detalhes.ps_abbreviation]
 		FormatTooltipNumber = ToKFunctions [_detalhes.tooltip.abbreviation]
-		TooltipMaximizedMethod = _detalhes.tooltip.maximize_method
 	end
 
 	local temp_table = {}
@@ -103,106 +81,114 @@ local _
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> damagedone tooltip
 
-	function atributo_custom:damagedoneTooltip (actor, target, spellid, combat, instance)
+	local build_done_tooltip = function (class_type, from_key, amount_label, tooltip_method)
+		return function (self, actor, target, spellid, combat, instance)
 
-		if (spellid) then
+			if (spellid) then
 
-			if (instance:GetCustomObject():IsSpellTarget()) then
-				local targetname = actor.nome
-				local this_actor = combat (1, targetname)
+				if (instance:GetCustomObject():IsSpellTarget()) then
+					local targetname = actor.nome
+					local this_actor = combat (class_type, targetname)
 
-				if (this_actor) then
-					for name, _ in _pairs (this_actor.damage_from) do
-						local aggressor = combat (1, name)
-						if (aggressor) then
-							local spell = aggressor.spells._ActorTable [spellid]
-							if (spell) then
-								local on_me = spell.targets [targetname]
-								if (on_me) then
-									GameCooltip:AddLine (aggressor.nome, FormatTooltipNumber (_, on_me))
-									_detalhes:AddTooltipBackgroundStatusbar()
+					if (this_actor) then
+						for name, _ in _pairs (this_actor [from_key]) do
+							local aggressor = combat (class_type, name)
+							if (aggressor) then
+								local spell = aggressor.spells._ActorTable [spellid]
+								if (spell) then
+									local on_me = spell.targets [targetname]
+									if (on_me) then
+										GameCooltip:AddLine (aggressor.nome, FormatTooltipNumber (_, on_me))
+										_detalhes:AddTooltipBackgroundStatusbar()
+									end
 								end
 							end
 						end
 					end
+
+					return
+				else
+					local name, _, icon = _GetSpellInfo (spellid)
+					GameCooltip:AddLine (name)
+					GameCooltip:AddIcon (icon, 1, 1, 14, 14)
+
+					local spell = actor.spells and actor.spells._ActorTable [spellid]
+					if (spell) then
+						GameCooltip:AddLine (Loc [amount_label] .. ": ", spell.total)
+						GameCooltip:AddLine (Loc ["STRING_HITS"] .. ": ", spell.counter)
+						GameCooltip:AddLine (Loc ["STRING_CRITICAL_HITS"] .. ": ", spell.c_amt)
+					end
 				end
 
-				return
-			else
-				local name, _, icon = _GetSpellInfo (spellid)
-				GameCooltip:AddLine (name)
-				GameCooltip:AddIcon (icon, 1, 1, 14, 14)
+			elseif (target) then
 
-				GameCooltip:AddLine (Loc ["STRING_DAMAGE"] .. ": ", spell.total)
-				GameCooltip:AddLine (Loc ["STRING_HITS"] .. ": ", spell.counter)
-				GameCooltip:AddLine (Loc ["STRING_CRITICAL_HITS"] .. ": ", spell.c_amt)
-			end
+				if (target == "[all]") then
+					SortOrder (actor.targets, target_func)
 
-		elseif (target) then
+					for i = 1, #temp_table do
+						local t = temp_table [i]
+						if (t[2] < 1) then
+							break
+						end
 
-			if (target == "[all]") then
-				SortOrder (actor.targets, target_func)
-
-				for i = 1, #temp_table do
-					local t = temp_table [i]
-					if (t[2] < 1) then
-						break
-					end
-
-					GameCooltip:AddLine (t[1], FormatTooltipNumber (_, t[2]))
-					_detalhes:AddTooltipBackgroundStatusbar()
-					GameCooltip:AddIcon ([[Interface\FriendsFrame\StatusIcon-Offline]], 1, 1, 14, 14)
-				end
-
-			elseif (target == "[raid]") then
-				local roster = combat.raid_roster
-
-				SortOrder (actor.targets, target_func)
-
-				for i = 1, #temp_table do
-					local t = temp_table [i]
-
-					if (t[2] < 1) then
-						break
-					end
-
-					if (roster [t[1]]) then
 						GameCooltip:AddLine (t[1], FormatTooltipNumber (_, t[2]))
 						_detalhes:AddTooltipBackgroundStatusbar()
+						GameCooltip:AddIcon ([[Interface\FriendsFrame\StatusIcon-Offline]], 1, 1, 14, 14)
 					end
+
+				elseif (target == "[raid]") then
+					local roster = combat.raid_roster
+
+					SortOrder (actor.targets, target_func)
+
+					for i = 1, #temp_table do
+						local t = temp_table [i]
+
+						if (t[2] < 1) then
+							break
+						end
+
+						if (roster [t[1]]) then
+							GameCooltip:AddLine (t[1], FormatTooltipNumber (_, t[2]))
+							_detalhes:AddTooltipBackgroundStatusbar()
+						end
+					end
+
+				elseif (target == "[player]") then
+					local target_amount = actor.targets [_detalhes.playername]
+					if (target_amount) then
+						GameCooltip:AddLine (_detalhes.playername, FormatTooltipNumber (_, target_amount))
+						_detalhes:AddTooltipBackgroundStatusbar()
+					end
+				else
+					SortOrder (actor.spells._ActorTable, spells_used_func, target)
+
+					for i = 1, #temp_table do
+						local t = temp_table [i]
+
+						if (t[2] < 1) then
+							break
+						end
+
+						local name, _, icon = _GetSpellInfo (t[1])
+						GameCooltip:AddLine (name, FormatTooltipNumber (_, t[2]))
+						_detalhes:AddTooltipBackgroundStatusbar()
+						GameCooltip:AddIcon (icon, 1, 1, 14, 14)
+					end
+
+					--for index, pet_name in ipairs (actor.pets) do
+
+					--end
 				end
 
-			elseif (target == "[player]") then
-				local target_amount = actor.targets [_detalhes.playername]
-				if (target_amount) then
-					GameCooltip:AddLine (targetactor.nome, FormatTooltipNumber (_, target_amount))
-					_detalhes:AddTooltipBackgroundStatusbar()
-				end
 			else
-				SortOrder (actor.spells._ActorTable, spells_used_func, target)
-
-				for i = 1, #temp_table do
-					local t = temp_table [i]
-
-					if (t[2] < 1) then
-						break
-					end
-
-					local name, _, icon = _GetSpellInfo (t[1])
-					GameCooltip:AddLine (name, FormatTooltipNumber (_, t[2]))
-					_detalhes:AddTooltipBackgroundStatusbar()
-					GameCooltip:AddIcon (icon, 1, 1, 14, 14)
-				end
-
-				--for index, pet_name in ipairs (actor.pets) do
-
-				--end
+				actor [tooltip_method] (actor, instance)
 			end
-
-		else
-			actor:ToolTip_DamageDone (instance)
 		end
 	end
+
+	atributo_custom.damagedoneTooltip = build_done_tooltip (1, "damage_from", "STRING_DAMAGE", "ToolTip_DamageDone")
+	atributo_custom.healdoneTooltip = build_done_tooltip (2, "healing_from", "STRING_HEAL", "ToolTip_HealingDone")
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> damagedone search
@@ -311,3 +297,4 @@ local _
 		end
 
 	end
+	atributo_custom.healdone = atributo_custom.damagedone

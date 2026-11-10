@@ -5,12 +5,9 @@ local _
 local gump = _detalhes.gump
 local SharedMedia = LibStub:GetLibrary("LibSharedMedia-3.0")
 
-local atributos = _detalhes.atributos
-local sub_atributos = _detalhes.sub_atributos
 local segmentos = _detalhes.segmentos
 
 --lua locals
-local _cstr = tostring
 local _math_ceil = math.ceil
 local _math_floor = math.floor
 local _math_abs = math.abs
@@ -23,24 +20,18 @@ local _unpack = unpack
 local CreateFrame = CreateFrame
 local _GetTime = GetTime
 local _GetCursorPosition = GetCursorPosition
-local _GameTooltip = GameTooltip
 local _UIParent = UIParent
-local _GetScreenWidth = GetScreenWidth
-local _GetScreenHeight = GetScreenHeight
 local _IsAltKeyDown = IsAltKeyDown
 local _IsShiftKeyDown = IsShiftKeyDown
 local _IsControlKeyDown = IsControlKeyDown
 
--- GLOBALS: C_Timer, Details, DetailsFramework, DetailsKeyBindScrollDown, DetailsKeyBindScrollUp, DetailsWindowGroupPopUp1, DetailsWindowLockPopUp1, GameCooltip
+-- GLOBALS: C_Timer, Details, DetailsFramework, DetailsKeyBindScrollDown, DetailsKeyBindScrollUp, GameCooltip
 -- GLOBALS: GameCooltip2, GameCooltipFrame1, GameTooltip, GetScreenHeight, GetScreenWidth, GetTime, InCombatLockdown, IsInInstance, LibStub, UIParent
 -- GLOBALS: UnitAffectingCombat, atan2, cos, error, getmetatable, ipairs, loadstring, math, pairs, pcall, setfenv, shift_monitor, sin, sqrt, string
 -- GLOBALS: strsplit, table, table_deepcopy, time, tinsert, tonumber, tremove, type, unpack, wipe
 -- GLOBALS: DETAILS_SEGMENTTYPE_DUNGEON_TRASH, DETAILS_SEGMENTTYPE_RAID_BOSS, DETAILS_SEGMENTTYPE_RAID_TRASH, TALENTS, _G
 
 local modo_raid = _detalhes._detalhes_props["MODO_RAID"]
-local modo_alone = _detalhes._detalhes_props["MODO_ALONE"]
-local modo_grupo = _detalhes._detalhes_props["MODO_GROUP"]
-local modo_all = _detalhes._detalhes_props["MODO_ALL"]
 
 local tok_functions = _detalhes.ToKFunctions
 
@@ -69,34 +60,20 @@ end
 -- 0.00048828125
 local DEFAULT_SKIN =[[Interface\AddOns\Details\images\skins\classic_skin]]
 
---local COORDS_LEFT_BALL = {0.15673828125, 0.27978515625, 0.08251953125, 0.20556640625} -- 160 84 287 211(updated)
---local COORDS_LEFT_BALL = {0.15576171875, 0.27978515625, 0.08251953125, 0.20556640625} -- 160 84 287 211(updated)
 local COORDS_LEFT_BALL = {0.15625, 0.2802734375, 0.08203125, 0.2060546875} -- 160 287 84 211
 
---local COORDS_LEFT_CONNECTOR = {0.29541015625, 0.30126953125, 0.08251953125, 0.20556640625} --302 84 309 211(updated)
 local COORDS_LEFT_CONNECTOR = {0.294921875, 0.3017578125, 0.08203125, 0.2060546875} --302 84 309 211(updated)
 
---local COORDS_LEFT_CONNECTOR_NO_ICON = {0.58837890625, 0.59423828125, 0.08251953125, 0.20556640625} -- 602 84 609 211(updated)
 local COORDS_LEFT_CONNECTOR_NO_ICON = {0.587890625+0.00048828125, 0.5947265625, 0.08203125, 0.2060546875} -- 602 609 x 84 211
 
---local COORDS_TOP_BACKGROUND = {0.15673828125, 0.65478515625, 0.22314453125, 0.34619140625} -- 160 228 671 355(updated)
 local COORDS_TOP_BACKGROUND = {0.15625, 0.6552734375, 0.22265625, 0.3466796875} -- 160 671 x 228 355
 
---local COORDS_RIGHT_BALL = {0.31591796875, 0.43994140625, 0.08251953125, 0.20556640625} --324 84 451 211(updated)
---local COORDS_RIGHT_BALL = {0.3154296875+0.00048828125, 0.439453125+0.00048828125, 0.08203125, 0.2060546875-0.00048828125} --323 84 450 211(updated)
 local COORDS_RIGHT_BALL = {0.3154296875, 0.439453125, 0.08203125, 0.2060546875} -- 323 450 x 84 211
 
---local COORDS_LEFT_BALL_NO_ICON = {0.44970703125, 0.57275390625, 0.08251953125, 0.20556640625} --460 84 587 211(updated)
---local COORDS_LEFT_BALL_NO_ICON = {0.44921875, 0.57421875, 0.08203125, 0.20703125} --460 84 588 212(updated)
---local COORDS_LEFT_BALL_NO_ICON = {0.44970703125, 0.57275390625, 0.08251953125, 0.20556640625} --460 84 587 211(updated) 588 212
 local COORDS_LEFT_BALL_NO_ICON = {0.44921875, 0.5732421875, 0.08203125, 0.2060546875} -- 460 587 84 211
 
---local COORDS_LEFT_SIDE_BAR = {0.76611328125, 0.82763671875, 0.00244140625, 0.50146484375} -- 784 2 848 514(updated)
 local COORDS_LEFT_SIDE_BAR = {0.765625, 0.828125, 0.001953125, 0.501953125} -- 784 2 848 514(updated)
 
---local COORDS_RIGHT_SIDE_BAR = {0.70068359375, 0.76220703125, 0.00244140625, 0.50146484375} -- 717 2 781 514(updated)
---local COORDS_RIGHT_SIDE_BAR = {0.7001953125, 0.763671875, 0.00244140625, 0.50146484375} -- 717 2 781 514(updated)
---local COORDS_RIGHT_SIDE_BAR = {0.7001953125+0.00048828125, 0.76171875, 0.001953125, 0.5009765625} -- --717 2 780 513
 local COORDS_RIGHT_SIDE_BAR = {0.7001953125, 0.7626953125, 0.001953125, 0.501953125} -- --717 2 781 513
 
 local COORDS_BOTTOM_SIDE_BAR = {0.32861328125, 0.82666015625, 0.50537109375, 0.56494140625} -- 336 517 847 579(updated)
@@ -105,7 +82,6 @@ local COORDS_SLIDER_TOP = {0.00146484375, 0.03076171875, 0.00244140625, 0.031738
 local COORDS_SLIDER_MIDDLE = {0.00146484375, 0.03076171875, 0.03955078125, 0.10009765625} -- 1 40 32 103 -ok
 local COORDS_SLIDER_DOWN = {0.00146484375, 0.03076171875, 0.10986328125, 0.13916015625} -- 1 112 32 143 -ok
 
---local COORDS_STRETCH = {0.00146484375, 0.03076171875, 0.21435546875, 0.22802734375} -- 1 219 32 234 -ok
 local COORDS_STRETCH = {0.0009765625, 0.03125, 0.2138671875, 0.228515625} -- 1 32 219 234
 
 local COORDS_RESIZE_RIGHT = {0.00146484375, 0.01513671875, 0.24560546875, 0.25927734375} -- 1 251 16 266 -ok
@@ -348,7 +324,7 @@ local function OnLeaveMainWindow(instancia, self)
 	instancia:SetAutoHideMenu(nil, nil, true)
 	instancia:RefreshAttributeTextSize()
 
-	if(instancia.modo ~= _detalhes._detalhes_props["MODO_ALONE"] and not instancia.baseframe.isLocked) then
+	if(not instancia.baseframe.isLocked) then
 
 		--> resizes, lock and ungroup buttons
 		if(not _detalhes.disable_lock_ungroup_buttons) then
@@ -361,7 +337,7 @@ local function OnLeaveMainWindow(instancia, self)
 		--> stretch button
 		gump:Fade(instancia.baseframe.button_stretch, "ALPHA", 0)
 
-	elseif(instancia.modo ~= _detalhes._detalhes_props["MODO_ALONE"] and instancia.baseframe.isLocked) then
+	else
 
 		--> resizes, lock and ungroup buttons
 		if(not _detalhes.disable_lock_ungroup_buttons) then
@@ -389,7 +365,7 @@ local function OnEnterMainWindow(instancia, self)
 		instancia.rowframe:SetFrameLevel(instancia.baseframe:GetFrameLevel())
 	end
 
-	if(instancia.modo ~= _detalhes._detalhes_props["MODO_ALONE"] and not instancia.baseframe.isLocked) then
+	if(not instancia.baseframe.isLocked) then
 
 		--> resize, lock and ungroup buttons
 		if(not _detalhes.disable_lock_ungroup_buttons) then
@@ -411,7 +387,7 @@ local function OnEnterMainWindow(instancia, self)
 			gump:Fade(instancia.baseframe.button_stretch, "ALPHA", 0.6)
 		end
 
-	elseif(instancia.modo ~= _detalhes._detalhes_props["MODO_ALONE"] and instancia.baseframe.isLocked) then
+	else
 
 		if(not _detalhes.disable_lock_ungroup_buttons) then
 			instancia.baseframe.lock_button:SetAlpha(1)
@@ -510,7 +486,7 @@ local update_line = function(self, target_frame)
 		guide_balls = _detalhes.guide_balls
 	end
 
-	for index, ball in ipairs(guide_balls) do
+	for index, ball in _ipairs(guide_balls) do
 		ball:Hide()
 	end
 
@@ -527,18 +503,17 @@ local update_line = function(self, target_frame)
 		local x =(distance -(i * 40)) * cos(angle)
 		local y =(distance -(i * 40)) * sin(angle)
 
-		local ball = guide_balls[i]
+		local ball = guide_balls[i + 1]
 		if(not ball) then
 			ball = _detalhes.overlay_frame:CreateTexture(nil, "Overlay")
 			ball:SetTexture([[Interface\AddOns\Details\images\icons]])
 			ball:SetSize(16, 16)
 			ball:SetAlpha(0.3)
 			ball:SetTexCoord(410/512, 426/512, 2/512, 18/512)
-			tinsert(guide_balls, ball)
+			guide_balls[#guide_balls+1] = ball
 		end
 
-		ball:ClearAllPoints()
-		ball:SetPoint("CENTER", self, "CENTER", x, y) --baseframse center
+		ball:ClearAndSetPoint("CENTER", self, "CENTER", x, y) --baseframse center
 		ball:Show()
 		ball:SetVertexColor(unpack(color))
 	end
@@ -820,9 +795,6 @@ local function move_janela(baseframe, iniciando, instancia, just_updating)
 				--print(lower_instance, instancia_alvo.meu_id, DEATHGRAPHICS_BUTTON:GetParent():GetName())
 
 				instancia_alvo:RestauraJanela(instancia_alvo.meu_id, true)
-				if(instancia_alvo:IsSoloMode()) then
-					_detalhes.SoloTables:switch()
-				end
 
 				instancia_alvo.ativa = false
 
@@ -851,7 +823,7 @@ local function move_janela(baseframe, iniciando, instancia, just_updating)
 		baseframe:SetScript("OnUpdate", nil)
 
 		if(_detalhes.guide_balls) then
-			for index, ball in ipairs(_detalhes.guide_balls) do
+			for index, ball in _ipairs(_detalhes.guide_balls) do
 				ball:Hide()
 			end
 		end
@@ -872,7 +844,6 @@ local function move_janela(baseframe, iniciando, instancia, just_updating)
 			instancia:AtualizaPontos()
 
 			local esquerda, baixo, direita, cima
-			local meu_id = instancia.meu_id --> id da inst�ncia que esta sendo movida
 
 			local isVertical = instancia_alvo.verticalSnap
 			local isHorizontal = instancia_alvo.horizontalSnap
@@ -936,9 +907,6 @@ local function move_janela(baseframe, iniciando, instancia, just_updating)
 
 					if(esta_instancia.modo == modo_raid) then
 						_detalhes.raid = nil
-					elseif(esta_instancia.modo == modo_alone) then
-						_detalhes.SoloTables:switch()
-						_detalhes.solo = nil
 					end
 
 				elseif(esta_instancia:IsAtiva()) then
@@ -1016,9 +984,6 @@ end
 local BGFrame_scripts_onmouseup = function(self, button)
 
 	if(self.is_toolbar and self._instance.baseframe.isLocked and button == "LeftButton") then
-		if(DetailsWindowLockPopUp1 and DetailsWindowLockPopUp1:IsShown()) then
-			_G["DetailsWindowLockPopUp1"]:Hide()
-		end
 		return self._instance.baseframe.button_stretch:GetScript("OnMouseUp")(self._instance.baseframe.button_stretch, "LeftButton")
 	end
 
@@ -1061,17 +1026,8 @@ end
 local BFrame_scripts_onsizechange = function(self)
 	self._instance:SaveMainWindowSize()
 	self._instance:ReajustaGump()
-	self._instance.oldwith = self:GetWidth()
 	_detalhes:SendEvent("DETAILS_INSTANCE_SIZECHANGED", nil, self._instance)
 	self._instance:RefreshAttributeTextSize()
-end
-
-local BFrame_scripts_onenter = function(self)
-	OnEnterMainWindow(self._instance, self)
-end
-
-local BFrame_scripts_onleave = function(self)
-	OnLeaveMainWindow(self._instance, self)
 end
 
 local BFrame_scripts_onmousedown = function(self, button)
@@ -1090,20 +1046,10 @@ end
 local function BFrame_scripts(baseframe, instancia)
 	baseframe._instance = instancia
 	baseframe:SetScript("OnSizeChanged", BFrame_scripts_onsizechange)
-	baseframe:SetScript("OnEnter", BFrame_scripts_onenter)
-	baseframe:SetScript("OnLeave", BFrame_scripts_onleave)
+	baseframe:SetScript("OnEnter", BGFrame_scripts_onenter)
+	baseframe:SetScript("OnLeave", BGFrame_scripts_onleave)
 	baseframe:SetScript("OnMouseDown", BFrame_scripts_onmousedown)
 	baseframe:SetScript("OnMouseUp", BFrame_scripts_onmouseup)
-end
-
-local function backgrounddisplay_scripts(backgrounddisplay, baseframe, instancia)
-	backgrounddisplay:SetScript("OnEnter", function(self)
-		OnEnterMainWindow(instancia, self)
-	end)
-
-	backgrounddisplay:SetScript("OnLeave", function(self)
-		OnLeaveMainWindow(instancia, self)
-	end)
 end
 
 local function instancias_horizontais(instancia, largura, esquerda, direita)
@@ -1169,14 +1115,14 @@ end
 local check_snap_side = function(instanceid, snap, id, container)
 	local instance = _detalhes:GetInstance(instanceid)
 	if(instance and instance.snap[snap] and instance.snap[snap] == id) then
-		tinsert(container, instance)
+		container[#container+1] = instance
 		return true
 	end
 end
 
-function _detalhes:InstanciasVerticais(instance)
+function _detalhes:InstanciasVerticais()
 
-	instance = self or instance
+	local instance = self
 
 	local on_top = {}
 	local on_bottom = {}
@@ -1188,7 +1134,6 @@ function _detalhes:InstanciasVerticais(instance)
 		--> top side
 		if(this_instance.snap[2] and this_instance.snap[2] == id) then
 			local cid = id
-			local snapid = 2
 			for i = cid-1, 1, -1 do
 				if(check_snap_side(i, 2, cid, on_top)) then
 					cid = cid - 1
@@ -1199,7 +1144,6 @@ function _detalhes:InstanciasVerticais(instance)
 		--> bottom side
 		elseif(this_instance.snap[4] and this_instance.snap[4] == id) then
 			local cid = id
-			local snapid = 4
 			for i = cid-1, 1, -1 do
 				if(check_snap_side(i, 4, cid, on_bottom)) then
 					cid = cid - 1
@@ -1216,7 +1160,6 @@ function _detalhes:InstanciasVerticais(instance)
 		--> top side
 		if(this_instance.snap[2] and this_instance.snap[2] == id) then
 			local cid = id
-			local snapid = 2
 			for i = cid+1, _detalhes:GetNumInstancesAmount() do
 				if(check_snap_side(i, 2, cid, on_top)) then
 					cid = cid + 1
@@ -1227,7 +1170,6 @@ function _detalhes:InstanciasVerticais(instance)
 		--> bottom side
 		elseif(this_instance.snap[4] and this_instance.snap[4] == id) then
 			local cid = id
-			local snapid = 4
 			for i = cid+1, _detalhes:GetNumInstancesAmount() do
 				if(check_snap_side(i, 4, cid, on_bottom)) then
 					cid = cid + 1
@@ -1265,7 +1207,7 @@ function _detalhes:InstanciasVerticais(instance)
 		end
 		bottom_clamp = bottom_clamp + 20
 		bottom_clamp = bottom_clamp + this_instance.baseframe:GetHeight()
-		tinsert(on_top, this_instance)
+		on_top[#on_top+1] = this_instance
 	end
 
 	return on_top, bottom_clamp, top_clamp
@@ -1282,9 +1224,9 @@ lado 1	|					| lado 3
 			lado 2
 --]]
 
-function _detalhes:InstanciasHorizontais(instancia)
+function _detalhes:InstanciasHorizontais()
 
-	instancia = self or instancia
+	local instancia = self
 
 	local linha_horizontal, esquerda, direita = {}, 0, 0
 
@@ -1382,12 +1324,10 @@ local resize_scripts_onmousedown = function(self, button)
 		return
 	end
 
-	if(not self:GetParent().isLocked and button == "LeftButton" and self._instance.modo ~= _detalhes._detalhes_props["MODO_ALONE"]) then
+	if(not self:GetParent().isLocked and button == "LeftButton") then
 		self:GetParent().isResizing = true
 		self._instance:BaseFrameSnap()
 
-		local isVertical = self._instance.verticalSnap
-		local isHorizontal = self._instance.horizontalSnap
 
 		local agrupadas
 		if(self._instance.verticalSnap) then
@@ -1398,7 +1338,7 @@ local resize_scripts_onmousedown = function(self, button)
 
 		self._instance.stretchToo = agrupadas
 		if(self._instance.stretchToo and #self._instance.stretchToo > 0) then
-			for _, esta_instancia in ipairs(self._instance.stretchToo) do
+			for _, esta_instancia in _ipairs(self._instance.stretchToo) do
 				esta_instancia.baseframe._place = esta_instancia:SaveMainWindowPosition()
 				esta_instancia.baseframe.isResizing = true
 			end
@@ -1484,7 +1424,7 @@ local resize_scripts_onmouseup = function(self, button)
 		self._instance:ReajustaGump()
 
 		if(self._instance.stretchToo and #self._instance.stretchToo > 0) then
-			for _, esta_instancia in ipairs(self._instance.stretchToo) do
+			for _, esta_instancia in _ipairs(self._instance.stretchToo) do
 				esta_instancia.baseframe:StopMovingOrSizing()
 				esta_instancia.baseframe.isResizing = false
 				esta_instancia:RefreshBars()
@@ -1512,7 +1452,7 @@ local resize_scripts_onmouseup = function(self, button)
 
 		if(self._instance.eh_tudo) then
 			for _, esta_instancia in _ipairs(_detalhes.tabela_instancias) do
-				if(esta_instancia:IsAtiva() and esta_instancia.modo ~= _detalhes._detalhes_props["MODO_ALONE"]) then
+				if(esta_instancia:IsAtiva()) then
 					esta_instancia.baseframe:ClearAllPoints()
 					esta_instancia:SaveMainWindowPosition()
 					esta_instancia:RestoreMainWindowPosition()
@@ -1520,7 +1460,7 @@ local resize_scripts_onmouseup = function(self, button)
 			end
 
 			for _, esta_instancia in _ipairs(_detalhes.tabela_instancias) do
-				if(esta_instancia:IsAtiva() and esta_instancia ~= self._instance and esta_instancia.modo ~= _detalhes._detalhes_props["MODO_ALONE"]) then
+				if(esta_instancia:IsAtiva() and esta_instancia ~= self._instance) then
 					esta_instancia.baseframe:SetWidth(largura)
 					esta_instancia.baseframe:SetHeight(altura)
 					esta_instancia.auto_resize = true
@@ -1565,7 +1505,7 @@ local resize_scripts_onenter = function(self)
 		return
 	end
 
-	if(self._instance.modo ~= _detalhes._detalhes_props["MODO_ALONE"] and not self._instance.baseframe.isLocked and not self.mostrando) then
+	if(not self._instance.baseframe.isLocked and not self.mostrando) then
 
 		OnEnterMainWindow(self._instance, self)
 
@@ -1616,7 +1556,7 @@ local lockFunctionOnEnter = function(self)
 		return
 	end
 
-	if(self.instancia.modo ~= _detalhes._detalhes_props["MODO_ALONE"] and not self.mostrando) then
+	if(not self.mostrando) then
 		OnEnterMainWindow(self.instancia, self)
 
 		self.mostrando = true
@@ -1697,15 +1637,13 @@ local lockFunctionOnClick = function(button, button_type, button2, isFromOptions
 			baseframe.resize_esquerda:SetAlpha(1)
 		end
 
-		button:ClearAllPoints()
-		button:SetPoint("right", baseframe.resize_direita, "left", -1, 1.5)
+		button:ClearAndSetPoint("right", baseframe.resize_direita, "left", -1, 1.5)
 	else
 		baseframe.isLocked = true
 		baseframe.instance.isLocked = true
 		button.label:SetText(Loc["STRING_UNLOCK_WINDOW"])
 		button:SetWidth(button.label:GetStringWidth()+2)
-		button:ClearAllPoints()
-		button:SetPoint("bottomright", baseframe, "bottomright", -3, 0)
+		button:ClearAndSetPoint("bottomright", baseframe, "bottomright", -3, 0)
 		baseframe.resize_direita:SetAlpha(0)
 		baseframe.resize_esquerda:SetAlpha(0)
 	end
@@ -1765,7 +1703,7 @@ end
 local shift_monitor = function(self)
 
 	if(not self:IsMouseOver()) then
-		self:SetScript("OnUpdate", shift_monitor)
+		self:SetScript("OnUpdate", nil)
 		return
 	end
 
@@ -2007,8 +1945,8 @@ local set_bar_value = function(self, value)
 		self.statusbar:SetValue(0)
 
 		local width = self._instance.cached_bar_width
-		local inverse_bar_size = width / 100 * value
-		local coord_inverse = inverse_bar_size / width
+		local inverse_bar_size = width * value * 0.01
+		local coord_inverse = value * 0.01
 
 		inverse_bar_size = _math_max(inverse_bar_size, 0.00000001)
 
@@ -2022,8 +1960,7 @@ local set_bar_value = function(self, value)
 
 	if(self.using_upper_3dmodels) then
 		local width = self:GetWidth()
-		local p =(width / 100) * value
-		self.modelbox_high:SetPoint("bottomright", self, "bottomright", p - width, 0)
+		self.modelbox_high:SetPoint("bottomright", self, "bottomright", width * value * 0.01 - width, 0)
 	end
 end
 
@@ -2057,7 +1994,6 @@ local icon_frame_on_enter = function(self)
 			local name = actor:name()
 			local class = actor:class()
 			local spec = _detalhes.cached_specs[serial] or actor.spec
-			local talents = _detalhes.cached_talents[serial]
 			local ilvl = _detalhes.ilevel:GetIlvl(serial)
 
 			local icon_size = 20
@@ -2068,13 +2004,13 @@ local icon_frame_on_enter = function(self)
 
 			local class_icon, class_L, class_R, class_T, class_B = _detalhes:GetClassIcon(class)
 
-			local spec_id, spec_name, spec_description, spec_icon, spec_role, spec_class = DetailsFramework.GetSpecializationInfoByID(spec or 0) --thanks pas06
 			local spec_L, spec_R, spec_T, spec_B
-			if(spec_id) then
-				spec_L, spec_R, spec_T, spec_B  = unpack(_detalhes.class_specs_coords[spec])
+			local spec_coords = spec and _detalhes.class_specs_coords[spec]
+			if(spec_coords) then
+				spec_L, spec_R, spec_T, spec_B = unpack(spec_coords)
 			end
 
-			GameCooltip:AddLine(name, spec_name)
+			GameCooltip:AddLine(name)
 			if(class == "UNKNOW" or class == "UNGROUPPLAYER") then
 				GameCooltip:AddIcon([[Interface\AddOns\Details\images\classes_small_alpha]], 1, 1, icon_size, icon_size, 0, 0.25, 0.75, 1)
 			else
@@ -2088,29 +2024,6 @@ local icon_frame_on_enter = function(self)
 			end
 			_detalhes:AddTooltipHeaderStatusbar()
 
-			local talent_string = ""
- -- TEMP
-			-- if (talents) then
-			-- 	for i = 1, #talents do
-			-- 		local talentID, name, texture, selected, available = GetTalentInfoByID(talents[i])
-			-- 		talent_string = talent_string ..  " |T" .. texture .. ":" .. 24 .. ":" .. 24 ..":0:0:64:64:4:60:4:60|t"
-			-- 	end
-			-- end
-
-
---[[
-            function TT:GetItemLvL(unit, giud)
-                local ilvl = ItemLevelMixIn:GetItemLevel(giud or UnitGUID(unit))
-                if ilvl and ilvl ~= -1 then
-                    local color = ItemLevelMixIn:GetColor(ilvl)
-                    if color then
-                        return format("%s%s|r", E:RGBToHex(color.r, color.g, color.b), ilvl)
-                    end
-                else
-                    return TOOLTIP_UNIT_LEVEL_ILEVEL_LOADING_LABEL
-                end
-            end]]
-			-- TEMP
 			local got_info
 			if(actor.serial)then
 				if(ilvl) then
@@ -2133,12 +2046,7 @@ local icon_frame_on_enter = function(self)
 				end
 			end
 
-			if(talent_string ~= "") then
-				GameCooltip:AddLine(TALENTS .. ":", talent_string) --> Loc from GlobalStrings.lua
-				GameCooltip:AddIcon([[]], 1, 1, 1, 24)
-				_detalhes:AddTooltipBackgroundStatusbar()
-				got_info = true
-			elseif(got_info) then
+			if(got_info) then
 				GameCooltip:AddLine(TALENTS .. ":", Loc["STRING_QUERY_INSPECT_REFRESH"]) --> Loc from GlobalStrings.lua
 				GameCooltip:AddIcon([[]], 1, 1, 1, 24)
 				_detalhes:AddTooltipBackgroundStatusbar()
@@ -2188,13 +2096,11 @@ local icon_frame_on_enter = function(self)
 				end
 			end
 
-			local attribute, subAttribute = instance:GetDisplay()
 			if(attribute == 1) then
 				local realDps = actor.total / instance:GetShowingCombat():GetCombatTime()
 				local dpsValue = _detalhes:comma_value_raw(realDps)
 				if(dpsValue) then
-					local total, decimal = strsplit(".", dpsValue)
-					total = total-- .. "." ..(decimal and decimal:match("^%d"))
+					local total = strsplit(".", dpsValue)
 					GameCooltip:AddLine("Dps:", total)
 					_detalhes:AddTooltipBackgroundStatusbar()
 					GameCooltip:AddIcon("", 1, 1, 1, 20)
@@ -2215,7 +2121,7 @@ end
 local icon_frame_on_leave = function(self)
 	GameCooltip:Hide()
 
-	if(GameTooltip and GameTooltip:IsShown()) then
+	if(GameTooltip:IsShown()) then
 		GameTooltip:Hide()
 	end
 
@@ -2227,10 +2133,10 @@ end
 
 local icon_frame_events = _detalhes:CreateEventListener()
 function icon_frame_events:EnterCombat()
-	for anim, _ in pairs(_detalhes.icon_animations.load.in_use) do
+	for anim, _ in _pairs(_detalhes.icon_animations.load.in_use) do
 		anim.anim:Stop()
 		anim:Hide()
-		tinsert(_detalhes.icon_animations.load.available, anim)
+		_detalhes.icon_animations.load.available[#_detalhes.icon_animations.load.available+1] = anim
 
 		anim.icon_frame.icon_animation = nil
 		anim.icon_frame = nil
@@ -2250,7 +2156,7 @@ function icon_frame_events:CancelAnim(anim)
 			local f = anim
 			if(not f.question_icon) then
 				f.question_icon = f.parent:GetParent():GetParent().border:CreateTexture(nil, "overlay")
-				f.question_icon:SetTexture([[Interface\GossipFrame\ActiveLegendaryQuestIcon]])
+				f.question_icon:SetTexture([[Interface\GossipFrame\ActiveQuestIcon]])
 				f.question_icon:SetSize(16, 16)
 			end
 			f.question_icon:Show()
@@ -2265,7 +2171,7 @@ function icon_frame_events:CancelAnim(anim)
 		end
 
 		_detalhes.icon_animations.load.in_use[anim] = nil
-		tinsert(_detalhes.icon_animations.load.available, anim)
+		_detalhes.icon_animations.load.available[#_detalhes.icon_animations.load.available+1] = anim
 		anim.anim:Stop()
 		anim:Hide()
 
@@ -2282,7 +2188,7 @@ local icon_frame_inspect_callback = function(guid, unitid, icon_frame)
 
 	local is_in_use = _detalhes.icon_animations.load.in_use[icon_frame.icon_animation]
 	if(is_in_use) then
-		tinsert(_detalhes.icon_animations.load.available, icon_frame.icon_animation)
+		_detalhes.icon_animations.load.available[#_detalhes.icon_animations.load.available+1] = icon_frame.icon_animation
 		_detalhes.icon_animations.load.in_use[icon_frame.icon_animation] = nil
 	end
 
@@ -2310,7 +2216,7 @@ local icon_frame_create_animation = function()
 	t:SetAlpha(0.7)
 	t:SetAllPoints()
 
-	tinsert(_detalhes.icon_animations.load.available, f)
+	_detalhes.icon_animations.load.available[#_detalhes.icon_animations.load.available+1] = f
 end
 
 local icon_frame_on_click_down = function(self)
@@ -2366,12 +2272,11 @@ local icon_frame_on_click_up = function(self, button)
 			local f = anim
 			if(not f.question_icon) then
 				f.question_icon = self:GetParent():GetParent().border:CreateTexture(nil, "overlay")
-				f.question_icon:SetTexture([[Interface\GossipFrame\ActiveLegendaryQuestIcon]])
+				f.question_icon:SetTexture([[Interface\GossipFrame\ActiveQuestIcon]])
 				f.question_icon:SetSize(16, 16)
 			end
 
-			f.question_icon:ClearAllPoints()
-			f.question_icon:SetPoint("center", self, "center")
+			f.question_icon:ClearAndSetPoint("center", self, "center")
 			f.question_icon:Show()
 
 			if(not _detalhes.HideBarQuestionIcon) then
@@ -2407,9 +2312,8 @@ local icon_frame_on_click_up = function(self, button)
 
 		anim:Show()
 		anim:SetParent(self)
-		anim:ClearAllPoints()
+		anim:ClearAndSetPoint("center", self, "center")
 		anim:SetFrameStrata("TOOLTIP")
-		anim:SetPoint("center", self, "center")
 		anim:SetSize(self:GetWidth()*1.7, self:GetHeight()*1.7)
 
 		anim.anim:Play()
@@ -2514,10 +2418,6 @@ local function button_stretch_scripts(baseframe, backgrounddisplay, instancia)
 			return
 		end
 
-		if(instancia:IsSoloMode()) then
-			return
-		end
-
 		instancia:EsconderScrollBar(true)
 		baseframe._place = instancia:SaveMainWindowPosition()
 		baseframe.isResizing = true
@@ -2567,7 +2467,7 @@ local function button_stretch_scripts(baseframe, backgrounddisplay, instancia)
 
 		instancia.stretchToo = linha_horizontal
 		if(#instancia.stretchToo > 0) then
-			for _, esta_instancia in ipairs(instancia.stretchToo) do
+			for _, esta_instancia in _ipairs(instancia.stretchToo) do
 				esta_instancia:EsconderScrollBar(true)
 				esta_instancia.baseframe._place = esta_instancia:SaveMainWindowPosition()
 				esta_instancia.baseframe.isResizing = true
@@ -2606,10 +2506,6 @@ local function button_stretch_scripts(baseframe, backgrounddisplay, instancia)
 			return
 		end
 
-		if(instancia:IsSoloMode()) then
-			return
-		end
-
 		if(baseframe.isResizing) then
 			baseframe:StopMovingOrSizing()
 			baseframe.isResizing = false
@@ -2628,7 +2524,7 @@ local function button_stretch_scripts(baseframe, backgrounddisplay, instancia)
 			baseframe.stretch_direction = nil
 
 			if(instancia.stretchToo and #instancia.stretchToo > 0) then
-				for _, esta_instancia in ipairs(instancia.stretchToo) do
+				for _, esta_instancia in _ipairs(instancia.stretchToo) do
 					esta_instancia.baseframe:StopMovingOrSizing()
 					esta_instancia.baseframe.isResizing = false
 					esta_instancia:RestoreMainWindowPosition(esta_instancia.baseframe._place)
@@ -2698,7 +2594,6 @@ local function button_down_scripts(main_frame, backgrounddisplay, instancia, scr
 			scrollbar:SetValue(scrollbar:GetValue() + instancia.row_height)
 		end
 
-		self.precionado = true
 		self.last_up = -0.3
 		self:SetScript("OnUpdate", function(self, elapsed)
 			self.last_up = self.last_up + elapsed
@@ -2715,7 +2610,6 @@ local function button_down_scripts(main_frame, backgrounddisplay, instancia, scr
 	end)
 
 	main_frame.button_down:SetScript("OnMouseUp", function(self)
-		self.precionado = false
 		self:SetScript("OnUpdate", nil)
 	end)
 end
@@ -2733,7 +2627,6 @@ local function button_up_scripts(main_frame, backgrounddisplay, instancia, scrol
 			scrollbar:SetValue(scrollbar:GetValue() - instancia.row_height*2)
 		end
 
-		self.precionado = true
 		self.last_up = -0.3
 		self:SetScript("OnUpdate", function(self, elapsed)
 			self.last_up = self.last_up + elapsed
@@ -2741,7 +2634,7 @@ local function button_up_scripts(main_frame, backgrounddisplay, instancia, scrol
 				self.last_up = 0
 				A = instancia.barraS[1]
 				if(A > 1) then
-					scrollbar:SetValue(scrollbar:GetValue() + instancia.row_height*2)
+					scrollbar:SetValue(scrollbar:GetValue() - instancia.row_height*2)
 				else
 					self:Disable()
 				end
@@ -2750,7 +2643,6 @@ local function button_up_scripts(main_frame, backgrounddisplay, instancia, scrol
 	end)
 
 	main_frame.button_up:SetScript("OnMouseUp", function(self)
-		self.precionado = false
 		self:SetScript("OnUpdate", nil)
 	end)
 
@@ -2773,7 +2665,7 @@ function DetailsKeyBindScrollUp()
 
 	_detalhes.KeyBindScrollUpLastPressed = GetTime()
 
-	for index, instance in ipairs(_detalhes.tabela_instancias) do
+	for index, instance in _ipairs(_detalhes.tabela_instancias) do
 		if(instance:IsEnabled()) then
 
 			local scrollbar = instance.scroll
@@ -2798,7 +2690,7 @@ function DetailsKeyBindScrollUp()
 end
 
 function DetailsKeyBindScrollDown()
-	for index, instance in ipairs(_detalhes.tabela_instancias) do
+	for index, instance in _ipairs(_detalhes.tabela_instancias) do
 		if(instance:IsEnabled()) then
 
 			local scrollbar = instance.scroll
@@ -2889,42 +2781,34 @@ local function iterate_scroll_scripts(backgrounddisplay, backgroundframe, basefr
 
 			local B = instancia.barraS[2]
 			if(B <(instancia.rows_showing or 0)) then --> se o valor maximo n�o for o m�ximo de barras a serem mostradas
-				local precisa_passar =((B+1) * instancia.row_height) -(instancia.row_height*instancia.rows_fit_in_window)
-				--if(meu_valor > precisa_passar) then --> o valor atual passou o valor que precisa passar pra locomover
-				if(true) then --> testing by pass row check
-					local diff = meu_valor - ultimo --> pega a diferen�a de H
-					diff = diff / instancia.row_height --> calcula quantas barras ele pulou
-					diff = _math_ceil(diff) --> arredonda para cima
-					if(instancia.barraS[2]+diff >(instancia.rows_showing or 0) and ultimo > 0) then
-						instancia.barraS[1] =(instancia.rows_showing or 0) -(instancia.rows_fit_in_window-1)
-						instancia.barraS[2] =(instancia.rows_showing or 0)
-					else
-						instancia.barraS[2] = instancia.barraS[2]+diff
-						instancia.barraS[1] = instancia.barraS[1]+diff
-					end
-					instancia:AtualizaGumpPrincipal(instancia, true)
+				local diff = meu_valor - ultimo --> pega a diferen�a de H
+				diff = diff / instancia.row_height --> calcula quantas barras ele pulou
+				diff = _math_ceil(diff) --> arredonda para cima
+				if(instancia.barraS[2]+diff >(instancia.rows_showing or 0) and ultimo > 0) then
+					instancia.barraS[1] =(instancia.rows_showing or 0) -(instancia.rows_fit_in_window-1)
+					instancia.barraS[2] =(instancia.rows_showing or 0)
+				else
+					instancia.barraS[2] = instancia.barraS[2]+diff
+					instancia.barraS[1] = instancia.barraS[1]+diff
 				end
+				instancia:AtualizaGumpPrincipal(instancia, true)
 			end
 		else --> scroll up
 			local A = instancia.barraS[1]
 			if(A > 1) then
-				local precisa_passar =(A-1) * instancia.row_height
-				--if(meu_valor < precisa_passar) then
-				if(true) then --> testing by pass row check
-					--> calcula quantas barras passou
-					local diff = ultimo - meu_valor
-					diff = diff / instancia.row_height
-					diff = _math_ceil(diff)
-					if(instancia.barraS[1]-diff < 1) then
-						instancia.barraS[2] = instancia.rows_fit_in_window
-						instancia.barraS[1] = 1
-					else
-						instancia.barraS[2] = instancia.barraS[2]-diff
-						instancia.barraS[1] = instancia.barraS[1]-diff
-					end
-
-					instancia:AtualizaGumpPrincipal(instancia, true)
+				--> calcula quantas barras passou
+				local diff = ultimo - meu_valor
+				diff = diff / instancia.row_height
+				diff = _math_ceil(diff)
+				if(instancia.barraS[1]-diff < 1) then
+					instancia.barraS[2] = instancia.rows_fit_in_window
+					instancia.barraS[1] = 1
+				else
+					instancia.barraS[2] = instancia.barraS[2]-diff
+					instancia.barraS[1] = instancia.barraS[1]-diff
 				end
+
+				instancia:AtualizaGumpPrincipal(instancia, true)
 			end
 		end
 		self.ultimo = meu_valor
@@ -2938,11 +2822,6 @@ end
 function _detalhes:InstanceAlertTime(instance)
 	instance.alert:Hide()
 	instance.alert.rotate:Stop()
-	instance.alert_time = nil
-end
-
-local hide_click_func = function()
-	--empty
 end
 
 function _detalhes:InstanceAlert(msg, icon, time, clickfunc, doflash, forceAlert)
@@ -2963,7 +2842,6 @@ function _detalhes:InstanceAlert(msg, icon, time, clickfunc, doflash, forceAlert
 	if(type(msg) == "boolean" and not msg) then
 		self.alert:Hide()
 		self.alert.rotate:Stop()
-		self.alert_time = nil
 		return
 	end
 
@@ -3009,7 +2887,6 @@ function _detalhes:InstanceAlert(msg, icon, time, clickfunc, doflash, forceAlert
 	end
 
 	time = time or 15
-	self.alert_time = time
 	_detalhes:ScheduleTimer("InstanceAlertTime", time, self)
 
 	self.alert:SetPoint("bottom", self.baseframe, "bottom", 0, -12)
@@ -3148,7 +3025,7 @@ local function CreateAlertFrame(baseframe, instancia)
 	anim1:SetDuration(0.1)
 	anim2:SetOrder(2)
 
-	anim1:SetChange(-1)
+	anim2:SetChange(-1)
 
 	anim2:SetDuration(0.2)
 	animation:SetScript("OnFinished", function(self)
@@ -3314,9 +3191,8 @@ do
 		local UIscale = UIParent:GetScale()
 		x = x * UIscale / scale
 		y = y * UIscale / scale
-		self:ClearAllPoints()
 		self:SetParent(UIParent)
-		self:SetPoint("center", UIParent, "center", x, y)
+		self:ClearAndSetPoint("center", UIParent, "center", x, y)
 	end
 
 	tooltip_anchor.alert = CreateFrame("frame", "DetailsTooltipAnchorAlert", UIParent) -- "ActionBarButtonSpellActivationAlert"
@@ -3689,10 +3565,6 @@ function gump:CriaJanelaPrincipal(ID, instancia, criando)
 				return
 			end
 			instancia:Desagrupar(-1)
-			--> hide tutorial
-			if(DetailsWindowGroupPopUp1 and DetailsWindowGroupPopUp1:IsShown()) then
-				DetailsWindowGroupPopUp1:Hide()
-			end
 		end)
 
 		instancia.break_snap_button:SetScript("OnEnter", unSnapButtonOnEnter)
@@ -3773,20 +3645,6 @@ function gump:CriaJanelaPrincipal(ID, instancia, criando)
 
 --> done
 
-	if(criando) then
-		local CProps = {
-			["altura"] = 100,
-			["largura"] = 200,
-			["barras"] = 50,
-			["barrasvisiveis"] = 0,
-			["x"] = 0,
-			["y"] = 0,
-			["w"] = 0,
-			["h"] = 0
-		}
-		instancia.locs = CProps
-	end
-
 	return baseframe, backgroundframe, backgrounddisplay, scrollbar
 
 end
@@ -3847,27 +3705,25 @@ function _detalhes:SetBarGrowDirection(direction)
 		for index, row in _ipairs(bars) do
 			local y = height *(index - 1)
 			y = y * -1
-			row:ClearAllPoints()
 
 			if(self.toolbar_side == 1) then
 				--> if titlebar is attached to the top side, don't add any midifiers
-				row:SetPoint("topleft", baseframe, "topleft", x, y)
+				row:ClearAndSetPoint("topleft", baseframe, "topleft", x, y)
 			else
 				--> if the titlebar is on the bottom side, remove the gap between the baseframe and the titlebar
-				row:SetPoint("topleft", baseframe, "topleft", x, y - 1)
+				row:ClearAndSetPoint("topleft", baseframe, "topleft", x, y - 1)
 			end
 		end
 
 	elseif(direction == 2) then --> bottom to top
 		for index, row in _ipairs(bars) do
 			local y = height *(index - 1)
-			row:ClearAllPoints()
 			if(self.toolbar_side == 1) then
 				--> if the titlebar is attached to the top side, we want to align bars a little above
-				row:SetPoint("bottomleft", baseframe, "bottomleft", x, y + 2)
+				row:ClearAndSetPoint("bottomleft", baseframe, "bottomleft", x, y + 2)
 			else
 				--> the titlebar is on the bottom side, align bars on the bottom
-				row:SetPoint("bottomleft", baseframe, "bottomleft", x, y + 0)
+				row:ClearAndSetPoint("bottomleft", baseframe, "bottomleft", x, y + 0)
 			end
 		end
 	end
@@ -3889,8 +3745,6 @@ end
 function gump:NewRow(instancia, index)
 	return gump:CriaNovaBarra(instancia, index)
 end
-
-_detalhes.barras_criadas = 0
 
 local function statusbar_on_size_changed(self, width)
 	self:GetStatusBarTexture():SetPoint("TOPRIGHT", -(width * ((100 - self.value) / 100)), 0)
@@ -3926,7 +3780,6 @@ function gump:CriaNovaBarra(instancia, index)
 	new_row:SetWidth(baseframe:GetWidth()+instancia.row_info.space.right)
 	new_row:SetFrameLevel(baseframe:GetFrameLevel() + 4)
 	new_row.last_value = 0
-	new_row.w_mod = 0
 	new_row:EnableMouse(true)
 	new_row:RegisterForClicks("LeftButtonDown", "RightButtonDown")
 
@@ -4350,31 +4203,47 @@ end
 --/script _detalhes:InstanceRefreshRows(_detalhes.tabela_instancias[1])
 
 --> on update function
-local fast_ps_func = function(self)
+local _string_gsub = string.gsub
+local fast_ps_func = function(self, elapsed)
+	self.ps_elapsed = (self.ps_elapsed or 0) + elapsed
+	if(self.ps_elapsed < 0.1) then
+		return
+	end
+	self.ps_elapsed = 0
 	local instance = self.instance
 
 	if(not instance.showing) then
 		return
 	end
 
+	local rows_fit = instance.rows_fit_in_window
+	if(not rows_fit) then
+		return
+	end
+
 	local combat_time = instance.showing:GetCombatTime()
-	local ps_type = _detalhes.ps_abbreviation
+	if(combat_time == 0) then
+		return
+	end
 
-	if(instance.rows_fit_in_window) then
-		for i = 1, instance.rows_fit_in_window do --instance:GetNumRows()
-			local row = instance.barras[i] --instance:GetRow(i)
-			if(row and row:IsShown()) then
-				local actor = row.minha_tabela
-				if(actor) then
-					local dps_text = row.ps_text
-					if(dps_text) then
-						local new_dps = _math_floor(actor.total / combat_time)
-						local formated_dps = tok_functions[ps_type](_, new_dps)
+	local barras = instance.barras
+	local format_func = tok_functions[_detalhes.ps_abbreviation]
 
-						--row.texto_direita:SetText(row.texto_direita:GetText():gsub(dps_text, formated_dps))
-						row.texto_direita:SetText(( row.texto_direita:GetText() or "" ):gsub(dps_text, formated_dps))
-						row.ps_text = formated_dps
+	for i = 1, rows_fit do
+		local row = barras[i]
+		if(row and row:IsShown()) then
+			local actor = row.minha_tabela
+			if(actor) then
+				local dps_text = row.ps_text
+				if(dps_text) then
+					local new_dps = _math_floor(actor.total / combat_time)
+					local formated_dps = format_func(_, new_dps)
+
+					local current_text = row.texto_direita:GetText()
+					if(current_text) then
+						row.texto_direita:SetText(_string_gsub(current_text, "%f[%w.]" .. dps_text:gsub("%p", "%%%0") .. "%f[^%w.]", formated_dps, 1))
 					end
+					row.ps_text = formated_dps
 				end
 			end
 		end
@@ -4503,20 +4372,11 @@ function _detalhes:InstanceRefreshRows(instancia)
 
 	--icons
 		local no_icon = self.row_info.no_icon
-		local icon_texture = self.row_info.icon_file
 		local start_after_icon = self.row_info.start_after_icon
-
-		if(self.row_info.use_spec_icons) then
-			icon_texture = self.row_info.spec_file
-		end
 
 		local icon_force_grayscale = self.row_info.icon_grayscale
 
 		local icon_offset_x, icon_offset_y = unpack(self.row_info.icon_offset)
-
-	--custom right text
-		local custom_right_text_enabled = self.row_info.textR_enable_custom_text
-		local custom_right_text = self.row_info.textR_custom_text
 
 	--backdrop
 		local backdrop = self.row_info.backdrop.enabled
@@ -4550,31 +4410,23 @@ function _detalhes:InstanceRefreshRows(instancia)
 		row.icone_classe:SetHeight(height)
 		row.icone_classe:SetWidth(height)
 
-		if(icon_force_grayscale) then
-			row.icone_classe:SetDesaturated(true)
-		else
-			row.icone_classe:SetDesaturated(false)
-		end
+		row.icone_classe:SetDesaturated(icon_force_grayscale)
 
 		--> icon and texture anchors
 		if(not is_mirror) then
 
-			row.texto_esquerdo:ClearAllPoints()
-			row.texto_direita:ClearAllPoints()
 			row.texto_direita:SetJustifyH("right")
 			row.texto_esquerdo:SetJustifyH("left")
 
-			row.texto_direita:SetPoint("right", row.statusbar, "right")
+			row.texto_direita:ClearAndSetPoint("right", row.statusbar, "right")
 
+			row.icone_classe:SetShown(not no_icon)
 			if(no_icon) then
 				row.statusbar:SetPoint("topleft", row, "topleft")
 				row.statusbar:SetPoint("bottomright", row, "bottomright")
-				row.texto_esquerdo:SetPoint("left", row.statusbar, "left", 2, 0)
-				row.icone_classe:Hide()
+				row.texto_esquerdo:ClearAndSetPoint("left", row.statusbar, "left", 2, 0)
 			else
-				row.icone_classe:ClearAllPoints()
-				row.icone_classe:SetPoint("left", row, "left", icon_offset_x, icon_offset_y)
-				row.icone_classe:Show()
+				row.icone_classe:ClearAndSetPoint("left", row, "left", icon_offset_x, icon_offset_y)
 
 				if(start_after_icon) then
 					row.statusbar:SetPoint("topleft", row.icone_classe, "topright")
@@ -4583,30 +4435,26 @@ function _detalhes:InstanceRefreshRows(instancia)
 				end
 
 				row.statusbar:SetPoint("bottomright", row, "bottomright")
-				row.texto_esquerdo:SetPoint("left", row.icone_classe, "right", 3, 0)
+				row.texto_esquerdo:ClearAndSetPoint("left", row.icone_classe, "right", 3, 0)
 			end
 		else
 
-			row.texto_esquerdo:ClearAllPoints()
-			row.texto_direita:ClearAllPoints()
 			row.texto_direita:SetJustifyH("left")
 			row.texto_esquerdo:SetJustifyH("right")
 
-			row.texto_direita:SetPoint("left", row.statusbar, "left", 1, 0)
+			row.texto_direita:ClearAndSetPoint("left", row.statusbar, "left", 1, 0)
 
+			row.icone_classe:SetShown(not no_icon)
 			if(no_icon) then
 				row.statusbar:SetPoint("topleft", row, "topleft")
 				row.statusbar:SetPoint("bottomright", row, "bottomright")
-				row.texto_esquerdo:SetPoint("right", row.statusbar, "right", -2, 0)
-				row.icone_classe:Hide()
+				row.texto_esquerdo:ClearAndSetPoint("right", row.statusbar, "right", -2, 0)
 
 				row.right_to_left_texture:SetPoint("topright", row.statusbar, "topright")
 				row.right_to_left_texture:SetPoint("bottomright", row.statusbar, "bottomright")
 			else
 
-				row.icone_classe:ClearAllPoints()
-				row.icone_classe:SetPoint("right", row, "right", icon_offset_x, icon_offset_y)
-				row.icone_classe:Show()
+				row.icone_classe:ClearAndSetPoint("right", row, "right", icon_offset_x, icon_offset_y)
 
 				if(start_after_icon) then
 					row.statusbar:SetPoint("bottomright", row.icone_classe, "bottomleft")
@@ -4616,7 +4464,7 @@ function _detalhes:InstanceRefreshRows(instancia)
 
 				row.statusbar:SetPoint("topleft", row, "topleft")
 
-				row.texto_esquerdo:SetPoint("right", row.icone_classe, "left", -2, 0)
+				row.texto_esquerdo:ClearAndSetPoint("right", row.icone_classe, "left", -2, 0)
 			end
 		end
 
@@ -4630,17 +4478,8 @@ function _detalhes:InstanceRefreshRows(instancia)
 		end
 
 		--> outline
-		if(left_text_outline) then
-			_detalhes:SetFontOutline(row.texto_esquerdo, left_text_outline)
-		else
-			_detalhes:SetFontOutline(row.texto_esquerdo, nil)
-		end
-
-		if(right_text_outline) then
-			self:SetFontOutline(row.texto_direita, right_text_outline)
-		else
-			self:SetFontOutline(row.texto_direita, nil)
-		end
+		_detalhes:SetFontOutline(row.texto_esquerdo, left_text_outline)
+		_detalhes:SetFontOutline(row.texto_direita, right_text_outline)
 
 		--> small outline
 		if(textL_outline_small) then
@@ -4662,11 +4501,7 @@ function _detalhes:InstanceRefreshRows(instancia)
 		row.right_to_left_texture:SetTexture(texture_file)
 		row.background:SetTexture(texture_file2)
 
-		if(is_mirror) then
-			row.right_to_left_texture:Show()
-			else
-			row.right_to_left_texture:Hide()
-		end
+		row.right_to_left_texture:SetShown(is_mirror)
 
 		--> texture class color: if true color changes on the fly through class refresh
 		if(not texture_class_color) then
@@ -4704,24 +4539,18 @@ function _detalhes:InstanceRefreshRows(instancia)
 		end
 
 		--> models
+		row.using_upper_3dmodels = upper_model_enabled
+		row.modelbox_high:SetShown(upper_model_enabled)
 		if(upper_model_enabled) then
-			row.using_upper_3dmodels = true
-			row.modelbox_high:Show()
 			row.modelbox_high:SetModel(upper_model)
 			row.modelbox_high:SetAlpha(upper_model_alpha)
-		else
-			row.using_upper_3dmodels = false
-			row.modelbox_high:Hide()
 		end
 
+		row.using_lower_3dmodels = lower_model_enabled
+		row.modelbox_low:SetShown(lower_model_enabled)
 		if(lower_model_enabled) then
-			row.using_lower_3dmodels = true
-			row.modelbox_low:Show()
 			row.modelbox_low:SetModel(lower_model)
 			row.modelbox_low:SetAlpha(lower_model_alpha)
-		else
-			row.using_lower_3dmodels = false
-			row.modelbox_low:Hide()
 		end
 
 	end
@@ -4909,11 +4738,6 @@ function _detalhes:SetWindowAlphaForCombat(entering_in_combat, true_hide)
 		self.combat_changes_alpha = amount
 		rowsamount = amount
 		menuamount = amount
-		if(_detalhes.pet_battle) then
-			amount = 0
-			rowsamount = 0
-			menuamount = 0
-		end
 	else
 		if(self.menu_alpha.enabled) then --auto transparency
 			if(self.is_interacting) then
@@ -4976,7 +4800,7 @@ function _detalhes:SetWindowAlphaForCombat(entering_in_combat, true_hide)
 
 end
 
-function _detalhes:InstanceButtonsColors(red, green, blue, alpha, no_save, only_left, only_right)
+function _detalhes:InstanceButtonsColors(red, green, blue, alpha, no_save, only_left)
 
 	if(not red) then
 		red, green, blue, alpha = unpack(self.color_buttons)
@@ -5078,15 +4902,6 @@ function _detalhes:InstanceColor(red, green, blue, alpha, no_save, change_status
 		self.skin = "Minimalistic"
 	end
 
-	--[[
-	self.baseframe.rodape.esquerdo:SetVertexColor(red, green, blue)
-		self.baseframe.rodape.esquerdo:SetAlpha(alpha)
-	self.baseframe.rodape.direita:SetVertexColor(red, green, blue)
-		self.baseframe.rodape.direita:SetAlpha(alpha)
-	self.baseframe.rodape.top_bg:SetVertexColor(red, green, blue)
-		self.baseframe.rodape.top_bg:SetAlpha(alpha)
-	--]]
-
 	self.baseframe.cabecalho.ball_r:SetVertexColor(red, green, blue)
 		self.baseframe.cabecalho.ball_r:SetAlpha(alpha)
 
@@ -5113,74 +4928,6 @@ function _detalhes:InstanceColor(red, green, blue, alpha, no_save, change_status
 
 	--self.color[1], self.color[2], self.color[3], self.color[4] = red, green, blue, alpha
 end
-
-function _detalhes:StatusBarAlertTime(instance)
-	instance.baseframe.statusbar:Hide()
-end
-
-function _detalhes:StatusBarAlert(text, icon, color, time)
-
-	local statusbar = self.baseframe.statusbar
-
-	if(text) then
-		if(type(text) == "table") then
-			if(text.color) then
-				statusbar.text:SetTextColor(gump:ParseColors(text.color))
-			else
-				statusbar.text:SetTextColor(1, 1, 1, 1)
-			end
-
-			statusbar.text:SetText(text.text or "")
-
-			if(text.size) then
-				_detalhes:SetFontSize(statusbar.text, text.size)
-			else
-				_detalhes:SetFontSize(statusbar.text, 9)
-			end
-		else
-			statusbar.text:SetText(text)
-			statusbar.text:SetTextColor(1, 1, 1, 1)
-			_detalhes:SetFontSize(statusbar.text, 9)
-		end
-	else
-		statusbar.text:SetText("")
-	end
-
-	if(icon) then
-		if(type(icon) == "table") then
-			local texture, w, h, l, r, t, b = unpack(icon)
-			statusbar.icon:SetTexture(texture)
-			statusbar.icon:SetWidth(w or 14)
-			statusbar.icon:SetHeight(h or 14)
-			if(l and r and t and b) then
-				statusbar.icon:SetTexCoord(l, r, t, b)
-			end
-		else
-			statusbar.icon:SetTexture(icon)
-			statusbar.icon:SetWidth(14)
-			statusbar.icon:SetHeight(14)
-			statusbar.icon:SetTexCoord(0, 1, 0, 1)
-		end
-	else
-		statusbar.icon:SetTexture(nil)
-	end
-
-	if(color) then
-		statusbar:SetBackdropColor(gump:ParseColors(color))
-	else
-		statusbar:SetBackdropColor(0, 0, 0, 1)
-	end
-
-	if(icon or text) then
-		statusbar:Show()
-		if(time) then
-			_detalhes:ScheduleTimer("StatusBarAlertTime", time, self)
-		end
-	else
-		statusbar:Hide()
-	end
-end
-
 
 function gump:CriaRodape(baseframe, instancia)
 
@@ -5238,32 +4985,6 @@ function gump:CriaRodape(baseframe, instancia)
 	StatusBarCenterAnchor:SetWidth(1)
 	StatusBarCenterAnchor:SetHeight(1)
 	baseframe.rodape.StatusBarCenterAnchor = StatusBarCenterAnchor
-
-	--> display frame
-		baseframe.statusbar = CreateFrame("frame", "DetailsStatusBar" .. instancia.meu_id, instancia.floatingframe)
-		baseframe.statusbar:SetFrameLevel(instancia.floatingframe:GetFrameLevel()+2)
-		baseframe.statusbar:SetPoint("left", baseframe.rodape.esquerdo, "right", -13, 10)
-		baseframe.statusbar:SetPoint("right", baseframe.rodape.direita, "left", 13, 10)
-		baseframe.statusbar:SetHeight(14)
-
-		local statusbar_icon = baseframe.statusbar:CreateTexture(nil, "overlay")
-		statusbar_icon:SetWidth(14)
-		statusbar_icon:SetHeight(14)
-		statusbar_icon:SetPoint("left", baseframe.statusbar, "left")
-
-		local statusbar_text = baseframe.statusbar:CreateFontString(nil, "overlay", "GameFontNormal")
-		statusbar_text:SetPoint("left", statusbar_icon, "right", 2, 0)
-
-		baseframe.statusbar:SetBackdrop({
-		bgFile =[[Interface\AddOns\Details\images\background]], tile = true, tileSize = 16,
-		insets = {left = 0, right = 0, top = 0, bottom = 0}})
-		baseframe.statusbar:SetBackdropColor(0, 0, 0, 1)
-
-		baseframe.statusbar.icon = statusbar_icon
-		baseframe.statusbar.text = statusbar_text
-		baseframe.statusbar.instancia = instancia
-
-		baseframe.statusbar:Hide()
 
 	--> frame invis�vel
 	baseframe.DOWNFrame = CreateFrame("frame", "DetailsDownFrame" .. instancia.meu_id, baseframe)
@@ -5348,7 +5069,7 @@ function _detalhes:SetIconAlpha(alpha, hide, no_animations)
 
 	if(self:IsLowerInstance()) then
 		if(#_detalhes.ToolBar.Shown > 0) then
-			for index, button in ipairs(_detalhes.ToolBar.Shown) do
+			for index, button in _ipairs(_detalhes.ToolBar.Shown) do
 				if(hide) then
 					gump:Fade(button, _unpack(_detalhes.windows_fade_in))
 				else
@@ -5381,33 +5102,7 @@ end
 -- search key: ~buttons ~icons
 
 local tbuttons = {}
-function _detalhes:ToolbarMenuSetButtons(_mode, _segment, _attributes, _report, _reset, _close)
-
-	if(_mode == nil) then
-		_mode = self.menu_icons[1]
-	end
-	if(_segment == nil) then
-		_segment = self.menu_icons[2]
-	end
-	if(_attributes == nil) then
-		_attributes = self.menu_icons[3]
-	end
-	if(_report == nil) then
-		_report = self.menu_icons[4]
-	end
-	if(_reset == nil) then
-		_reset = self.menu_icons[5]
-	end
-	if(_close == nil) then
-		_close = self.menu_icons[6]
-	end
-
-	self.menu_icons[1] = _mode
-	self.menu_icons[2] = _segment
-	self.menu_icons[3] = _attributes
-	self.menu_icons[4] = _report
-	self.menu_icons[5] = _reset
-	self.menu_icons[6] = _close
+function _detalhes:ToolbarMenuSetButtons()
 
 	table.wipe(tbuttons)
 
@@ -5520,7 +5215,7 @@ function _detalhes:ToolbarMenuSetButtons(_mode, _segment, _attributes, _report, 
 				self.baseframe.cabecalho.PluginIconsSeparator.widget = self.baseframe.cabecalho.PluginIconsSeparator
 			end
 
-			for index, button in ipairs(_detalhes.ToolBar.Shown) do
+			for index, button in _ipairs(_detalhes.ToolBar.Shown) do
 				button:ClearAllPoints()
 
 				if(got_anchor) then
@@ -5628,8 +5323,8 @@ function _detalhes:ToolbarMenuSetButtons(_mode, _segment, _attributes, _report, 
 
 end
 
-function _detalhes:ToolbarMenuButtons(_mode, _segment, _attributes, _report)
-	return self:ToolbarMenuSetButtons(_mode, _segment, _attributes, _report)
+function _detalhes:ToolbarMenuButtons()
+	return self:ToolbarMenuSetButtons()
 end
 
 local parameters_table = {}
@@ -5662,6 +5357,18 @@ end
 
 function _detalhes:SetTooltipMinWidth()
 	GameCooltip:SetOption("MinWidth", 155)
+end
+
+function _detalhes:SetPluginMenuCooltip()
+	GameCooltip2:Reset()
+	GameCooltip2:SetType("menu")
+	GameCooltip2:SetOption("TextSize", _detalhes.font_sizes.menus)
+	GameCooltip2:SetOption("TextFont", _detalhes.font_faces.menus)
+	GameCooltip2:SetOption("LineHeightSizeOffset", 3)
+	GameCooltip2:SetOption("VerticalOffset", 2)
+	GameCooltip2:SetOption("VerticalPadding", -4)
+	GameCooltip2:SetOption("FrameHeightSizeOffset", -3)
+	_detalhes:SetTooltipMinWidth()
 end
 
 function _detalhes:FormatCooltipBackdrop()
@@ -5733,22 +5440,6 @@ local build_mode_list = function(self, elapsed)
 			--CoolTip:SetWallpaper(2, _detalhes.tooltip.menus_bg_texture, _detalhes.tooltip.menus_bg_coords, _detalhes.tooltip.menus_bg_color, true)
 		end
 
-		CoolTip:AddLine(Loc["STRING_MODE_SELF"])
-		CoolTip:AddMenu(1, instancia.AlteraModo, 1, true)
-		CoolTip:AddIcon([[Interface\AddOns\Details\images\modo_icones]], 1, 1, 20, 20, 0, 32/256, 0, 1)
-
-		--build self plugins list
-
-		--pega a list de plugins solo:
-		if(#_detalhes.SoloTables.Menu > 0) then
-			for index, ptable in _ipairs(_detalhes.SoloTables.Menu) do
-				if(ptable[3].__enabled) then
-					CoolTip:AddMenu(2, _detalhes.SoloTables.EnableSoloMode, instancia, ptable[4], true, ptable[1], ptable[2], true)
-				end
-			end
-			--CoolTip:SetWallpaper(2, _detalhes.tooltip.menus_bg_texture, _detalhes.tooltip.menus_bg_coords, _detalhes.tooltip.menus_bg_color, true)
-		end
-
 		--> window control
 		GameCooltip:AddLine("$div")
 		CoolTip:AddLine(Loc["STRING_MENU_INSTANCE_CONTROL"])
@@ -5802,18 +5493,7 @@ local build_mode_list = function(self, elapsed)
 				else
 					local modo = _this_instance.modo
 
-					if(modo == 1) then --alone
-
-						atributo = _detalhes.SoloTables.Mode or 1
-						local SoloInfo = _detalhes.SoloTables.Menu[atributo]
-						if(SoloInfo) then
-							CoolTip:AddMenu(2, OnClickNovoMenu, index, instancia, nil, "#".. index .. " " .. SoloInfo[1], _, true)
-							CoolTip:AddIcon(SoloInfo[2], 2, 1, 16, 16, 0, 1, 0, 1)
-						else
-							CoolTip:AddMenu(2, OnClickNovoMenu, index, instancia, nil, "#".. index .. " Unknown Plugin", _, true)
-						end
-
-					elseif(modo == 4) then --raid
+					if(modo == 4) then --raid
 
 						local plugin_name = _this_instance.current_raid_plugin or _this_instance.last_raid_plugin
 						if(plugin_name) then
@@ -5916,12 +5596,8 @@ end
 local empty_segment_color = {1, 1, 1, .4}
 
 local segments_common_tex, segments_common_color = {0.5078125, 0.1171875, 0.017578125, 0.1953125}, {1, 1, 1, .5}
-local unknown_boss_tex, unknown_boss_color = {0.14453125, 0.9296875, 0.2625, 0.6546875}, {1, 1, 1, 0.5}
 
 local party_line_color = {170/255, 167/255, 255/255, 1}
-local party_line_color_trash = {130/255, 130/255, 155/255, 1}
-local party_line_color2 = {210/255, 200/255, 255/255, 1}
-local party_line_color2_trash = {110/255, 110/255, 155/255, 1}
 
 local party_wallpaper_tex, party_wallpaper_color, raid_wallpaper_tex = {0.09, 0.698125, 0, 0.833984375}, {1, 1, 1, 0.5}, {33/512, 361/512, 45/512, 295/512}
 
@@ -5981,16 +5657,6 @@ function _detalhes:GetSegmentInfo(index)
 			if(b) then
 				background = b
 				background_coords = party_wallpaper_tex -- TODO
-
-			elseif(combat.instance_type == "party") then
-				local ej_id = combat.is_boss.ej_instance_id
-				if(ej_id) then
-					local name, description, bgImage, buttonImage, loreImage, dungeonAreaMapID, link = DetailsFramework.EncounterJournal.EJ_GetInstanceInfo(ej_id)
-					if(bgImage) then
-						background = bgImage
-						background_coords = party_wallpaper_tex
-					end
-				end
 			end
 
 		elseif(combat.is_arena) then
@@ -6064,8 +5730,6 @@ local build_segment_list = function(self, elapsed)
 		segments_filled = fill
 
 		local dungeon_color = party_line_color
-		local dungeon_color_trash = party_line_color_trash
-		local dungeon_run_id = false
 
 		--> history table(segments container)
 		for i = _detalhes.segments_amount, 1, -1 do
@@ -6075,11 +5739,8 @@ local build_segment_list = function(self, elapsed)
 				local thisCombat = _detalhes.tabela_historico.tabelas[i]
 				if(thisCombat) then
 					local enemy = thisCombat.is_boss and thisCombat.is_boss.name
-					local segment_info_added = false
 
 					segments_used = segments_used + 1
-
-					--print(thisCombat.is_boss.name, thisCombat.instance_type, _detalhes:GetRaidIcon(thisCombat.is_boss.mapid), thisCombat.is_boss.ej_instance_id)
 
 					if(thisCombat.is_boss and thisCombat.is_boss.name) then
 
@@ -6113,20 +5774,6 @@ local build_segment_list = function(self, elapsed)
 						local portrait = _detalhes:GetBossPortrait(thisCombat.is_boss.mapid, thisCombat.is_boss.index) or thisCombat.is_boss.bossimage
 						if(portrait) then
 							CoolTip:AddIcon(portrait, 2, "top", 128, 64)
-						else
-							local encounter_name = thisCombat.is_boss.encounter
-							local instanceID = thisCombat.is_boss.ej_instance_id
-							if(encounter_name and instanceID and instanceID ~= 0) then
-								local index, name, description, encounterID, rootSectionID, link = _detalhes:GetEncounterInfoFromEncounterName(instanceID, encounter_name)
-								if(index and name and encounterID) then
-									--EJ_SelectInstance(instanceID)
-									--creature info pode ser sempre 1, n�o usar o index do boss
-									local id, name, description, displayInfo, iconImage = DetailsFramework.EncounterJournal.EJ_GetCreatureInfo(1, encounterID)
-									if(iconImage) then
-										CoolTip:AddIcon(iconImage, 2, "top", 128, 64)
-									end
-								end
-							end
 						end
 
 						CoolTip:AddIcon([[Interface\AddOns\Details\images\icons]], "main", "left", 16, 16, 0.96875, 1, 0, 0.03125)
@@ -6135,20 +5782,6 @@ local build_segment_list = function(self, elapsed)
 							local background = _detalhes:GetRaidIcon(thisCombat.is_boss.mapid)
 							if(background) then
 								CoolTip:SetWallpaper(2, background, raid_wallpaper_tex, segments_wallpaper_color, true)
-							else
-								local ej_id = thisCombat.is_boss.ej_instance_id
-								if(ej_id and ej_id ~= 0) then
-									local name, description, bgImage, buttonImage, loreImage, dungeonAreaMapID, link = DetailsFramework.EncounterJournal.EJ_GetInstanceInfo(ej_id)
-									if(name) then
-										if(thisCombat.instance_type == "party") then
-											CoolTip:SetWallpaper(2, bgImage, party_wallpaper_tex, party_wallpaper_color, true)
-										else
-											CoolTip:SetWallpaper(2, loreImage, raid_wallpaper_tex, party_wallpaper_color, true)
-										end
-									end
-								else
-									--CoolTip:SetWallpaper(2,[[Interface\BlackMarket\HotItemBanner]], unknown_boss_tex, unknown_boss_color, true)
-								end
 							end
 						else
 							--> wallpaper = main window
@@ -6209,15 +5842,13 @@ local build_segment_list = function(self, elapsed)
 
 					CoolTip:AddMenu(1, instancia.TrocaTabela, i)
 
-					if(not segment_info_added) then
-						CoolTip:AddLine(Loc["STRING_SEGMENT_ENEMY"] .. ":", enemy, 2, "white", "white")
-						local decorrido = thisCombat:GetCombatTime()
-						local minutos, segundos = _math_floor(decorrido/60), _math_floor(decorrido%60)
-						CoolTip:AddLine(Loc["STRING_SEGMENTS_LIST_COMBATTIME"] .. ":", minutos.."m "..segundos.."s", 2, "white", "white")
+					CoolTip:AddLine(Loc["STRING_SEGMENT_ENEMY"] .. ":", enemy, 2, "white", "white")
+					local decorrido = thisCombat:GetCombatTime()
+					local minutos, segundos = _math_floor(decorrido/60), _math_floor(decorrido%60)
+					CoolTip:AddLine(Loc["STRING_SEGMENTS_LIST_COMBATTIME"] .. ":", minutos.."m "..segundos.."s", 2, "white", "white")
 
-						CoolTip:AddLine(Loc["STRING_SEGMENT_START"] .. ":", thisCombat.data_inicio, 2, "white", "white")
-						CoolTip:AddLine(Loc["STRING_SEGMENT_END"] .. ":", thisCombat.data_fim or "in progress", 2, "white", "white")
-					end
+					CoolTip:AddLine(Loc["STRING_SEGMENT_START"] .. ":", thisCombat.data_inicio, 2, "white", "white")
+					CoolTip:AddLine(Loc["STRING_SEGMENT_END"] .. ":", thisCombat.data_fim or "in progress", 2, "white", "white")
 
 					fight_amount = fight_amount + 1
 				else
@@ -6247,9 +5878,6 @@ local build_segment_list = function(self, elapsed)
 			local enemy = _detalhes.tabela_vigente.is_boss and _detalhes.tabela_vigente.is_boss.name or _detalhes.tabela_vigente.enemy or "--x--x--"
 			local file, coords
 
-			local thisCombat = _detalhes.tabela_vigente
-			local segment_info_added
-
 			--> add the new line
 			CoolTip:AddLine(segmentos.current_standard, _, 1, "white")
 			CoolTip:AddMenu(1, instancia.TrocaTabela, 0)
@@ -6260,38 +5888,12 @@ local build_segment_list = function(self, elapsed)
 				local portrait = _detalhes:GetBossPortrait(_detalhes.tabela_vigente.is_boss.mapid, _detalhes.tabela_vigente.is_boss.index) or _detalhes.tabela_vigente.is_boss.bossimage
 				if(portrait) then
 					CoolTip:AddIcon(portrait, 2, "top", 128, 64)
-				else
-					local thisCombat = _detalhes.tabela_vigente
-					local encounter_name = thisCombat.is_boss.encounter
-					local instanceID = thisCombat.is_boss.ej_instance_id
-					instanceID = tonumber(instanceID)
-					if(encounter_name and instanceID and instanceID ~= 0) then
-						local index, name, description, encounterID, rootSectionID, link = _detalhes:GetEncounterInfoFromEncounterName(instanceID, encounter_name)
-						if(index and name and encounterID) then
-							local id, name, description, displayInfo, iconImage = DetailsFramework.EncounterJournal.EJ_GetCreatureInfo(index, encounterID)
-							if(iconImage) then
-								CoolTip:AddIcon(iconImage, 2, "top", 128, 64)
-							end
-						end
-					end
 				end
 
 				if(_detalhes.tooltip.submenu_wallpaper) then
 					local background = _detalhes:GetRaidIcon(_detalhes.tabela_vigente.is_boss.mapid)
 					if(background) then
 						CoolTip:SetWallpaper(2, background, raid_wallpaper_tex, segments_wallpaper_color, true)
-					else
-						local ej_id = _detalhes.tabela_vigente.is_boss.ej_instance_id
-						if(ej_id and ej_id ~= 0) then
-							local name, description, bgImage, buttonImage, loreImage, dungeonAreaMapID, link = DetailsFramework.EncounterJournal.EJ_GetInstanceInfo(ej_id)
-							if(name) then
-								if(_detalhes.tabela_vigente.instance_type == "party") then
-									CoolTip:SetWallpaper(2, bgImage, party_wallpaper_tex, party_wallpaper_color, true)
-								else
-									CoolTip:SetWallpaper(2, loreImage, raid_wallpaper_tex, party_wallpaper_color, true)
-								end
-							end
-						end
 					end
 				else
 					--> wallpaper = main window
@@ -6322,26 +5924,24 @@ local build_segment_list = function(self, elapsed)
 				--CoolTip:SetWallpaper(2, _detalhes.tooltip.menus_bg_texture, _detalhes.tooltip.menus_bg_coords, _detalhes.tooltip.menus_bg_color, true)
 			end
 
-			if(not segment_info_added) then
-				CoolTip:AddLine(Loc["STRING_SEGMENT_ENEMY"] .. ":", enemy, 2, "white", "white")
+			CoolTip:AddLine(Loc["STRING_SEGMENT_ENEMY"] .. ":", enemy, 2, "white", "white")
 
-				if(not _detalhes.tabela_vigente:GetEndTime()) then
-					if(_detalhes.in_combat) then
-						local decorrido = _detalhes.tabela_vigente:GetCombatTime()
-						local minutos, segundos = _math_floor(decorrido/60), _math_floor(decorrido%60)
-						CoolTip:AddLine(Loc["STRING_SEGMENTS_LIST_COMBATTIME"] .. ":", minutos.."m "..segundos.."s", 2, "white", "white")
-					else
-						CoolTip:AddLine(Loc["STRING_SEGMENTS_LIST_COMBATTIME"] .. ":", "--x--x--", 2, "white", "white")
-					end
-				else
+			if(not _detalhes.tabela_vigente:GetEndTime()) then
+				if(_detalhes.in_combat) then
 					local decorrido = _detalhes.tabela_vigente:GetCombatTime()
 					local minutos, segundos = _math_floor(decorrido/60), _math_floor(decorrido%60)
 					CoolTip:AddLine(Loc["STRING_SEGMENTS_LIST_COMBATTIME"] .. ":", minutos.."m "..segundos.."s", 2, "white", "white")
+				else
+					CoolTip:AddLine(Loc["STRING_SEGMENTS_LIST_COMBATTIME"] .. ":", "--x--x--", 2, "white", "white")
 				end
-
-				CoolTip:AddLine(Loc["STRING_SEGMENT_START"] .. ":", _detalhes.tabela_vigente.data_inicio, 2, "white", "white")
-				CoolTip:AddLine(Loc["STRING_SEGMENT_END"] .. ":", _detalhes.tabela_vigente.data_fim or "in progress", 2, "white", "white")
+			else
+				local decorrido = _detalhes.tabela_vigente:GetCombatTime()
+				local minutos, segundos = _math_floor(decorrido/60), _math_floor(decorrido%60)
+				CoolTip:AddLine(Loc["STRING_SEGMENTS_LIST_COMBATTIME"] .. ":", minutos.."m "..segundos.."s", 2, "white", "white")
 			end
+
+			CoolTip:AddLine(Loc["STRING_SEGMENT_START"] .. ":", _detalhes.tabela_vigente.data_inicio, 2, "white", "white")
+			CoolTip:AddLine(Loc["STRING_SEGMENT_END"] .. ":", _detalhes.tabela_vigente.data_fim or "in progress", 2, "white", "white")
 
 			--> fill � a quantidade de menu que esta sendo mostrada
 			if(instancia.segmento == 0) then
@@ -6447,10 +6047,6 @@ local build_segment_list = function(self, elapsed)
 
 		_detalhes:SetTooltipMinWidth()
 
-		--CoolTip:SetWallpaper(1, _detalhes.tooltip.menus_bg_texture, _detalhes.tooltip.menus_bg_coords, _detalhes.tooltip.menus_bg_color, true)
-		--CoolTip:SetBackdrop(1, menus_backdrop, nil, menus_bordercolor)
-		--CoolTip:SetBackdrop(2, menus_backdrop, nil, menus_bordercolor)
-
 		_detalhes:FormatCooltipBackdrop()
 
 		show_anti_overlap(instancia, self, "top")
@@ -6482,66 +6078,7 @@ function _detalhes:RefreshMicroDisplays()
 end
 
 
---source https://github.com/WeakAuras/WeakAuras2/blob/520951a4b49b64cb49d88c1a8542d02bbcdbe412/WeakAuras/AuraEnvironment.lua#L66
-local blockedFunctions = {
-	-- Lua functions that may allow breaking out of the environment
-	setfenv = true,
-	getfenv = true,
-	loadstring = true,
-	pcall = true,
-	xpcall = true,
-	getglobal = true,
-
-	-- blocked WoW API
-	SendMail = true,
-	SetTradeMoney = true,
-	AddTradeMoney = true,
-	PickupTradeMoney = true,
-	PickupPlayerMoney = true,
-	TradeFrame = true,
-	MailFrame = true,
-	EnumerateFrames = true,
-	RunScript = true,
-	AcceptTrade = true,
-	SetSendMailMoney = true,
-	EditMacro = true,
-	SlashCmdList = true,
-	DevTools_DumpCommand = true,
-	hash_SlashCmdList = true,
-	CreateMacro = true,
-	SetBindingMacro = true,
-	GuildDisband = true,
-	GuildUninvite = true,
-	securecall = true,
-	DeleteCursorItem = true,
-	ChatEdit_SendText = true,
-	CastSpellByName = true,
-	CastSpell = true,
-	CastSpellByID = true,
-
-	--additional
-	setmetatable = true,
-}
-local blockedTables = {
-	SlashCmdList = true,
-	SendMailMailButton = true,
-	SendMailMoneyGold = true,
-	MailFrameTab2 = true,
-	ChatFrame1 = true,
-	WeakAurasOptions = true,
-	WeakAurasOptionsSaved = true
-}
-local functionFilter = setmetatable({}, {__index = function(env, key)
-	if key == "_G" then
-		return env
-	elseif blockedFunctions[key] then
-		return nil
-	elseif blockedTables[key] then
-		return {}
-	else
-		return _G[key]
-	end
-end})
+local functionFilter = _detalhes:CreateScriptEnvironment()
 
 function _detalhes:ChangeSkin(skin_name)
 
@@ -6701,25 +6238,9 @@ function _detalhes:ChangeSkin(skin_name)
 
 ----------> icon anchor and size
 
-	if(self.modo == 1 or self.modo == 4 or self.atributo == 5) then -- alone e raid
+	if(self.modo == 4 or self.atributo == 5) then
 		local icon_anchor = this_skin.icon_anchor_plugins
 		self.baseframe.cabecalho.atributo_icon:SetPoint("topright", self.baseframe.cabecalho.ball_point, "topright", icon_anchor[1], icon_anchor[2])
-		if(self.modo == 1) then
-			if(_detalhes.SoloTables.Plugins[1] and _detalhes.SoloTables.Mode) then
-				local plugin_index = _detalhes.SoloTables.Mode
-				if(plugin_index > 0 and _detalhes.SoloTables.Menu[plugin_index]) then
-					self:ChangeIcon(_detalhes.SoloTables.Menu[plugin_index][2])
-				end
-			end
-
-		elseif(self.modo == 4) then
-			--if(_detalhes.RaidTables.Plugins[1] and _detalhes.RaidTables.Mode) then
-			--	local plugin_index = _detalhes.RaidTables.Mode
-			--	if(plugin_index and _detalhes.RaidTables.Menu[plugin_index]) then
-					--self:ChangeIcon(_detalhes.RaidTables.Menu[plugin_index][2])
-			--	end
-			--end
-		end
 	else
 		local icon_anchor = this_skin.icon_anchor_main --> ancora do icone do canto direito superior
 		self.baseframe.cabecalho.atributo_icon:SetPoint("topright", self.baseframe.cabecalho.ball_point, "topright", icon_anchor[1], icon_anchor[2])
@@ -6736,11 +6257,7 @@ function _detalhes:ChangeSkin(skin_name)
 
 ----------> update abbreviation function on the class files
 
-	_detalhes.atributo_damage:UpdateSelectedToKFunction()
-	_detalhes.atributo_heal:UpdateSelectedToKFunction()
-	_detalhes.atributo_energy:UpdateSelectedToKFunction()
-	_detalhes.atributo_misc:UpdateSelectedToKFunction()
-	_detalhes.atributo_custom:UpdateSelectedToKFunction()
+	_detalhes:UpdateToKFunctions()
 
 ----------> call widgets handlers
 		self:SetBarSettings(self.row_info.height)
@@ -6873,18 +6390,10 @@ function updateClickThroughListener:EnterCombat()
 	end)
 end
 
-function updateClickThroughListener:LeaveCombat()
-	_detalhes:InstanceCall(function(instance)
-		C_Timer:After(1.5, function()
-			instance:UpdateClickThrough()
-		end)
-	end)
-end
-
 updateClickThroughListener:RegisterEvent("COMBAT_PLAYER_ENTER", "EnterCombat")
 updateClickThroughListener:RegisterEvent("COMBAT_PLAYER_LEAVE", "EnterCombat")
 
-function _detalhes:UpdateClickThroughSettings(inCombat, window, bars, toolbaricons)
+function _detalhes:UpdateClickThroughSettings(inCombat, window, bars)
 	if(inCombat ~= nil) then
 		self.clickthrough_incombatonly = inCombat
 	end
@@ -6897,141 +6406,25 @@ function _detalhes:UpdateClickThroughSettings(inCombat, window, bars, toolbarico
 		self.clickthrough_rows = bars
 	end
 
-	if(toolbaricons ~= nil) then
-		self.clickthrough_toolbaricons = toolbaricons
-	end
-
 	self:UpdateClickThrough()
 end
 
 function _detalhes:UpdateClickThrough()
+	local active = not self.clickthrough_incombatonly or InCombatLockdown()
+	local barsMouse = not (active and self.clickthrough_rows)
+	local windowMouse = not (active and self.clickthrough_window)
 
-	local barsClickThrough = self.clickthrough_rows
-	local windowClickThrough = self.clickthrough_window
-	local onlyInCombat = self.clickthrough_incombatonly
-	local toolbarIcons = not self.clickthrough_toolbaricons
-
-	if(onlyInCombat) then
-
-		if(InCombatLockdown()) then
-			--player bars
-			if(barsClickThrough) then
-				for barIndex, barObject in _ipairs(self.barras) do
-					barObject:EnableMouse(false)
-				end
-			else
-				for barIndex, barObject in _ipairs(self.barras) do
-					barObject:EnableMouse(true)
-				end
-			end
-
-			--window frames
-			if(windowClickThrough) then
-				self.baseframe:EnableMouse(false)
-				self.bgframe:EnableMouse(false)
-				self.rowframe:EnableMouse(false)
-				self.floatingframe:EnableMouse(false)
-				self.windowSwitchButton:EnableMouse(false)
-				self.windowBackgroundDisplay:EnableMouse(false)
-				self.baseframe.UPFrame:EnableMouse(false)
-
-			else
-				self.baseframe:EnableMouse(true)
-				self.bgframe:EnableMouse(true)
-				self.rowframe:EnableMouse(true)
-				self.floatingframe:EnableMouse(true)
-				self.windowSwitchButton:EnableMouse(true)
-				self.windowBackgroundDisplay:EnableMouse(true)
-				self.baseframe.UPFrame:EnableMouse(true)
-			end
-
-			--titlebar icons
-			local toolbar_buttons = {}
-			toolbar_buttons[1] = self.baseframe.cabecalho.modo_selecao
-			toolbar_buttons[2] = self.baseframe.cabecalho.segmento
-			toolbar_buttons[3] = self.baseframe.cabecalho.atributo
-			toolbar_buttons[4] = self.baseframe.cabecalho.report
-			toolbar_buttons[5] = self.baseframe.cabecalho.reset
-			toolbar_buttons[6] = self.baseframe.cabecalho.fechar
-
-			for i, button in ipairs(toolbar_buttons) do
-				button:EnableMouse(toolbar_buttons)
-			end
-
-		else
-			--player bars
-			for barIndex, barObject in _ipairs(self.barras) do
-				barObject:EnableMouse(true)
-			end
-
-			--window frames
-			self.baseframe:EnableMouse(true)
-			self.bgframe:EnableMouse(true)
-			self.rowframe:EnableMouse(true)
-			self.floatingframe:EnableMouse(true)
-			self.windowSwitchButton:EnableMouse(true)
-			self.windowBackgroundDisplay:EnableMouse(true)
-			self.baseframe.UPFrame:EnableMouse(true)
-
-			--titlebar icons, forcing true because the player isn't in combat and the inCombat setting is enabled
-			local toolbar_buttons = {}
-			toolbar_buttons[1] = self.baseframe.cabecalho.modo_selecao
-			toolbar_buttons[2] = self.baseframe.cabecalho.segmento
-			toolbar_buttons[3] = self.baseframe.cabecalho.atributo
-			toolbar_buttons[4] = self.baseframe.cabecalho.report
-			toolbar_buttons[5] = self.baseframe.cabecalho.reset
-			toolbar_buttons[6] = self.baseframe.cabecalho.fechar
-
-			for i, button in ipairs(toolbar_buttons) do
-				button:EnableMouse(true)
-			end
-		end
-	else
-
-		--player bars
-		if(barsClickThrough) then
-			for barIndex, barObject in _ipairs(self.barras) do
-				barObject:EnableMouse(false)
-			end
-		else
-			for barIndex, barObject in _ipairs(self.barras) do
-				barObject:EnableMouse(true)
-			end
-		end
-
-		--window frame
-		if(windowClickThrough) then
-			self.baseframe:EnableMouse(false)
-			self.bgframe:EnableMouse(false)
-			self.rowframe:EnableMouse(false)
-			self.floatingframe:EnableMouse(false)
-			self.windowSwitchButton:EnableMouse(false)
-			self.windowBackgroundDisplay:EnableMouse(false)
-			self.baseframe.UPFrame:EnableMouse(false)
-
-		else
-			self.baseframe:EnableMouse(true)
-			self.bgframe:EnableMouse(true)
-			self.rowframe:EnableMouse(true)
-			self.floatingframe:EnableMouse(true)
-			self.windowSwitchButton:EnableMouse(true)
-			self.windowBackgroundDisplay:EnableMouse(true)
-			self.baseframe.UPFrame:EnableMouse(true)
-		end
-
-		--titlebar icons
-		local toolbar_buttons = {}
-		toolbar_buttons[1] = self.baseframe.cabecalho.modo_selecao
-		toolbar_buttons[2] = self.baseframe.cabecalho.segmento
-		toolbar_buttons[3] = self.baseframe.cabecalho.atributo
-		toolbar_buttons[4] = self.baseframe.cabecalho.report
-		toolbar_buttons[5] = self.baseframe.cabecalho.reset
-		toolbar_buttons[6] = self.baseframe.cabecalho.fechar
-
-		for i, button in ipairs(toolbar_buttons) do
-			button:EnableMouse(toolbarIcons)
-		end
+	for _, barObject in _ipairs(self.barras) do
+		barObject:EnableMouse(barsMouse)
 	end
+
+	self.baseframe:EnableMouse(windowMouse)
+	self.bgframe:EnableMouse(windowMouse)
+	self.rowframe:EnableMouse(windowMouse)
+	self.floatingframe:EnableMouse(windowMouse)
+	self.windowSwitchButton:EnableMouse(windowMouse)
+	self.windowBackgroundDisplay:EnableMouse(windowMouse)
+	self.baseframe.UPFrame:EnableMouse(windowMouse)
 end
 
 --endd
@@ -7232,7 +6625,7 @@ function _detalhes:CheckForTextTimeCounter(combat_start)
 			end
 		end
 	else
-		for _, instance in ipairs(_detalhes.tabela_instancias) do
+		for _, instance in _ipairs(_detalhes.tabela_instancias) do
 			if(_detalhes.instance_title_text_timer[instance.meu_id] and instance.baseframe and instance:IsEnabled() and instance.menu_attribute_string) then
 				_detalhes:CancelTimer(_detalhes.instance_title_text_timer[instance.meu_id])
 				local current_text = instance.menu_attribute_string:GetText()
@@ -7370,19 +6763,16 @@ function _detalhes:AttributeMenu(enabled, pos_x, pos_y, font, size, color, side,
 	--> anchor
 	if(side == 1) then --> a string esta no lado de cima
 		if(self.toolbar_side == 1) then -- a toolbar esta em cima
-			self.menu_attribute_string:ClearAllPoints()
-			self.menu_attribute_string:SetPoint("bottomleft", self.baseframe.cabecalho.ball, "bottomright", self.attribute_text.anchor[1], self.attribute_text.anchor[2])
+			self.menu_attribute_string:ClearAndSetPoint("bottomleft", self.baseframe.cabecalho.ball, "bottomright", self.attribute_text.anchor[1], self.attribute_text.anchor[2])
 
 		elseif(self.toolbar_side == 2) then --a toolbar esta em baixo
-			self.menu_attribute_string:ClearAllPoints()
-			self.menu_attribute_string:SetPoint("bottomleft", self.baseframe, "topleft", self.attribute_text.anchor[1] + 21, self.attribute_text.anchor[2])
+			self.menu_attribute_string:ClearAndSetPoint("bottomleft", self.baseframe, "topleft", self.attribute_text.anchor[1] + 21, self.attribute_text.anchor[2])
 
 		end
 
 	elseif(side == 2) then --> a string esta no lado de baixo
 		if(self.toolbar_side == 1) then --toolbar esta em cima
-			self.menu_attribute_string:ClearAllPoints()
-			self.menu_attribute_string:SetPoint("left", self.baseframe.rodape.StatusBarLeftAnchor, "left", self.attribute_text.anchor[1] + 16, self.attribute_text.anchor[2] - 6)
+			self.menu_attribute_string:ClearAndSetPoint("left", self.baseframe.rodape.StatusBarLeftAnchor, "left", self.attribute_text.anchor[1] + 16, self.attribute_text.anchor[2] - 6)
 
 		elseif(self.toolbar_side == 2) then --toolbar esta em baixo
 			self.menu_attribute_string:SetPoint("bottomleft", self.baseframe.cabecalho.ball, "topright", self.attribute_text.anchor[1], self.attribute_text.anchor[2] - 19)
@@ -7448,10 +6838,6 @@ function _detalhes:SetAutoHideMenu(left, right, interacting)
 					self.baseframe.cabecalho.PluginIconsSeparator:Show()
 				end
 			end
---			if(self.auto_hide_menu.right) then
---				local r, g, b = unpack(self.color_buttons)
---				self:InstanceButtonsColors(r, g, b, 1, true, nil, true) --no save, only right
---			end
 		else
 			if(self.auto_hide_menu.left) then
 				local r, g, b = unpack(self.color_buttons)
@@ -7461,10 +6847,6 @@ function _detalhes:SetAutoHideMenu(left, right, interacting)
 					self.baseframe.cabecalho.PluginIconsSeparator:Hide()
 				end
 			end
---			if(self.auto_hide_menu.right) then
---				local r, g, b = unpack(self.color_buttons)
---				self:InstanceButtonsColors(r, g, b, 0, true, nil, true) --no save, only right
---			end
 		end
 		return
 	end
@@ -7504,18 +6886,6 @@ function _detalhes:SetAutoHideMenu(left, right, interacting)
 		end
 	end
 
---[=[
-	if(not right) then
-		--auto hide is off
-		self:InstanceButtonsColors(r, g, b, 1, true, nil, true) --no save, only right
-	else
-		if(self.is_interacting) then
-			self:InstanceButtonsColors(r, g, b, 1, true, nil, true) --no save, only right
-		else
-			self:InstanceButtonsColors(0, 0, 0, 0, true, nil, true) --no save, only right
-		end
-	end
---]=]
 
 	self:RefreshAttributeTextSize()
 	--auto_hide_menu = {left = false, right = false},
@@ -7669,7 +7039,7 @@ function _detalhes:GetInstanceGroup(instance_id)
 				if(this_instance and this_instance:IsEnabled()) then
 					for side, id in _pairs(this_instance.snap) do
 						if(id == last_id) then
-							tinsert(current_group, this_instance)
+							current_group[#current_group+1] = this_instance
 							got = true
 							last_id = i
 						end
@@ -7687,7 +7057,7 @@ function _detalhes:GetInstanceGroup(instance_id)
 				if(this_instance and this_instance:IsEnabled()) then
 					for side, id in _pairs(this_instance.snap) do
 						if(id == last_id) then
-							tinsert(current_group, this_instance)
+							current_group[#current_group+1] = this_instance
 							got = true
 							last_id = i
 						end
@@ -7749,11 +7119,9 @@ function _detalhes:ToolbarSide(side, only_update_anchors)
 		local anchor_mod = not self.show_sidebars and skin.instance_cprops.show_sidebars_need_resize_by or 0
 
 		--> icon(ball) point
-		self.baseframe.cabecalho.ball_point:ClearAllPoints()
-
 		local x, y = unpack(skin.icon_point_anchor)
 		x = x +(anchor_mod)
-		self.baseframe.cabecalho.ball_point:SetPoint("bottomleft", self.baseframe, "topleft", x, y)
+		self.baseframe.cabecalho.ball_point:ClearAndSetPoint("bottomleft", self.baseframe, "topleft", x, y)
 
 		--> ball
 		if(self.hide_icon) then
@@ -7764,19 +7132,16 @@ function _detalhes:ToolbarSide(side, only_update_anchors)
 			self.baseframe.cabecalho.emenda:SetTexCoord(unpack(COORDS_LEFT_CONNECTOR))
 		end
 
-		self.baseframe.cabecalho.ball:ClearAllPoints()
-
 		local x, y = unpack(skin.left_corner_anchor)
 		x = x +(anchor_mod)
-		self.baseframe.cabecalho.ball:SetPoint("bottomleft", self.baseframe, "topleft", x, y)
+		self.baseframe.cabecalho.ball:ClearAndSetPoint("bottomleft", self.baseframe, "topleft", x, y)
 
 		--> ball r
 		self.baseframe.cabecalho.ball_r:SetTexCoord(unpack(COORDS_RIGHT_BALL))
-		self.baseframe.cabecalho.ball_r:ClearAllPoints()
 
 		local x, y = unpack(skin.right_corner_anchor)
 		x = x +((anchor_mod) * -1)
-		self.baseframe.cabecalho.ball_r:SetPoint("bottomright", self.baseframe, "topright", x, y)
+		self.baseframe.cabecalho.ball_r:ClearAndSetPoint("bottomright", self.baseframe, "topright", x, y)
 
 		--> tex coords
 		self.baseframe.cabecalho.top_bg:SetTexCoord(unpack(COORDS_TOP_BACKGROUND))
@@ -7785,12 +7150,10 @@ function _detalhes:ToolbarSide(side, only_update_anchors)
 		self.baseframe.UPFrame:SetPoint("left", self.baseframe.cabecalho.ball, "right", 0, -53)
 		self.baseframe.UPFrame:SetPoint("right", self.baseframe.cabecalho.ball_r, "left", 0, -53)
 
-		self.baseframe.UPFrameConnect:ClearAllPoints()
-		self.baseframe.UPFrameConnect:SetPoint("bottomleft", self.baseframe, "topleft", 0, -1)
+		self.baseframe.UPFrameConnect:ClearAndSetPoint("bottomleft", self.baseframe, "topleft", 0, -1)
 		self.baseframe.UPFrameConnect:SetPoint("bottomright", self.baseframe, "topright", 0, -1)
 
-		self.baseframe.UPFrameLeftPart:ClearAllPoints()
-		self.baseframe.UPFrameLeftPart:SetPoint("bottomleft", self.baseframe, "topleft", 0, 0)
+		self.baseframe.UPFrameLeftPart:ClearAndSetPoint("bottomleft", self.baseframe, "topleft", 0, 0)
 
 
 	else --> bottom
@@ -7803,27 +7166,21 @@ function _detalhes:ToolbarSide(side, only_update_anchors)
 		local anchor_mod = not self.show_sidebars and skin.instance_cprops.show_sidebars_need_resize_by or 0
 
 		--> ball point
-		self.baseframe.cabecalho.ball_point:ClearAllPoints()
-
 		local _x, _y = unpack(skin.icon_point_anchor_bottom)
 		_x = _x +(anchor_mod)
-		self.baseframe.cabecalho.ball_point:SetPoint("topleft", self.baseframe, "bottomleft", _x, _y + y)
+		self.baseframe.cabecalho.ball_point:ClearAndSetPoint("topleft", self.baseframe, "bottomleft", _x, _y + y)
 
 		--> ball
-		self.baseframe.cabecalho.ball:ClearAllPoints()
-
 		local _x, _y = unpack(skin.left_corner_anchor_bottom)
 		_x = _x +(anchor_mod)
-		self.baseframe.cabecalho.ball:SetPoint("topleft", self.baseframe, "bottomleft", _x, _y + y)
+		self.baseframe.cabecalho.ball:ClearAndSetPoint("topleft", self.baseframe, "bottomleft", _x, _y + y)
 		local l, r, t, b = unpack(COORDS_LEFT_BALL)
 		self.baseframe.cabecalho.ball:SetTexCoord(l, r, b, t)
 
 		--> ball r
-		self.baseframe.cabecalho.ball_r:ClearAllPoints()
-
 		local _x, _y = unpack(skin.right_corner_anchor_bottom)
 		_x = _x +((anchor_mod) * -1)
-		self.baseframe.cabecalho.ball_r:SetPoint("topright", self.baseframe, "bottomright", _x, _y + y)
+		self.baseframe.cabecalho.ball_r:ClearAndSetPoint("topright", self.baseframe, "bottomright", _x, _y + y)
 		local l, r, t, b = unpack(COORDS_RIGHT_BALL)
 		self.baseframe.cabecalho.ball_r:SetTexCoord(l, r, b, t)
 
@@ -7837,12 +7194,10 @@ function _detalhes:ToolbarSide(side, only_update_anchors)
 		self.baseframe.UPFrame:SetPoint("left", self.baseframe.cabecalho.ball, "right", 0, 53)
 		self.baseframe.UPFrame:SetPoint("right", self.baseframe.cabecalho.ball_r, "left", 0, 53)
 
-		self.baseframe.UPFrameConnect:ClearAllPoints()
-		self.baseframe.UPFrameConnect:SetPoint("topleft", self.baseframe, "bottomleft", 0, 1)
+		self.baseframe.UPFrameConnect:ClearAndSetPoint("topleft", self.baseframe, "bottomleft", 0, 1)
 		self.baseframe.UPFrameConnect:SetPoint("topright", self.baseframe, "bottomright", 0, 1)
 
-		self.baseframe.UPFrameLeftPart:ClearAllPoints()
-		self.baseframe.UPFrameLeftPart:SetPoint("topleft", self.baseframe, "bottomleft", 0, 0)
+		self.baseframe.UPFrameLeftPart:ClearAndSetPoint("topleft", self.baseframe, "bottomleft", 0, 0)
 
 	end
 
@@ -7890,7 +7245,7 @@ function _detalhes:StretchButtonAnchor(side)
 		side = self.stretch_button_side
 	end
 
-	if(side == 1 or string.lower(side) == "top") then
+	if(side == 1 or _string_lower(side) == "top") then
 
 		self.baseframe.button_stretch:ClearAllPoints()
 
@@ -7904,7 +7259,7 @@ function _detalhes:StretchButtonAnchor(side)
 		self.baseframe.button_stretch.texture:SetTexCoord(unpack(COORDS_STRETCH))
 		self.stretch_button_side = 1
 
-	elseif(side == 2 or string.lower(side) == "bottom") then
+	elseif(side == 2 or _string_lower(side) == "bottom") then
 
 		self.baseframe.button_stretch:ClearAllPoints()
 
@@ -8105,8 +7460,7 @@ function _detalhes:ShowSideBars(instancia)
 			self.baseframe.barra_fundo:Show()
 			local l, r, t, b = unpack(COORDS_BOTTOM_SIDE_BAR)
 			self.baseframe.barra_fundo:SetTexCoord(l, r, b, t)
-			self.baseframe.barra_fundo:ClearAllPoints()
-			self.baseframe.barra_fundo:SetPoint("bottomleft", self.baseframe, "topleft", 0, -6)
+			self.baseframe.barra_fundo:ClearAndSetPoint("bottomleft", self.baseframe, "topleft", 0, -6)
 			self.baseframe.barra_fundo:SetPoint("bottomright", self.baseframe, "topright", -1, -6)
 		else
 			self.baseframe.barra_fundo:Hide()
@@ -8120,13 +7474,11 @@ function _detalhes:ShowSideBars(instancia)
 		if(self.toolbar_side == 2) then --tooltbar on bottom
 			local l, r, t, b = unpack(COORDS_BOTTOM_SIDE_BAR)
 			self.baseframe.barra_fundo:SetTexCoord(l, r, b, t)
-			self.baseframe.barra_fundo:ClearAllPoints()
-			self.baseframe.barra_fundo:SetPoint("bottomleft", self.baseframe, "topleft", 0, -6)
+			self.baseframe.barra_fundo:ClearAndSetPoint("bottomleft", self.baseframe, "topleft", 0, -6)
 			self.baseframe.barra_fundo:SetPoint("bottomright", self.baseframe, "topright", -1, -6)
 		else --tooltbar on top
 			self.baseframe.barra_fundo:SetTexCoord(unpack(COORDS_BOTTOM_SIDE_BAR))
-			self.baseframe.barra_fundo:ClearAllPoints()
-			self.baseframe.barra_fundo:SetPoint("bottomleft", self.baseframe, "bottomleft", 0, -56)
+			self.baseframe.barra_fundo:ClearAndSetPoint("bottomleft", self.baseframe, "bottomleft", 0, -56)
 			self.baseframe.barra_fundo:SetPoint("bottomright", self.baseframe, "bottomright", -1, -56)
 		end
 	end
@@ -8293,14 +7645,11 @@ end
 			return
 		end
 
-		local instancia = self._instance or self.widget._instance
-		local baseframe = instancia.baseframe
 
 		local GameCooltip = GameCooltip
 
 		OnEnterMainWindow(self.instance, self)
 		GameCooltip.buttonOver = true
-		self.instance.baseframe.cabecalho.button_mouse_over = true
 
 		if(self.instance.desaturated_menu) then
 			self:GetNormalTexture():SetDesaturated(false)
@@ -8348,7 +7697,6 @@ end
 		hide_anti_overlap(self.instance.baseframe.anti_menu_overlap)
 
 		GameCooltip.buttonOver = false
-		self.instance.baseframe.cabecalho.button_mouse_over = false
 
 		if(GameCooltip.active) then
 			parameters_table[2] = 0
@@ -8408,7 +7756,6 @@ end
 		local GameCooltip = GameCooltip
 
 		GameCooltip.buttonOver = true
-		self.instance.baseframe.cabecalho.button_mouse_over = true
 
 		GameCooltip:Reset()
 		GameCooltip:SetType("menu")
@@ -8426,7 +7773,6 @@ end
 
 		GameCooltip:SetOption("HeighMod", 9)
 
-		local font = SharedMedia:Fetch("font", "Friz Quadrata TT")
 		GameCooltip:AddLine(Loc["STRING_MENU_CLOSE_INSTANCE"], nil, 1, "white", nil, _detalhes.font_sizes.menus, _detalhes.font_faces.menus)
 		GameCooltip:AddIcon([[Interface\Buttons\UI-Panel-MinimizeButton-Up]], 1, 1, 14, 14, 0.2, 0.8, 0.2, 0.8)
 		GameCooltip:AddMenu(1, close_button_onclick, self)
@@ -8458,7 +7804,6 @@ end
 		hide_anti_overlap(self.instance.baseframe.anti_menu_overlap)
 
 		GameCooltip.buttonOver = false
-		self.instance.baseframe.cabecalho.button_mouse_over = false
 
 		if(GameCooltip.active) then
 			parameters_table[2] = 0
@@ -8498,7 +7843,6 @@ local report_on_enter = function(self, motion, forced, from_click)
 	end
 
 	GameCooltip.buttonOver = true
-	baseframe.cabecalho.button_mouse_over = true
 
 	GameCooltip:Reset()
 
@@ -8561,7 +7905,6 @@ local report_on_leave = function(self, motion, forced, from_click)
 	hide_anti_overlap(instancia.baseframe.anti_menu_overlap)
 
 	GameCooltip.buttonOver = false
-	baseframe.cabecalho.button_mouse_over = false
 
 	if(instancia.desaturated_menu) then
 		self:GetNormalTexture():SetDesaturated(true)
@@ -8592,7 +7935,6 @@ local atributo_on_enter = function(self, motion, forced, from_click)
 	end
 
 	GameCooltip.buttonOver = true
-	baseframe.cabecalho.button_mouse_over = true
 
 	show_anti_overlap(instancia, self, "top")
 
@@ -8600,10 +7942,7 @@ local atributo_on_enter = function(self, motion, forced, from_click)
 	GameCooltip:SetType(3)
 	GameCooltip:SetFixedParameter(instancia)
 
-	if(_detalhes.solo and _detalhes.solo == instancia.meu_id) then
-		_detalhes:MontaSoloOption(instancia)
-
-	elseif(instancia:IsRaidMode()) then
+	if(instancia:IsRaidMode()) then
 
 		local have_plugins = _detalhes:MontaRaidOption(instancia)
 		if(not have_plugins) then
@@ -8638,7 +7977,7 @@ local atributo_on_enter = function(self, motion, forced, from_click)
 	GameCooltip:ShowCooltip(self)
 end
 
-local atributo_on_leave = function(self, motion, forced, from_click)
+local toolbar_menu_on_leave = function(self)
 	local instancia = self._instance or self.widget._instance
 	local baseframe = instancia.baseframe
 
@@ -8651,7 +7990,6 @@ local atributo_on_leave = function(self, motion, forced, from_click)
 	end
 
 	GameCooltip.buttonOver = false
-	baseframe.cabecalho.button_mouse_over = false
 
 	if(GameCooltip.active) then
 		parameters_table[2] = 0
@@ -8678,7 +8016,6 @@ local segmento_on_enter = function(self, motion, forced, from_click)
 	end
 
 	GameCooltip.buttonOver = true
-	baseframe.cabecalho.button_mouse_over = true
 
 	local passou = 0
 	if(_G.GameCooltip.active) then
@@ -8688,29 +8025,6 @@ local segmento_on_enter = function(self, motion, forced, from_click)
 	parameters_table[1] = instancia
 	parameters_table[2] = from_click and 1 or passou
 	self:SetScript("OnUpdate", build_segment_list)
-end
-
-local segmento_on_leave = function(self, motion, forced, from_click)
-	local instancia = self._instance or self.widget._instance
-	local baseframe = instancia.baseframe
-
-	OnLeaveMainWindow(instancia, self, 3)
-
-	hide_anti_overlap(instancia.baseframe.anti_menu_overlap)
-
-	if(instancia.desaturated_menu) then
-		self:GetNormalTexture():SetDesaturated(true)
-	end
-
-	GameCooltip.buttonOver = false
-	baseframe.cabecalho.button_mouse_over = false
-
-	if(GameCooltip.active) then
-		parameters_table[2] = 0
-		self:SetScript("OnUpdate", on_leave_menu)
-	else
-		self:SetScript("OnUpdate", nil)
-	end
 end
 
 local modo_selecao_on_enter = function(self, motion, forced, from_click)
@@ -8730,7 +8044,6 @@ local modo_selecao_on_enter = function(self, motion, forced, from_click)
 	end
 
 	GameCooltip.buttonOver = true
-	baseframe.cabecalho.button_mouse_over = true
 
 	local passou = 0
 	if(_G.GameCooltip.active) then
@@ -8738,9 +8051,7 @@ local modo_selecao_on_enter = function(self, motion, forced, from_click)
 	end
 
 	local checked
-	if(instancia.modo == 1) then
-		checked = 4
-	elseif(instancia.modo == 2) then
+	if(instancia.modo == 2) then
 		checked = 1
 	elseif(instancia.modo == 3) then
 		checked = 2
@@ -8755,86 +8066,7 @@ local modo_selecao_on_enter = function(self, motion, forced, from_click)
 	self:SetScript("OnUpdate", build_mode_list)
 end
 
-local modo_selecao_on_leave = function(self)
 
-	local instancia = self._instance or self.widget._instance
-	local baseframe = instancia.baseframe
-
-	OnLeaveMainWindow(instancia, self, 3)
-
-	hide_anti_overlap(instancia.baseframe.anti_menu_overlap)
-
-	if(instancia.desaturated_menu) then
-		self:GetNormalTexture():SetDesaturated(true)
-	end
-
-	GameCooltip.buttonOver = false
-	baseframe.cabecalho.button_mouse_over = false
-
-	if(GameCooltip.active) then
-		parameters_table[2] = 0
-		self:SetScript("OnUpdate", on_leave_menu)
-	else
-		self:SetScript("OnUpdate", nil)
-	end
-end
-
-
-
--- these can
-local title_bar_icons = {
-	{texture =[[Interface\AddOns\Details\images\toolbar_icons]], texcoord = {0/256, 32/256, 0, 1}},
-	{texture =[[Interface\AddOns\Details\images\toolbar_icons]], texcoord = {32/256, 64/256, 0, 1}},
-	{texture =[[Interface\AddOns\Details\images\toolbar_icons]], texcoord = {66/256, 93/256, 0, 1}},
-	{texture =[[Interface\AddOns\Details\images\toolbar_icons]], texcoord = {96/256, 128/256, 0, 1}},
-	{texture =[[Interface\AddOns\Details\images\toolbar_icons]], texcoord = {128/256, 160/256, 0, 1}},
-}
-function _detalhes:GetTitleBarIconsTexture(button, instance)
-	if(instance or self.meu_id) then
-		local textureFile = self.toolbar_icon_file or instance.toolbar_icon_file
-		local t = title_bar_icons[button]
-		if(t and textureFile) then
-			t.texture = textureFile
-		end
-		return t or title_bar_icons
-	end
-	return title_bar_icons[button] or title_bar_icons
-end
-
-function _detalhes:CreateFakeWindow()
-	local t = CreateFrame("frame")
-	t:SetSize(200, 91)
-	t:SetBackdrop({bgFile = "Interface\\AddOns\\Details\\images\\background", tile = true, tileSize = 16 })
-	t:SetBackdropColor(0.0941, 0.0941, 0.0941, 0.3)
-	local tb = CreateFrame("frame", nil, t)
-	tb:SetPoint("bottomleft", t, "topleft", 0, 0)
-	tb:SetPoint("bottomright", t, "topright", 0, 0)
-	tb:SetHeight(16)
-	tb:SetBackdrop({bgFile = "Interface\\AddOns\\Details\\images\\background", tile = true, tileSize = 16 })
-	tb:SetBackdropColor(0.7, 0.7, 0.7, 0.4)
-	local tt = tb:CreateFontString(nil, "overlay", "GameFontNormal")
-	_detalhes:SetFontColor(tt, "white")
-	_detalhes:SetFontSize(tt, 10)
-	_detalhes:SetFontFace(tt, LibStub:GetLibrary("LibSharedMedia-3.0"):Fetch("font", "Accidental Presidency"))
-	tt:SetPoint("bottomleft", tb, 3, 4)
-	tt:SetText("Damage Done")
-
-	t.TitleIcons = {}
-	for i = 1, 5 do
-		local b = tb:CreateTexture(nil, "overlay")
-		b:SetSize(12, 12)
-		b:SetPoint("bottomright", tb, "bottomright", -((_math_abs(i-6)-1)*11) - 1, 2)
-		local button_texture_texcoord = _detalhes:GetTitleBarIconsTexture(i)
-		b:SetTexture(button_texture_texcoord.texture)
-		b:SetTexCoord(unpack(button_texture_texcoord.texcoord))
-		tinsert(t.TitleIcons, b)
-	end
-
-	t.TitleBar = tb
-	t.TitleText = tt
-
-	return t
-end
 
 local function click_to_change_segment(instancia, buttontype)
 	if(buttontype == "LeftButton") then
@@ -8905,10 +8137,6 @@ function gump:CriaCabecalho(baseframe, instancia)
 	baseframe.cabecalho.fechar:GetHighlightTexture():SetTexCoord(160/256, 192/256, 0, 1)
 	baseframe.cabecalho.fechar:SetPushedTexture([[Interface\AddOns\Details\images\toolbar_icons]])
 	baseframe.cabecalho.fechar:GetPushedTexture():SetTexCoord(160/256, 192/256, 0, 1)
-
-	--baseframe.cabecalho.fechar:SetNormalTexture([[Interface\Buttons\UI-Panel-MinimizeButton-Up]])
-	--baseframe.cabecalho.fechar:SetHighlightTexture([[Interface\Buttons\UI-Panel-MinimizeButton-Highlight]])
-	--baseframe.cabecalho.fechar:SetPushedTexture([[Interface\Buttons\UI-Panel-MinimizeButton-Down]])
 
 	baseframe.cabecalho.fechar.instancia = instancia
 	baseframe.cabecalho.fechar.instance = instancia
@@ -9033,16 +8261,11 @@ function gump:CriaCabecalho(baseframe, instancia)
 	local MenuAnchorRight = CreateFrame("frame", "DetailsMenuAnchorRight"..instancia.meu_id, baseframe)
 	MenuAnchorRight:SetSize(1, 1)
 
-	local Menu2AnchorRight = CreateFrame("frame", "DetailsMenu2AnchorRight"..instancia.meu_id, baseframe)
-	Menu2AnchorRight:SetSize(1, 1)
-
 	instancia.menu_points = {MenuAnchorLeft, MenuAnchorRight}
-	instancia.menu2_points = {Menu2AnchorRight}
 
 -- bot�es
 -------------------------------------------------------------------------------------------------------------------------------------------------
 
-	local CoolTip = _G.GameCooltip
 
 	--> SELE��O DO MODO ----------------------------------------------------------------------------------------------------------------------------------------------------
 	local modo_selecao_button_click = function()
@@ -9059,13 +8282,13 @@ function gump:CriaCabecalho(baseframe, instancia)
 		end
 	end
 
-	baseframe.cabecalho.modo_selecao = gump:NewButton(baseframe, nil, "DetailsModeButton"..instancia.meu_id, nil, 16, 16, modo_selecao_button_click, nil, nil,[[Interface\AddOns\Details\images\modo_icone]])
+	baseframe.cabecalho.modo_selecao = gump:NewButton(baseframe, nil, "DetailsModeButton"..instancia.meu_id, nil, 16, 16, modo_selecao_button_click, nil, nil,nil)
 	baseframe.cabecalho.modo_selecao:SetPoint("bottomleft", baseframe.cabecalho.ball, "bottomright", instancia.menu_anchor[1], instancia.menu_anchor[2])
 	baseframe.cabecalho.modo_selecao:SetFrameLevel(baseframe:GetFrameLevel()+5)
 	baseframe.cabecalho.modo_selecao.widget._instance = instancia
 
 	baseframe.cabecalho.modo_selecao:SetScript("OnEnter", modo_selecao_on_enter)
-	baseframe.cabecalho.modo_selecao:SetScript("OnLeave", modo_selecao_on_leave)
+	baseframe.cabecalho.modo_selecao:SetScript("OnLeave", toolbar_menu_on_leave)
 
 	local b = baseframe.cabecalho.modo_selecao.widget
 	b:SetNormalTexture([[Interface\AddOns\Details\images\toolbar_icons]])
@@ -9091,7 +8314,7 @@ function gump:CriaCabecalho(baseframe, instancia)
 		end
 	end
 
-	baseframe.cabecalho.segmento = gump:NewButton(baseframe, nil, "DetailsSegmentButton"..instancia.meu_id, nil, 16, 16, segmento_button_click, nil, nil,[[Interface\AddOns\Details\images\segmentos_icone]])
+	baseframe.cabecalho.segmento = gump:NewButton(baseframe, nil, "DetailsSegmentButton"..instancia.meu_id, nil, 16, 16, segmento_button_click, nil, nil,nil)
 	baseframe.cabecalho.segmento:SetFrameLevel(baseframe.UPFrame:GetFrameLevel()+1)
 	baseframe.cabecalho.segmento.widget._instance = instancia
 	baseframe.cabecalho.segmento:SetPoint("left", baseframe.cabecalho.modo_selecao, "right", 0, 0)
@@ -9100,7 +8323,7 @@ function gump:CriaCabecalho(baseframe, instancia)
 	baseframe.cabecalho.segmento:SetClickFunction(segmento_button_click, nil, nil, "rightclick")
 
 	baseframe.cabecalho.segmento:SetScript("OnEnter", segmento_on_enter)
-	baseframe.cabecalho.segmento:SetScript("OnLeave", segmento_on_leave)
+	baseframe.cabecalho.segmento:SetScript("OnLeave", toolbar_menu_on_leave)
 
 	local b = baseframe.cabecalho.segmento.widget
 	b:SetNormalTexture([[Interface\AddOns\Details\images\toolbar_icons]])
@@ -9129,7 +8352,7 @@ function gump:CriaCabecalho(baseframe, instancia)
 	baseframe.cabecalho.atributo:SetPoint("left", baseframe.cabecalho.segmento.widget, "right", 0, 0)
 
 	baseframe.cabecalho.atributo:SetScript("OnEnter", atributo_on_enter)
-	baseframe.cabecalho.atributo:SetScript("OnLeave", atributo_on_leave)
+	baseframe.cabecalho.atributo:SetScript("OnLeave", toolbar_menu_on_leave)
 
 	local b = baseframe.cabecalho.atributo.widget
 	b:SetNormalTexture([[Interface\AddOns\Details\images\toolbar_icons]])

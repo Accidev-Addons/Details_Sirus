@@ -1,18 +1,16 @@
-local Loc = LibStub ("AceLocale-3.0"):GetLocale ( "Details" )
 
 --lua api
 local _table_remove = table.remove
 local _table_insert = table.insert
 local _setmetatable = setmetatable
 local _table_wipe = table.wipe
+local ipairs = ipairs
 
 local _detalhes = 		_G._detalhes
 local gump = 			_detalhes.gump
 
 local combate =			_detalhes.combate
 local historico = 			_detalhes.historico
-local barra_total =		_detalhes.barra_total
-local container_pets =		_detalhes.container_pets
 local timeMachine =		_detalhes.timeMachine
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -135,28 +133,11 @@ function historico:adicionar_overall (tabela)
 
 end
 
-function _detalhes:ScheduleAddCombatToOverall (combat) --deprecated (15/03/2019)
-	local canAdd = _detalhes:CanAddCombatToOverall (combat)
-	if (canAdd) then
-		_detalhes.schedule_add_to_overall = _detalhes.schedule_add_to_overall or {}
-		tinsert (_detalhes.schedule_add_to_overall, combat)
-	end
-end
-
 function _detalhes:CanAddCombatToOverall (tabela)
 
 	--> already added
 	if (tabela.overall_added) then
 		return false
-	end
-
-	--> already scheduled to add
-	if (_detalhes.schedule_add_to_overall) then --deprecated
-		for _, combat in ipairs (_detalhes.schedule_add_to_overall) do
-			if (combat == tabela) then
-				return false
-			end
-		end
 	end
 
 	--> raid boss - flag 0x1
@@ -250,17 +231,10 @@ function historico:adicionar (tabela)
 	local canAddToOverall = _detalhes:CanAddCombatToOverall (tabela)
 
 	if (canAddToOverall) then
-		--if (InCombatLockdown()) then
-		--	_detalhes:ScheduleAddCombatToOverall (tabela)
-		--	if (_detalhes.debug) then
-		--		_detalhes:Msg ("(debug) overall data flag match > in combat scheduling overall addition.")
-		--	end
-		--else
 			if (_detalhes.debug) then
 				_detalhes:Msg ("(debug) overall data flag match addind the combat to overall data.")
 			end
 			historico:adicionar_overall (tabela)
-		--end
 	end
 
 	--> erase trash segments
@@ -271,16 +245,12 @@ function historico:adicionar (tabela)
 
 		--regular cleanup
 		for _, jogador in ipairs (container_damage._ActorTable) do
-			--> remover a tabela de last events
-			jogador.last_events_table =  nil
 			--> verifica se ele ainda esta registrado na time machine
 			if (jogador.timeMachine) then
 				jogador:DesregistrarNaTimeMachine()
 			end
 		end
 		for _, jogador in ipairs (container_heal._ActorTable) do
-			--> remover a tabela de last events
-			jogador.last_events_table =  nil
 			--> verifica se ele ainda esta registrado na time machine
 			if (jogador.timeMachine) then
 				jogador:DesregistrarNaTimeMachine()
@@ -399,10 +369,6 @@ function _detalhes:OverallOptions (reset_new_boss, reset_on_logoff)
 end
 
 function historico:resetar_overall()
-	--if (InCombatLockdown()) then
-	--	_detalhes:Msg (Loc ["STRING_ERASE_IN_COMBAT"])
-	--	_detalhes.schedule_remove_overall = true
-	--else
 		--> fecha a janela de informa��es do jogador
 		_detalhes:FechaJanelaInfo()
 
@@ -415,11 +381,6 @@ function historico:resetar_overall()
 			end
 		end
 
-		if (_detalhes.schedule_add_to_overall) then --deprecated
-			wipe (_detalhes.schedule_add_to_overall)
-		end
-	--end
-
 	--> stop bar testing if any
 	_detalhes:StopTestBarUpdate()
 
@@ -427,10 +388,6 @@ function historico:resetar_overall()
 end
 
 function historico:resetar()
-
-	if (_detalhes.bosswindow) then
-		_detalhes.bosswindow:Reset()
-	end
 
 	--> stop bar testing if any
 	_detalhes:StopTestBarUpdate()
@@ -442,9 +399,7 @@ function historico:resetar()
 	_detalhes.last_closed_combat = nil
 
 	--> clear other schedules
-	_detalhes.schedule_flag_boss_components = nil
 	_detalhes.schedule_store_boss_encounter = nil
-	--_detalhes.schedule_remove_overall = nil
 
 	--> fecha a janela de informa��es do jogador
 	_detalhes:FechaJanelaInfo()
@@ -458,10 +413,6 @@ function historico:resetar()
 	_table_wipe (_detalhes.tabela_vigente)
 	_table_wipe (_detalhes.tabela_overall)
 	_table_wipe (_detalhes.spellcache)
-
-	if (_detalhes.schedule_add_to_overall) then --deprecated
-		wipe (_detalhes.schedule_add_to_overall)
-	end
 
 	_detalhes:LimparPets()
 	_detalhes:ResetSpecCache (true) --> for�ar
@@ -509,7 +460,6 @@ function historico:resetar()
 	end
 
 	_detalhes:InstanciaCallFunction (_detalhes.AtualizaSegmentos) -- atualiza o instancia.showing para as novas tabelas criadas
-	_detalhes:InstanciaCallFunction (_detalhes.AtualizaSoloMode_AfertReset) -- verifica se precisa zerar as tabela da janela solo mode
 	_detalhes:InstanciaCallFunction (_detalhes.ResetaGump) --_detalhes:ResetaGump ("de todas as instancias")
 	_detalhes:InstanciaCallFunction (gump.Fade, "in", nil, "barras")
 
@@ -524,39 +474,3 @@ function _detalhes.refresh:r_historico (este_historico)
 	--este_historico.__index = historico
 end
 
---[[
-		elseif (_detalhes.trash_concatenate) then
-
-			if (true) then
-				return
-			end
-
-			if (_terceiro_combate) then
-				if (_terceiro_combate.is_trash and _segundo_combate.is_trash and not _terceiro_combate.is_boss and not _segundo_combate.is_boss) then
-					--> tabela 2 deve ser deletada e somada a tabela 1
-					if (_detalhes.debug) then
-						detalhes:Msg ("(debug) concatenating two trash segments.")
-					end
-
-					_segundo_combate = _segundo_combate + _terceiro_combate
-					_detalhes.tabela_overall = _detalhes.tabela_overall - _terceiro_combate
-
-					_segundo_combate.is_trash = true
-
-					--> verificar novamente a time machine
-					for _, jogador in ipairs (_terceiro_combate [1]._ActorTable) do --> damage
-						if (jogador.timeMachine) then
-							jogador:DesregistrarNaTimeMachine()
-						end
-					end
-					for _, jogador in ipairs (_terceiro_combate [2]._ActorTable) do --> heal
-						if (jogador.timeMachine) then
-							jogador:DesregistrarNaTimeMachine()
-						end
-					end
-					--> remover
-					_table_remove (self.tabelas, 3)
-					_detalhes:SendEvent ("DETAILS_DATA_SEGMENTREMOVED", nil, nil)
-				end
-			end
---]]

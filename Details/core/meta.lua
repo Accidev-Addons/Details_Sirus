@@ -6,12 +6,8 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> local pointers
 	local _
-	local _pairs = pairs --lua local
 	local _ipairs = ipairs --lua local
-	local _rawget = rawget --lua local
-	local _setmetatable = setmetatable --lua local
 	local _table_remove = table.remove --lua local
-	local _bit_band = bit.band --lua local
 	local _table_wipe = table.wipe --lua local
 	local _time = time --lua local
 
@@ -21,13 +17,7 @@
 	local atributo_heal =		_detalhes.atributo_heal --details local
 	local atributo_energy =		_detalhes.atributo_energy --details local
 	local atributo_misc =		_detalhes.atributo_misc --details local
-	local alvo_da_habilidade = 	_detalhes.alvo_da_habilidade --details local
-	local habilidade_dano = 	_detalhes.habilidade_dano --details local
-	local habilidade_cura = 		_detalhes.habilidade_cura --details local
-	local container_habilidades = 	_detalhes.container_habilidades --details local
-	local container_combatentes = _detalhes.container_combatentes --details local
 
-	local container_damage_target = _detalhes.container_type.CONTAINER_DAMAGETARGET_CLASS
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> constants
@@ -54,13 +44,8 @@
 	--> reaplica as tabelas no overall
 		function _detalhes:RestauraOverallMetaTables()
 
-			local is_in_instance = select (1, IsInInstance())
-
 			local combate = _detalhes.tabela_overall
 			combate.overall_refreshed = true
-			combate.hasSaved = true
-
-			combate.__call = _detalhes.call_combate
 
 			_detalhes.refresh:r_combate (combate)
 
@@ -78,10 +63,8 @@
 
 					local nome = esta_classe.nome
 
-					if (is_in_instance and _detalhes.remove_realm_from_name) then
+					if (_detalhes.remove_realm_from_name) then
 						esta_classe.displayName = nome:gsub (("%-.*"), "")
-					elseif (_detalhes.remove_realm_from_name) then
-						esta_classe.displayName = nome:gsub (("%-.*"), "") --"%*"
 					else
 						esta_classe.displayName = nome
 					end
@@ -131,11 +114,6 @@
 
 				local tabelas_do_historico = _detalhes.tabela_historico.tabelas --> atalho
 
-			--> recupera meta function
-				for _, combat_table in _ipairs (tabelas_do_historico) do
-					combat_table.__call = _detalhes.call_combate
-				end
-
 				for i = #tabelas_do_historico-1, 1, -1 do
 					local combat = tabelas_do_historico [i]
 					combat.previous_combat = tabelas_do_historico [i+1]
@@ -150,13 +128,9 @@
 					combate_overall.end_time = GetTime()
 				end
 
-				local is_in_instance = select (1, IsInInstance())
-
 			--> inicia a recupera��o das tabelas e montagem do overall
 				if (#tabelas_do_historico > 0) then
 					for index, combate in _ipairs (tabelas_do_historico) do
-
-						combate.hasSaved = true
 
 						--> recupera a meta e indexes da tabela do combate
 						_detalhes.refresh:r_combate (combate, combate_overall)
@@ -183,7 +157,7 @@
 
 							combate_overall.segments_added =combate_overall.segments_added or {}
 							local date_start, date_end = combate:GetDate()
-							tinsert (combate_overall.segments_added, {name = combate:GetCombatName (true), elapsed = combate:GetCombatTime(), clock = date_start})
+							combate_overall.segments_added[#combate_overall.segments_added+1] = {name = combate:GetCombatName (true), elapsed = combate:GetCombatTime(), clock = date_start}
 
 						end
 
@@ -206,10 +180,8 @@
 
 								local nome = esta_classe.nome
 
-								if (is_in_instance and _detalhes.remove_realm_from_name) then
+								if (_detalhes.remove_realm_from_name) then
 									esta_classe.displayName = nome:gsub (("%-.*"), "")
-								elseif (_detalhes.remove_realm_from_name) then
-									esta_classe.displayName = nome:gsub (("%-.*"), "") --%*
 								else
 									esta_classe.displayName = nome
 								end
@@ -261,158 +233,89 @@
 				--fim
 				end
 
-			--> restaura last_events_table
-				local primeiro_combate = tabelas_do_historico [1] --> primeiro combate
-				if (primeiro_combate) then
-					primeiro_combate [1]:ActorCallFunction (atributo_damage.r_last_events_table)
-					primeiro_combate [2]:ActorCallFunction (atributo_heal.r_last_events_table)
-				end
-
-				local segundo_combate = tabelas_do_historico [2] --> segundo combate
-				if (segundo_combate) then
-					segundo_combate [1]:ActorCallFunction (atributo_damage.r_last_events_table)
-					segundo_combate [2]:ActorCallFunction (atributo_heal.r_last_events_table)
-				end
 
 		end
+
+	local cleanup_instance = function (esta_instancia)
+		if (esta_instancia.StatusBar.left) then
+			esta_instancia.StatusBarSaved = {
+				["left"] = esta_instancia.StatusBar.left.real_name or "NONE",
+				["center"] = esta_instancia.StatusBar.center.real_name or "NONE",
+				["right"] = esta_instancia.StatusBar.right.real_name or "NONE",
+			}
+			esta_instancia.StatusBarSaved.options = {
+				[esta_instancia.StatusBarSaved.left] = esta_instancia.StatusBar.left.options,
+				[esta_instancia.StatusBarSaved.center] = esta_instancia.StatusBar.center.options,
+				[esta_instancia.StatusBarSaved.right] = esta_instancia.StatusBar.right.options
+			}
+		end
+
+		--> erase all widgets frames
+
+		esta_instancia.scroll = nil
+		esta_instancia.baseframe = nil
+		esta_instancia.bgframe = nil
+		esta_instancia.bgdisplay = nil
+		esta_instancia.freeze_icon = nil
+		esta_instancia.freeze_texto = nil
+		esta_instancia.barras = nil
+		esta_instancia.showing = nil
+		esta_instancia._version = nil
+
+		esta_instancia.h_baixo = nil
+		esta_instancia.h_esquerda = nil
+		esta_instancia.h_direita = nil
+		esta_instancia.h_cima = nil
+		esta_instancia.break_snap_button = nil
+		esta_instancia.alert = nil
+
+		esta_instancia.StatusBar = nil
+		esta_instancia.lastIcon = nil
+		esta_instancia.firstIcon = nil
+
+		esta_instancia.menu_attribute_string = nil
+
+		esta_instancia.wait_for_plugin_created = nil
+		esta_instancia.waiting_raid_plugin = nil
+		esta_instancia.waiting_pid = nil
+	end
 
 	function _detalhes:DoInstanceCleanup()
-
-		--> normal instances
 		for _, esta_instancia in _ipairs (_detalhes.tabela_instancias) do
-
-			if (esta_instancia.StatusBar.left) then
-				esta_instancia.StatusBarSaved = {
-					["left"] = esta_instancia.StatusBar.left.real_name or "NONE",
-					["center"] = esta_instancia.StatusBar.center.real_name or "NONE",
-					["right"] = esta_instancia.StatusBar.right.real_name or "NONE",
-				}
-				esta_instancia.StatusBarSaved.options = {
-					[esta_instancia.StatusBarSaved.left] = esta_instancia.StatusBar.left.options,
-					[esta_instancia.StatusBarSaved.center] = esta_instancia.StatusBar.center.options,
-					[esta_instancia.StatusBarSaved.right] = esta_instancia.StatusBar.right.options
-				}
-			end
-
-			--> erase all widgets frames
-
-			esta_instancia.scroll = nil
-			esta_instancia.baseframe = nil
-			esta_instancia.bgframe = nil
-			esta_instancia.bgdisplay = nil
-			esta_instancia.freeze_icon = nil
-			esta_instancia.freeze_texto = nil
-			esta_instancia.barras = nil
-			esta_instancia.showing = nil
-			esta_instancia.agrupada_a = nil
-			esta_instancia.grupada_pos = nil
-			esta_instancia.agrupado = nil
-			esta_instancia._version = nil
-
-			esta_instancia.h_baixo = nil
-			esta_instancia.h_esquerda = nil
-			esta_instancia.h_direita = nil
-			esta_instancia.h_cima = nil
-			esta_instancia.break_snap_button = nil
-			esta_instancia.alert = nil
-
-			esta_instancia.StatusBar = nil
-			esta_instancia.consolidateFrame = nil
-			esta_instancia.consolidateButtonTexture = nil
-			esta_instancia.consolidateButton = nil
-			esta_instancia.lastIcon = nil
-			esta_instancia.firstIcon = nil
-
-			esta_instancia.menu_attribute_string = nil
-
-			esta_instancia.wait_for_plugin_created = nil
-			esta_instancia.waiting_raid_plugin = nil
-			esta_instancia.waiting_pid = nil
-
+			cleanup_instance (esta_instancia)
 		end
-
-		--> unused instances
 		for _, esta_instancia in _ipairs (_detalhes.unused_instances) do
-
-			if (esta_instancia.StatusBar.left) then
-				esta_instancia.StatusBarSaved = {
-					["left"] = esta_instancia.StatusBar.left.real_name or "NONE",
-					["center"] = esta_instancia.StatusBar.center.real_name or "NONE",
-					["right"] = esta_instancia.StatusBar.right.real_name or "NONE",
-				}
-				esta_instancia.StatusBarSaved.options = {
-					[esta_instancia.StatusBarSaved.left] = esta_instancia.StatusBar.left.options,
-					[esta_instancia.StatusBarSaved.center] = esta_instancia.StatusBar.center.options,
-					[esta_instancia.StatusBarSaved.right] = esta_instancia.StatusBar.right.options
-				}
-			end
-
-			--> erase all widgets frames
-			esta_instancia.scroll = nil
-			esta_instancia.baseframe = nil
-			esta_instancia.bgframe = nil
-			esta_instancia.bgdisplay = nil
-			esta_instancia.freeze_icon = nil
-			esta_instancia.freeze_texto = nil
-			esta_instancia.barras = nil
-			esta_instancia.showing = nil
-			esta_instancia.agrupada_a = nil
-			esta_instancia.grupada_pos = nil
-			esta_instancia.agrupado = nil
-			esta_instancia._version = nil
-
-			esta_instancia.h_baixo = nil
-			esta_instancia.h_esquerda = nil
-			esta_instancia.h_direita = nil
-			esta_instancia.h_cima = nil
-			esta_instancia.break_snap_button = nil
-			esta_instancia.alert = nil
-
-			esta_instancia.StatusBar = nil
-			esta_instancia.consolidateFrame = nil
-			esta_instancia.consolidateButtonTexture = nil
-			esta_instancia.consolidateButton = nil
-			esta_instancia.lastIcon = nil
-			esta_instancia.firstIcon = nil
-
-			esta_instancia.menu_attribute_string = nil
-
-			esta_instancia.wait_for_plugin_created = nil
-			esta_instancia.waiting_raid_plugin = nil
-			esta_instancia.waiting_pid = nil
+			cleanup_instance (esta_instancia)
 		end
 	end
 
-	function _detalhes:DoOwnerCleanup()
+	local for_each_saved_combat = function (func)
 		local combats = _detalhes.tabela_historico.tabelas or {}
 		local overall_added
 		if (not _detalhes.overall_clear_logout) then
-			tinsert (combats, _detalhes.tabela_overall)
+			combats[#combats+1] = _detalhes.tabela_overall
 			overall_added = true
 		end
-
-		for index, combat in _ipairs (combats) do
-			for index, container in _ipairs (combat) do
-				for index, esta_classe in _ipairs (container._ActorTable) do
-					esta_classe.owner = nil
-				end
-			end
+		for _, combat in _ipairs (combats) do
+			func (combat)
 		end
-
 		if (overall_added) then
 			tremove (combats, #combats)
 		end
 	end
 
-	function _detalhes:DoClassesCleanup()
-		local combats = _detalhes.tabela_historico.tabelas or {}
-		local overall_added
-		if (not _detalhes.overall_clear_logout) then
-			tinsert (combats, _detalhes.tabela_overall)
-			overall_added = true
-		end
+	function _detalhes:DoOwnerCleanup()
+		for_each_saved_combat (function (combat)
+			for index, container in _ipairs (combat) do
+				for index, esta_classe in _ipairs (container._ActorTable) do
+					esta_classe.owner = nil
+				end
+			end
+		end)
+	end
 
-		for index, combat in _ipairs (combats) do
+	function _detalhes:DoClassesCleanup()
+		for_each_saved_combat (function (combat)
 			for class_type, container in _ipairs (combat) do
 				for index, esta_classe in _ipairs (container._ActorTable) do
 
@@ -431,56 +334,64 @@
 
 				end
 			end
-		end
-
-		if (overall_added) then
-			tremove (combats, #combats)
-		end
+		end)
 	end
 
 	function _detalhes:DoContainerCleanup()
-		local combats = _detalhes.tabela_historico.tabelas or {}
-		local overall_added
-		if (not _detalhes.overall_clear_logout) then
-			tinsert (combats, _detalhes.tabela_overall)
-			overall_added = true
-		end
-
-		for index, combat in _ipairs (combats) do
+		for_each_saved_combat (function (combat)
 			_detalhes.clear:c_combate (combat)
 			for index, container in _ipairs (combat) do
 				_detalhes.clear:c_container_combatentes (container)
 			end
-		end
-
-		if (overall_added) then
-			tremove (combats, #combats)
-		end
+		end)
 	end
 
 	function _detalhes:DoContainerIndexCleanup()
-		local combats = _detalhes.tabela_historico.tabelas or {}
-		local overall_added
-		if (not _detalhes.overall_clear_logout) then
-			tinsert (combats, _detalhes.tabela_overall)
-			overall_added = true
-		end
-
-		for index, combat in _ipairs (combats) do
+		for_each_saved_combat (function (combat)
 			for index, container in _ipairs (combat) do
 				_detalhes.clear:c_container_combatentes_index (container)
 			end
-		end
+		end)
+	end
 
-		if (overall_added) then
-			tremove (combats, #combats)
+	local erase_ungrouped_actors = function (combat, keep_all, subtract)
+		local todos_atributos = {combat [class_type_dano] or {}, combat [class_type_cura] or {}, combat [class_type_e_energy] or {}, combat [class_type_misc] or {}}
+		for class_type, _tabela in _ipairs (todos_atributos) do
+			local conteudo = _tabela._ActorTable
+			if (conteudo and not keep_all) then
+				local index, cleaned = 1, 0
+				local actor = conteudo [1]
+				while (actor) do --search key: ~deletar ~apagar
+					local can_erase = not (actor.grupo or actor.boss or actor.boss_fight_component or actor.pvp_component or actor.fight_component)
+					local owner = actor.owner
+					if (can_erase and owner) then
+						local owner_index = combat [class_type]._NameIndexTable [owner.nome]
+						if (owner_index and combat [class_type]._ActorTable [owner_index]) then
+							can_erase = not (owner.grupo or owner.boss or owner.boss_fight_component or owner.fight_component)
+						end
+					end
+
+					if (can_erase) then
+						if (subtract and not owner) then
+							actor:subtract_total (combat)
+						end
+						_table_remove (conteudo, index)
+						cleaned = cleaned + 1
+					else
+						index = index + 1
+					end
+					actor = conteudo [index]
+				end
+
+				if (cleaned > 0) then
+					ReconstroiMapa (_tabela)
+				end
+			end
 		end
 	end
 
 	--> limpa indexes, metatables e shadows
 		function _detalhes:PrepareTablesForSave()
-
-		_detalhes.clear_ungrouped = true
 
 		--> clear instances
 			_detalhes:DoInstanceCleanup()
@@ -508,65 +419,16 @@
 				end
 			end
 
-			--> tabela do combate atual
-			local tabela_atual = _detalhes.tabela_vigente or _detalhes.combate:NovaTabela (_, _detalhes.tabela_overall)
-
 			--> limpa a tabela overall
 			if (_detalhes.overall_clear_logout) then
 				_detalhes.tabela_overall = nil
 				_detalhes_database.tabela_overall = nil
-			else
-				local _combate = _detalhes.tabela_overall
-
-				_combate.previous_combat = nil
-				local todos_atributos = {_combate [class_type_dano] or {}, _combate [class_type_cura] or {}, _combate [class_type_e_energy] or {}, _combate [class_type_misc] or {}}
-
-				for class_type, _tabela in _ipairs (todos_atributos) do
-					local conteudo = _tabela._ActorTable
-
-					--> Limpa tabelas que n�o estejam em grupo
-					if (conteudo) then
-						if (_detalhes.clear_ungrouped) then
-						--if (not _detalhes.clear_ungrouped) then
-							local _iter = {index = 1, data = conteudo[1], cleaned = 0} --> ._ActorTable[1] para pegar o primeiro index
-
-							while (_iter.data) do --search key: ~deletar ~apagar
-								local can_erase = true
-
-								if (_iter.data.grupo or _iter.data.boss or _iter.data.boss_fight_component or _iter.data.pvp_component or _iter.data.fight_component) then
-									can_erase = false
-								else
-
-									local owner = _iter.data.owner
-									if (owner) then
-										local owner_actor = _combate [class_type]._NameIndexTable [owner.nome]
-										if (owner_actor) then
-											local owner_actor = _combate [class_type]._ActorTable [owner_actor]
-											if (owner_actor) then
-												if (owner.grupo or owner.boss or owner.boss_fight_component or owner.fight_component) then
-													can_erase = false
-												end
-											end
-										end
-									end
-								end
-
-								if (can_erase) then
-									_table_remove (conteudo, _iter.index)
-									_iter.cleaned = _iter.cleaned + 1
-									_iter.data = conteudo [_iter.index]
-								else
-									_iter.index = _iter.index + 1
-									_iter.data = conteudo [_iter.index]
-								end
-							end
-
-							if (_iter.cleaned > 0) then
-								ReconstroiMapa (_tabela)
-							end
-						end
-					end
+				for _, combat in _ipairs (historico_tabelas) do
+					combat.overall_added = nil
 				end
+			else
+				_detalhes.tabela_overall.previous_combat = nil
+				erase_ungrouped_actors (_detalhes.tabela_overall)
 			end
 
 			for _, _tabela in _ipairs (historico_tabelas) do
@@ -583,128 +445,7 @@
 				--> limpa a referencia do ultimo combate
 				_combate.previous_combat = nil
 
-				local container_dano = _combate [class_type_dano] or {}
-				local container_cura = _combate [class_type_cura] or {}
-				local container_e_energy = _combate [class_type_e_energy] or {}
-				local container_misc = _combate [class_type_misc] or {}
-
-				local todos_atributos = {container_dano, container_cura, container_e_energy, container_misc}
-
-				local IsBossEncounter = _combate.is_boss
-				if (IsBossEncounter) then
-					if (_combate.pvp) then
-						IsBossEncounter = false
-					end
-				end
-
-				for class_type, _tabela in _ipairs (todos_atributos) do
-
-					local conteudo = _tabela._ActorTable
-
-					--> Limpa tabelas que n�o estejam em grupo
-					if (conteudo) then
-
-						if (_detalhes.clear_ungrouped) then
-						--n�o deleta dummies e actors de fora do grupo
-						--if (not _detalhes.clear_ungrouped) then
-
-							local _iter = {index = 1, data = conteudo[1], cleaned = 0} --> ._ActorTable[1] para pegar o primeiro index
-
-							while (_iter.data) do --search key: ~deletar ~apagar
-								local can_erase = true
-
-								if (_iter.data.grupo or _iter.data.boss or _iter.data.boss_fight_component or IsBossEncounter or _iter.data.pvp_component or _iter.data.fight_component) then
-									can_erase = false
-								else
-									local owner = _iter.data.owner
-									if (owner) then
-										local owner_actor = _combate [class_type]._NameIndexTable [owner.nome]
-										if (owner_actor) then
-											local owner_actor = _combate [class_type]._ActorTable [owner_actor]
-											if (owner_actor) then
-												if (owner.grupo or owner.boss or owner.boss_fight_component or owner.fight_component) then
-													can_erase = false
-												end
-											end
-										end
-									end
-								end
-
-								if (can_erase) then
-
-									if (not _iter.data.owner) then --> pet
-										local myself = _iter.data
-
-										if (myself.tipo == class_type_dano or myself.tipo == class_type_cura) then
-											_combate.totals [myself.tipo] = _combate.totals [myself.tipo] - myself.total
-											if (myself.grupo) then
-												_combate.totals_grupo [myself.tipo] = _combate.totals_grupo [myself.tipo] - myself.total
-											end
-
-										elseif (myself.tipo == class_type_e_energy) then
-											_combate.totals [myself.tipo] [myself.powertype] = _combate.totals [myself.tipo] [myself.powertype] - myself.total
-											if (myself.grupo) then
-												_combate.totals_grupo [myself.tipo] [myself.powertype] = _combate.totals_grupo [myself.tipo] [myself.powertype] - myself.total
-											end
-
-										elseif (myself.tipo == class_type_misc) then
-											if (myself.cc_break) then
-												_combate.totals [myself.tipo] ["cc_break"] = _combate.totals [myself.tipo] ["cc_break"] - myself.cc_break
-												if (myself.grupo) then
-													_combate.totals_grupo [myself.tipo] ["cc_break"] = _combate.totals_grupo [myself.tipo] ["cc_break"] - myself.cc_break
-												end
-											end
-											if (myself.ress) then
-												_combate.totals [myself.tipo] ["ress"] = _combate.totals [myself.tipo] ["ress"] - myself.ress
-												if (myself.grupo) then
-													_combate.totals_grupo [myself.tipo] ["ress"] = _combate.totals_grupo [myself.tipo] ["ress"] - myself.ress
-												end
-											end
-											--> n�o precisa diminuir o total dos buffs e debuffs
-											if (myself.cooldowns_defensive) then
-												_combate.totals [myself.tipo] ["cooldowns_defensive"] = _combate.totals [myself.tipo] ["cooldowns_defensive"] - myself.cooldowns_defensive
-												if (myself.grupo) then
-													_combate.totals_grupo [myself.tipo] ["cooldowns_defensive"] = _combate.totals_grupo [myself.tipo] ["cooldowns_defensive"] - myself.cooldowns_defensive
-												end
-											end
-											if (myself.interrupt) then
-												_combate.totals [myself.tipo] ["interrupt"] = _combate.totals [myself.tipo] ["interrupt"] - myself.interrupt
-												if (myself.grupo) then
-													_combate.totals_grupo [myself.tipo] ["interrupt"] = _combate.totals_grupo [myself.tipo] ["interrupt"] - myself.interrupt
-												end
-											end
-											if (myself.dispell) then
-												_combate.totals [myself.tipo] ["dispell"] = _combate.totals [myself.tipo] ["dispell"] - myself.dispell
-												if (myself.grupo) then
-													_combate.totals_grupo [myself.tipo] ["dispell"] = _combate.totals_grupo [myself.tipo] ["dispell"] - myself.dispell
-												end
-											end
-											if (myself.dead) then
-												_combate.totals [myself.tipo] ["dead"] = _combate.totals [myself.tipo] ["dead"] - myself.dead
-												if (myself.grupo) then
-													_combate.totals_grupo [myself.tipo] ["dead"] = _combate.totals_grupo [myself.tipo] ["dead"] - myself.dead
-												end
-											end
-										end
-									end
-
-									_table_remove (conteudo, _iter.index)
-									_iter.cleaned = _iter.cleaned + 1
-									_iter.data = conteudo [_iter.index]
-								else
-									_iter.index = _iter.index + 1
-									_iter.data = conteudo [_iter.index]
-								end
-							end
-
-							if (_iter.cleaned > 0) then
-								ReconstroiMapa (_tabela)
-							end
-
-						end
-					end
-
-				end
+				erase_ungrouped_actors (_combate, _combate.is_boss and not _combate.pvp, true)
 			end
 
 			--> panic mode
@@ -740,32 +481,6 @@
 		end
 	end
 
-	--desativado 7.2.5 veio com algum bug e a checagem de memoria esta sendo feita durante o combate
-	function _detalhes:CheckMemoryAfterCombat()
-		if (_detalhes.next_memory_check < time() and not InCombatLockdown() and not UnitAffectingCombat ("player")) then
-			_detalhes.next_memory_check = time()+_detalhes.intervalo_memoria
-			UpdateAddOnMemoryUsage()
-			local memory = GetAddOnMemoryUsage ("Details")
-			if (memory > _detalhes.memory_ram) then
-				_detalhes:IniciarColetaDeLixo (true, 60) --> sending true doesn't check anythink
-			end
-		end
-	end
-
-	function _detalhes:CheckMemoryPeriodically()
-		if (_detalhes.next_memory_check <= time() and not _InCombatLockdown() and not _detalhes.in_combat and not UnitAffectingCombat ("player")) then
-			_detalhes.next_memory_check = time() + _detalhes.intervalo_memoria - 3
-			UpdateAddOnMemoryUsage()
-			local memory = GetAddOnMemoryUsage ("Details")
-			if (_detalhes.debug) then
-				_detalhes:Msg ("(debug) checking memory periodically. Using: ",math.floor (memory))
-			end
-			if (memory > _detalhes.memory_ram * 1000) then
-				_detalhes:IniciarColetaDeLixo (1, 60) --> sending 1 only check for combat and ignore garbage collect cooldown
-			end
-		end
-	end
-
 	function _detalhes:IniciarColetaDeLixo (forcar, lastevent)
 
 		if (not forcar) then
@@ -793,8 +508,6 @@
 				_detalhes:Msg ("(debug) collecting garbage.")
 			end
 		end
-
-		local memory = GetAddOnMemoryUsage ("Details")
 
 		--> reseta o cache do parser
 		_detalhes:ClearParserCache()
@@ -825,11 +538,6 @@
 
 		_detalhes:ManutencaoTimeMachine()
 
-		--> print cache states
-		--if (_detalhes.debug) then
-		--	_detalhes:Msg ("(debug) removed: damage "..damage.." heal "..heal.." energy "..energy.." misc "..misc)
-		--end
-
 		--> elimina pets antigos
 		_detalhes:LimparPets()
 		if (not _detalhes.in_combat) then
@@ -847,8 +555,6 @@
 		if (_detalhes.debug) then
 			collectgarbage()
 			UpdateAddOnMemoryUsage()
-			--local memory2 = GetAddOnMemoryUsage ("Details")
-			--_detalhes:Msg ("(debug) memory before: "..memory.." memory after: "..memory2)
 		end
 
 	end
@@ -877,7 +583,6 @@
 			if (t < _tempo and not _actor.grupo and not _actor.boss and not _actor.fight_component and not _actor.boss_fight_component) then
 				local owner = _actor.owner
 				if (owner) then
-					local owner_actor = _combate (tipo, owner.nome)
 					if (not owner.grupo and not owner.boss and not owner.boss_fight_component) then
 						can_garbage = true
 					end
@@ -906,10 +611,6 @@
 
 		end
 
-		--if (_detalhes.debug) then
-			-- _detalhes:Msg ("- garbage collect:", tipo, "actors removed:",_iter.cleaned)
-		--end
-
 		if (_iter.cleaned > 0) then
 			ReconstroiMapa (_combate [tipo])
 			_combate [tipo].need_refresh = true
@@ -923,7 +624,6 @@
 
 		--print ("fazendo coleta...")
 
-		local _tempo  = _time()
 		local limpados = 0
 
 		--> monta a lista de combates

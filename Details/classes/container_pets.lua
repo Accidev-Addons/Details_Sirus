@@ -1,5 +1,4 @@
 local _detalhes = 		_G._detalhes
-local gump = 			_detalhes.gump
 
 local container_pets =		_detalhes.container_pets
 
@@ -15,7 +14,6 @@ local _GetNumGroupMembers = GetNumGroupMembers
 local _setmetatable = setmetatable
 local _bit_band = bit.band --lua local
 local _pairs = pairs
-local _ipairs = ipairs
 local _table_wipe = table.wipe
 
 --details locals
@@ -31,7 +29,6 @@ end
 
 local OBJECT_TYPE_PET = 0x00001000
 local EM_GRUPO = 0x00000007
-local PET_EM_GRUPO = 0x00001007
 
 function container_pets:PegaDono (pet_serial, pet_nome, pet_flags)
 
@@ -76,7 +73,7 @@ function container_pets:PegaDono (pet_serial, pet_nome, pet_flags)
 		end
 
 	elseif (_IsInGroup()) then
-		for i = 1, _GetNumGroupMembers()-1 do
+		for i = 1, GetNumPartyMembers() do
 			if (pet_serial == _UnitGUID ("partypet"..i)) then
 				dono_serial = _UnitGUID ("party"..i)
 				dono_flags = 0x00000417 --> emulate sourceflag flag
@@ -180,7 +177,7 @@ function container_pets:BuscarPets()
 		end
 
 	elseif (_IsInGroup()) then
-		for i = 1, _GetNumGroupMembers()-1, 1 do
+		for i = 1, GetNumPartyMembers() do
 			local pet_serial = _UnitGUID ("partypet"..i)
 			if (pet_serial) then
 				if (not _detalhes.tabela_pets.pets [pet_serial]) then
@@ -223,14 +220,8 @@ function container_pets:Adicionar (pet_serial, pet_nome, pet_flags, dono_serial,
 
 	if (pet_flags and _bit_band (pet_flags, OBJECT_TYPE_PET) ~= 0 and _bit_band (pet_flags, EM_GRUPO) ~= 0) then
 		self.pets [pet_serial] = {dono_nome, dono_serial, dono_flags, _detalhes._tempo, true, pet_nome, pet_serial}
-		--if (pet_nome == "Guardian of Ancient Kings") then --remover
-		--	print ("SUMMON", "Adicionou ao container")
-		--end
 	else
 		self.pets [pet_serial] = {dono_nome, dono_serial, dono_flags, _detalhes._tempo, false, pet_nome, pet_serial}
-		--if (pet_nome == "Guardian of Ancient Kings") then --remover
-		--	print ("SUMMON", "Adicionou ao container")
-		--end
 	end
 
 end

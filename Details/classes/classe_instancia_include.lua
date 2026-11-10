@@ -10,6 +10,9 @@
 local _detalhes = 		_G._detalhes
 local SharedMedia = LibStub:GetLibrary("LibSharedMedia-3.0")
 
+local pairs = pairs
+local type = type
+
 function _detalhes:ResetInstanceConfig (maintainsnap)
 	for key, value in pairs (_detalhes.instance_defaults) do
 		if (type (value) == "table") then
@@ -37,8 +40,6 @@ _detalhes.instance_skin_ignored_values = {
 	["auto_hide_menu"] = true,
 	["menu_alpha"] = true,
 	["total_bar"] = true,
-	["hide_in_combat"] = true,
-	["hide_out_of_combat"] = true,
 	["hide_in_combat_type"] = true,
 	["hide_in_combat_alpha"] = true,
 	["switch_all_roles_in_combat"] = true,
@@ -100,7 +101,6 @@ end
 _detalhes.instance_defaults = {
 
 	--> click through settings
-	clickthrough_toolbaricons = false,
 	clickthrough_rows = false,
 	clickthrough_window = false,
 	clickthrough_incombatonly = true,
@@ -179,8 +179,6 @@ _detalhes.instance_defaults = {
 		instance_button_anchor = {-27, 1},
 	--total bar
 		total_bar = {enabled = false, color = {1, 1, 1}, only_in_group = true, icon = [[Interface\ICONS\INV_Sigil_Thorim]]},
-	--row animation when show
-		row_show_animation = {anim = "Fade", options = {}},
 	--row info
 		row_info = {
 			--if true the texture of the bars will have the color of his actor class
@@ -272,10 +270,6 @@ _detalhes.instance_defaults = {
 	--instance window color
 		color = {1, 1, 1, 1},
 		color_buttons = {1, 1, 1, 1},
-	--hide in combat
-		hide_in_combat = false,
-		hide_out_of_combat = false,
-
 		hide_in_combat_type = 1,
 		hide_in_combat_alpha = 0,
 	--switches
@@ -301,9 +295,4 @@ _detalhes.instance_defaults = {
 			height = 0,
 			overlay = {1, 1, 1, 1}
 		},
-	--tooltip amounts
-	tooltip = {
-			["n_abilities"] = 3,
-			["n_enemies"] = 3
-		}
 }

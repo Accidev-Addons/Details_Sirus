@@ -6,9 +6,7 @@ end
 
 Loc ["STRING_PLUGIN_NAME"] = "Tiny Threat"
 
-Loc ["STRING_SLASH_ANIMATE"] = "animate"
 Loc ["STRING_SLASH_SPEED"] = "speed"
-Loc ["STRING_SLASH_AMOUNT"] = "amount"
 
 Loc ["STRING_COMMAND_LIST"] = "Available Commands:"
 Loc ["STRING_SLASH_SPEED_DESC"] = "Changes the frequency (in seconds) which the window is updated, allow values between 0.1 and 3.0"

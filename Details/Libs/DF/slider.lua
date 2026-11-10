@@ -423,8 +423,9 @@ local DFSliderMetaFunctions = _G [DF.GlobalWidgetControlNames ["slider"]]
 	end
 
 	function f:ShowMe (host)
-		f:SetPoint ("bottomleft", host, "topleft", -3, -5)
-		f:SetPoint ("bottomright", host, "topright", 3, -5)
+		f:ClearAllPoints()
+		f:SetPoint ("left", host, "left", -3, 0)
+		f:SetPoint ("right", host, "right", 3, 0)
 		--f:SetFrameStrata (host:GetFrameStrata())
 		f:SetFrameStrata ("FULLSCREEN")
 		f:SetFrameLevel (host:GetFrameLevel() + 1000)
@@ -483,7 +484,7 @@ local DFSliderMetaFunctions = _G [DF.GlobalWidgetControlNames ["slider"]]
 	--button_minor:SetPoint ("bottomleft", f, "bottomleft", -6, -13)
 	--button_plus:SetPoint ("bottomright", f, "bottomright", 6, -13)
 
-	button_minor:SetPoint ("bottomright", f, "bottomright", 13, -13)
+	button_minor:SetPoint ("right", f, "right", 13, 0)
 	button_plus:SetPoint ("left", button_minor, "right", -2, 0)
 
 	button_plus:SetSize (16, 16)

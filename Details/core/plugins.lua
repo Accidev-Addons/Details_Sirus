@@ -8,7 +8,6 @@
 	--> consts
 		local CONST_PLUGINWINDOW_MENU_WIDTH = 150
 		local CONST_PLUGINWINDOW_MENU_HEIGHT = 22
-		local CONST_PLUGINWINDOW_MENU_X = -5
 		local CONST_PLUGINWINDOW_MENU_Y = -26
 		local CONST_PLUGINWINDOW_WIDTH = 925
 		local CONST_PLUGINWINDOW_HEIGHT = 600
@@ -17,7 +16,7 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> details api functions
 	function _detalhes:GetPlugin (PAN) --plugin absolute name
-		return _detalhes.SoloTables.NameTable [PAN] or _detalhes.RaidTables.NameTable [PAN] or _detalhes.ToolBar.NameTable [PAN] or _detalhes.StatusBar.NameTable [PAN] or _detalhes.PluginsLocalizedNames [PAN] or _detalhes.PluginsGlobalNames [PAN]
+		return _detalhes.RaidTables.NameTable [PAN] or _detalhes.ToolBar.NameTable [PAN] or _detalhes.StatusBar.NameTable [PAN] or _detalhes.PluginsLocalizedNames [PAN] or _detalhes.PluginsGlobalNames [PAN]
 	end
 
 	function _detalhes:GetPluginSavedTable (PluginAbsoluteName)
@@ -118,10 +117,6 @@
 			return _detalhes:NewError ("Game client needs to be restarted in order to finish Details! update.")
 		end
 
-		if (PluginType == "TANK") then
-			PluginType = "RAID"
-		end
-
 		if (not PluginType) then
 			return _detalhes:NewError ("InstallPlugin parameter 1 (plugin type) not especified")
 		elseif (not PluginName) then
@@ -145,8 +140,7 @@
 		PluginObject.__name = PluginName
 		PluginObject.__author = Author or "--------"
 		PluginObject.__version = Version or "v1.0.0"
-		PluginObject.__icon = PluginIcon or [[Interface\ICONS\Trade_Engineering]]
-		PluginObject.real_name = PluginAbsoluteName
+		PluginObject.__icon = PluginIcon
 
 		_detalhes.PluginsGlobalNames [PluginAbsoluteName] = PluginObject
 		_detalhes.PluginsLocalizedNames [PluginName] = PluginObject
@@ -168,20 +162,7 @@
 			PluginObject.__enabled = saved_table.enabled
 		end
 
-		if (PluginType == "SOLO") then
-			if (not PluginObject.Frame) then
-				return _detalhes:NewError ("plugin doesn't have a Frame, please check case-sensitive member name: Frame")
-			end
-
-			--> Install Plugin
-			_detalhes.SoloTables.Plugins [#_detalhes.SoloTables.Plugins+1] = PluginObject
-			_detalhes.SoloTables.Menu [#_detalhes.SoloTables.Menu+1] = {PluginName, PluginIcon, PluginObject, PluginAbsoluteName}
-			_detalhes.SoloTables.NameTable [PluginAbsoluteName] = PluginObject
-			_detalhes:SendEvent ("INSTALL_OKEY", PluginObject)
-
-			_detalhes.PluginCount.SOLO = _detalhes.PluginCount.SOLO + 1
-
-		elseif (PluginType == "RAID") then
+		if (PluginType == "RAID") then
 
 			--> Install Plugin
 			_detalhes.RaidTables.Plugins [#_detalhes.RaidTables.Plugins+1] = PluginObject
@@ -230,7 +211,6 @@
 --> internal functions
 
 	_detalhes.PluginCount = {
-		["SOLO"] = 0,
 		["RAID"] = 0,
 		["TOOLBAR"] = 0,
 		["STATUSBAR"] = 0
@@ -284,8 +264,7 @@
 		local NewPlugin = {__options = PluginOptions, __enabled = true, RegisterEvent = register_event_func, UnregisterEvent = unregister_event_func}
 
 		local Frame = CreateFrame ("Frame", FrameName, UIParent)
-		Frame:RegisterEvent ("PLAYER_LOGIN")
-		Frame:RegisterEvent ("PLAYER_LOGOUT")
+		FrameUtil.RegisterFrameForEvents(Frame, {"PLAYER_LOGIN", "PLAYER_LOGOUT"})
 
 		Frame:SetScript ("OnEvent", function(self, event, ...)
 			if (NewPlugin.OnEvent) then
@@ -332,77 +311,42 @@
 
 		template = template or 1
 
-		if (template == 2) then
-			local options_frame = CreateFrame ("Frame", name, UIParent, "ButtonFrameTemplate")
-			tinsert (UISpecialFrames, name)
-			options_frame:SetSize (500, 200)
+		local options_frame = CreateFrame ("Frame", name, UIParent, template == 2 and "ButtonFrameTemplate" or nil)
+		tinsert (UISpecialFrames, name)
+		options_frame:SetSize (500, 200)
 
-			options_frame:SetScript ("OnMouseDown", function(self, button)
-				if (button == "RightButton") then
-					if (self.moving) then
-						self.moving = false
-						self:StopMovingOrSizing()
-					end
-					return options_frame:Hide()
-				elseif (button == "LeftButton" and not self.moving) then
-					self.moving = true
-					self:StartMoving()
-				end
-			end)
-			options_frame:SetScript ("OnMouseUp", function(self)
+		options_frame:SetScript ("OnMouseDown", function(self, button)
+			if (button == "RightButton") then
 				if (self.moving) then
 					self.moving = false
 					self:StopMovingOrSizing()
 				end
-			end)
+				return options_frame:Hide()
+			elseif (button == "LeftButton" and not self.moving) then
+				self.moving = true
+				self:StartMoving()
+			end
+		end)
+		options_frame:SetScript ("OnMouseUp", function(self)
+			if (self.moving) then
+				self.moving = false
+				self:StopMovingOrSizing()
+			end
+		end)
 
-			options_frame:SetMovable (true)
-			options_frame:EnableMouse (true)
-			options_frame:SetFrameStrata ("DIALOG")
-			options_frame:SetToplevel (true)
+		options_frame:SetMovable (true)
+		options_frame:EnableMouse (true)
+		options_frame:SetFrameStrata ("DIALOG")
+		options_frame:SetToplevel (true)
 
-			options_frame:Hide()
+		options_frame:Hide()
 
-			options_frame:SetPoint ("CENTER", UIParent, "CENTER")
+		options_frame:SetPoint ("CENTER", UIParent, "CENTER")
+
+		if (template == 2) then
 			options_frame.TitleText:SetText (title)
 			options_frame.portrait:SetTexture ([[Interface\CHARACTERFRAME\TEMPORARYPORTRAIT-FEMALE-BLOODELF]])
-
-			return options_frame
-
-		elseif (template == 1) then
-
-			local options_frame = CreateFrame ("Frame", name, UIParent)
-			tinsert (UISpecialFrames, name)
-			options_frame:SetSize (500, 200)
-
-			options_frame:SetScript ("OnMouseDown", function(self, button)
-				if (button == "RightButton") then
-					if (self.moving) then
-						self.moving = false
-						self:StopMovingOrSizing()
-					end
-					return options_frame:Hide()
-				elseif (button == "LeftButton" and not self.moving) then
-					self.moving = true
-					self:StartMoving()
-				end
-			end)
-			options_frame:SetScript ("OnMouseUp", function(self)
-				if (self.moving) then
-					self.moving = false
-					self:StopMovingOrSizing()
-				end
-			end)
-
-			options_frame:SetMovable (true)
-			options_frame:EnableMouse (true)
-			options_frame:SetFrameStrata ("DIALOG")
-			options_frame:SetToplevel (true)
-
-			options_frame:Hide()
-
-			options_frame:SetPoint ("CENTER", UIParent, "CENTER")
-
+		else
 			options_frame:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16,
 			edgeFile = [[Interface\AddOns\Details\images\border_2]], edgeSize = 32,
 			insets = {left = 1, right = 1, top = 1, bottom = 1}})
@@ -414,9 +358,9 @@
 			local bigdog = _detalhes.gump:NewImage (options_frame, [[Interface\MainMenuBar\UI-MainMenuBar-EndCap-Human]], 110, 120, nil, {1, 0, 0, 1}, "backgroundBigDog", "$parentBackgroundBigDog")
 			bigdog:SetPoint ("BOTTOMRIGHT", options_frame, "BOTTOMRIGHT", -3, 0)
 			bigdog:SetAlpha (.25)
-
-			return options_frame
 		end
+
+		return options_frame
 	end
 
 
@@ -426,13 +370,13 @@
 		f:EnableMouse (true)
 		f:SetMovable (true)
 		f:SetPoint ("CENTER", UIParent, "CENTER")
-		f:SetBackdrop (_detalhes.PluginDefaults and _detalhes.PluginDefaults.Backdrop or {bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16, edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1})
+		f:SetBackdrop (_detalhes.PluginDefaults.Backdrop)
 		f:SetBackdropColor (0, 0, 0, 0.3)
+		f:SetBackdropBorderColor (unpack (_detalhes.PluginDefaults.BackdropBorderColor))
 
 		f:Hide()
 
 		--> members
-			f.MenuX = CONST_PLUGINWINDOW_MENU_X
 			f.MenuY = CONST_PLUGINWINDOW_MENU_Y
 			f.MenuButtonWidth = CONST_PLUGINWINDOW_MENU_WIDTH
 			f.MenuButtonHeight = CONST_PLUGINWINDOW_MENU_HEIGHT
@@ -476,7 +420,7 @@
 			menuBackground:SetWidth (f.MenuButtonWidth + 6)
 
 			local bigdog = _detalhes.gump:NewImage (menuBackground, [[Interface\MainMenuBar\UI-MainMenuBar-EndCap-Human]], 180*0.7, 200*0.7, "overlay", {0, 1, 0, 1}, "backgroundBigDog", "$parentBackgroundBigDog")
-			bigdog:SetPoint ("BOTTOMLEFT", custom_window, "BOTTOMLEFT", 0, 1)
+			bigdog:SetPoint ("BOTTOMLEFT", menuBackground, "BOTTOMLEFT", 0, 1)
 			bigdog:SetAlpha (0.3)
 
 			local bigdogRow = menuBackground:CreateTexture (nil, "artwork")
@@ -517,8 +461,7 @@
 				C_Timer:After (1, function()
 					local right = f:GetRight()
 					if (right and right > GetScreenWidth() + 500) then
-						f:ClearAllPoints()
-						f:SetPoint ("CENTER", UIParent, "CENTER", 0, 0)
+						f:ClearAndSetPoint ("CENTER", UIParent, "CENTER", 0, 0)
 						LibWindow.SavePosition (f)
 						_detalhes:Msg ("detected options panel out of screen, position has reset")
 					end
@@ -571,6 +514,8 @@
 				end
 			end
 
+			f.SetWindowScale (_detalhes.options_window.scale)
+
 			--> re set the point of the frame within the main plugin window
 			f.RefreshFrame (pluginObject.__var_Frame)
 			C_Timer:After (0.016, function ()
@@ -617,13 +562,20 @@
 			newButton:SetIcon (pluginObject.__icon, nil, nil, nil, pluginObject.__iconcoords, pluginObject.__iconcolor, 4)
 
 			--> add it to menu table
-			tinsert (f.MenuButtons, newButton)
+			f.MenuButtons[#f.MenuButtons+1] = newButton
 
 			return newButton
 		end
 
 		local on_hide = function (self)
 			DetailsPluginContainerWindow.ClosePlugin()
+		end
+
+		function f.SetWindowScale (scale)
+			LibWindow.SetScale (f, scale)
+			for index, plugin in ipairs (f.EmbedPlugins) do
+				plugin.__var_Frame:SetScale (scale)
+			end
 		end
 
 		function f.RefreshFrame (frame)
@@ -633,8 +585,7 @@
 			frame:SetScript ("OnMouseUp", nil)
 			--frame:SetScript ("OnHide", on_hide)
 			frame:HookScript ("OnHide", on_hide)
-			frame:ClearAllPoints()
-			frame:SetPoint ("TOPLEFT", f, "TOPLEFT", 0, 0)
+			frame:ClearAndSetPoint ("TOPLEFT", f, "TOPLEFT", 0, 0)
 			frame:Show()
 		end
 
@@ -650,10 +601,6 @@
 			--> create a button for this plugin
 			local newMenuButtom = f.CreatePluginMenuButton (pluginObject, isUtility)
 
-			--> utility is true when the object isn't a real plugin, but instead a tool frame from the main addon being embed on this panel
-			if (isUtility) then
-				pluginObject.__var_Utility = true
-			end
 			pluginObject.__var_Frame = frame
 
 			--> sort buttons alphabetically, put utilities at the end
@@ -672,8 +619,7 @@
 			--> reset the buttons points
 			local addingTools = false
 			for index, button in ipairs (f.MenuButtons) do
-				button:ClearAllPoints()
-				button:SetPoint ("CENTER", menuBackground, "CENTER", 0, 0)
+				button:ClearAndSetPoint ("CENTER", menuBackground, "CENTER", 0, 0)
 
 				if (button.IsUtility) then
 					--> add -20 to add a gap between plugins and utilities
@@ -694,7 +640,7 @@
 			--> format the plugin main frame
 			f.RefreshFrame (frame)
 			--> add the plugin to embed table
-			tinsert (f.EmbedPlugins, pluginObject)
+			f.EmbedPlugins[#f.EmbedPlugins+1] = pluginObject
 
 			f.DebugMsg ("plugin added", pluginObject.__name)
 		end

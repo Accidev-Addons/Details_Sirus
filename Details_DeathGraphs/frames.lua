@@ -10,7 +10,6 @@ do
 	_detalhes.DeathGraphsWindowBuilder = function (DeathGraphs)
 
 		local tinsert = tinsert
-		local GetSpellInfo = GetSpellInfo
 		local unpack = unpack
 
 		local f = DeathGraphs.Frame
@@ -18,8 +17,6 @@ do
 		local framework = _G._detalhes:GetFramework()
 		local SharedMedia = LibStub:GetLibrary("LibSharedMedia-3.0")
 
-		local CONST_DBTYPE_DEATH = "deaths"
-		local CONST_DBTYPE_ENDURANCE = "endurance"
 		local CONST_COORDS_NO_BORDER = {5/64, 59/64, 5/64, 59/64}
 
 		local BUTTON_BACKGROUND_COLOR = {.2, .2, .2, .75}
@@ -31,9 +28,19 @@ do
 
 		local Loc = LibStub ("AceLocale-3.0"):GetLocale ("Details_DeathGraphs")
 
-		local debugmode = false
-		local cooltip_block_bg = {0, 0, 0, 1}
 		local _
+
+		local current_boss_hash = function()
+			local currentCombat = Details:GetCurrentCombat()
+			local boss = currentCombat and currentCombat.is_boss
+			if (boss) then
+				local bossIndex = Details:GetBossIndex (boss.mapid, boss.id, boss.name)
+				local encounter = bossIndex and Details:GetBossEncounter (boss.mapid, bossIndex)
+				if (encounter) then
+					return tostring (encounter) .. tostring (boss.diff)
+				end
+			end
+		end
 
 		framework.button_templates ["ADL_BUTTON_TEMPLATE"] = {
 			backdrop = {edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tileSize = 64, tile = true},
@@ -46,11 +53,7 @@ do
 		framework:InstallTemplate ("button", "ADL_MENUBUTTON_TEMPLATE", {width = 160}, "DETAILS_PLUGIN_BUTTON_TEMPLATE")
 		framework:InstallTemplate ("button", "ADL_MENUBUTTON_SELECTED_TEMPLATE", {width = 160}, "DETAILS_PLUGIN_BUTTONSELECTED_TEMPLATE")
 
-		local options_text_template = framework:GetTemplate ("font", "OPTIONS_FONT_TEMPLATE")
 		local options_dropdown_template = framework:GetTemplate ("dropdown", "OPTIONS_DROPDOWN_TEMPLATE")
-		local options_switch_template = framework:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE")
-		local options_slider_template = framework:GetTemplate ("slider", "OPTIONS_SLIDER_TEMPLATE")
-		local options_button_template = framework:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE")
 
 		local mode_buttons_width = 140
 		local mode_buttons_height = 20
@@ -123,13 +126,7 @@ do
 		f:SetBackdropBorderColor (0, 0, 0, 1)
 
 		--title bar
-		local titlebar = CreateFrame ("frame", nil, f)
-		titlebar:SetPoint ("topleft", f, "topleft", 2, -3)
-		titlebar:SetPoint ("topright", f, "topright", -2, -3)
-		titlebar:SetHeight (20)
-		titlebar:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-		titlebar:SetBackdropColor (.5, .5, .5, 1)
-		titlebar:SetBackdropBorderColor (0, 0, 0, 1)
+		local titlebar = _detalhes:CreateWindowTitleBar (f)
 
 		local name_bg_texture = f:CreateTexture (nil, "background")
 		name_bg_texture:SetTexture ([[Interface\PetBattles\_PetBattleHorizTile]], true)
@@ -145,13 +142,6 @@ do
 		titleLabel:SetPoint ("center", f, "center")
 		titleLabel:SetPoint ("top", f, "top", 0, -7)
 
-		DeathGraphs.selected_texture_boss = framework:NewImage (f, "Interface\\SPELLBOOK\\Spellbook-Parts", 190, 50, "border", {0.31250000, 0.96484375, 0.37109375, 0.52343750})
-		DeathGraphs.selected_texture_boss:SetBlendMode ("ADD")
-		DeathGraphs.selected_texture_boss2 = framework:NewImage (f, "Interface\\SPELLBOOK\\Spellbook-Parts", 190, 50, "border", {0.31250000, 0.96484375, 0.37109375, 0.52343750})
-		DeathGraphs.selected_texture_boss2:SetBlendMode ("ADD")
-		DeathGraphs.selected_texture_boss2:SetAllPoints (DeathGraphs.selected_texture_boss.widget)
-
-
 
 	--> boss scroll
 
@@ -165,9 +155,7 @@ do
 				end
 			end
 			local get_bd_table = function()
-				if (DeathGraphs.db.showing_type == 1) then
-					return DeathGraphs.deaths_database
-				elseif (DeathGraphs.db.showing_type == 2) then
+				if (DeathGraphs.db.showing_type == 2) then
 					return DeathGraphs.endurance_database
 				end
 			end
@@ -180,9 +168,7 @@ do
 
 			local OnSelectBoss = function (_, _, boss)
 				DeathGraphs.db.last_boss = boss
-				if (DeathGraphs.db.showing_type == 1) then
-					DeathGraphs:RefreshPlayerScroll()
-				elseif (DeathGraphs.db.showing_type == 2) then
+				if (DeathGraphs.db.showing_type == 2) then
 					DeathGraphs:ShowEndurance (boss, true)
 				end
 
@@ -304,13 +290,7 @@ do
 			local diff
 
 			if (hash) then
-				diff = hash:gsub ("%d%d%d%d", "")
-			else
-				if (DeathGraphs.db.showing_type == 1) then
-					DeathGraphs:RefreshPlayerScroll()
-				elseif (DeathGraphs.db.showing_type == 2) then
-
-				end
+				diff = hash:match ("(%d)$")
 			end
 
 			local rf_value = select_dropdown_10normal.value
@@ -318,392 +298,63 @@ do
 			local heroic_value = select_dropdown_10heroic.value
 			local mythic_value = select_dropdown_25heroic.value
 
-			if (DeathGraphs.db.showing_type == 1) then
-
-			elseif (DeathGraphs.db.showing_type == 2) then
+			if (DeathGraphs.db.showing_type == 2) then
 				if (not DeathGraphs.endurance_database [rf_value]) then
 					for _hash, t in pairs (DeathGraphs.endurance_database) do
-				--		if (t.diff == 17) then
+						if (t.diff == 1) then
 							select_dropdown_10normal:Select (t.hash)
 							break
-				--		end
+						end
 					end
 				end
 				if (not DeathGraphs.endurance_database [normal_value]) then
 					for _hash, t in pairs (DeathGraphs.endurance_database) do
-				--		if (t.diff == 14) then
+						if (t.diff == 2) then
 							select_dropdown_25normal:Select (t.hash)
 							break
-				--		end
+						end
 					end
 				end
 				if (not DeathGraphs.endurance_database [heroic_value]) then
 					for _hash, t in pairs (DeathGraphs.endurance_database) do
-				--		if (t.diff == 15) then
+						if (t.diff == 3) then
 							select_dropdown_10heroic:Select (t.hash)
 							break
-				--		end
+						end
 					end
 				end
 				if (not DeathGraphs.endurance_database [mythic_value]) then
 					for _hash, t in pairs (DeathGraphs.endurance_database) do
-				--		if (t.diff == 16) then
+						if (t.diff == 4) then
 							select_dropdown_25heroic:Select (t.hash)
 							break
-				--		end
+						end
 					end
 				end
 			end
 
-			if (diff == "1") then --normal
+			if (diff == "2") then --normal
 				select_dropdown_25normal:SetBackdropBorderColor (1, 1, 0, 1)
 				select_dropdown_25normal:Select (hash)
 				dropdown_label_25normal:SetTextColor (1, 0.8 , 0, 1)
 
-			elseif (diff == "2") then --heroic
+			elseif (diff == "3") then --heroic
 				select_dropdown_10heroic:SetBackdropBorderColor (1, 1, 0, 1)
 				select_dropdown_10heroic:Select (hash)
 				dropdown_label_10heroic:SetTextColor (1, 0.8 , 0, 1)
 
-			elseif (diff == "3") then --mythic
+			elseif (diff == "4") then --mythic
 				select_dropdown_25heroic:SetBackdropBorderColor (1, 1, 0, 1)
 				select_dropdown_25heroic:Select (hash)
 				dropdown_label_25heroic:SetTextColor (1, 0.8 , 0, 1)
 
-			elseif (diff == "4") then --rf
+			elseif (diff == "1") then --rf
 				select_dropdown_10normal:SetBackdropBorderColor (1, 1, 0, 1)
 				select_dropdown_10normal:Select (hash)
 				dropdown_label_10normal:SetTextColor (1, 0.8 , 0, 1)
 
 			end
 
-		end
-
-		local clear_func = function()
-
-			local hash = DeathGraphs.db.last_boss
-
-			if (DeathGraphs.db.showing_type == 1) then
-				local db_table = DeathGraphs.deaths_database
-				if (db_table and db_table [hash]) then
-					table.wipe (db_table [hash])
-				end
-				db_table [hash] = nil
-
-				if (DeathGraphs.db.last_boss == hash) then
-					DeathGraphs.db.last_player = false
-					DeathGraphs.db.last_segment = false
-					DeathGraphs.db.last_boss = false
-
-					for hash, _ in pairs (DeathGraphs.deaths_database) do
-						DeathGraphs.db.last_boss = hash
-						if (DeathGraphs.db.last_boss) then
-							break
-						end
-					end
-				end
-
-				DeathGraphs.graphic_frame:Reset()
-				DeathGraphs:ClearOverall()
-				DeathGraphs:Refresh()
-
-			elseif (DeathGraphs.db.showing_type == 2) then
-				local db_table = DeathGraphs.endurance_database
-				table.wipe (db_table [hash])
-				db_table [hash] = nil
-				DeathGraphs:ShowEndurance()
-			end
-
-			--> add
-
-		end
-
-		local AMOUNT_PLAYER_DEATH_LABELS = 17
-
-	--> player scroll
-		local player_refresh = function (self)
-			--> pega a lista de player
-			local boss_hash = DeathGraphs.db.last_boss
-			local players = DeathGraphs.deaths_database [boss_hash]
-
-			if (debugmode) then
-				print ("player refresh (boss_hash, players):", boss_hash, players)
-			end
-
-			DeathGraphs.selected_texture_player:Hide()
-			DeathGraphs.selected_texture_player2:Hide()
-
-			if (players) then
-				local players_list = players.player_db
-
-				local amount = 0
-				local numeric = {}
-
-				for playername, t in pairs (players_list) do
-					if (#t.deaths > 0) then
-						amount = amount+1
-						tinsert (numeric, t)
-					end
-				end
-				table.sort (numeric, function(t1, t2) return t1.name < t2.name end)
-
-				FauxScrollFrame_Update (self, amount, 16, 21)
-
-				local offset = FauxScrollFrame_GetOffset (self)
-
-				for bar_index = 1, AMOUNT_PLAYER_DEATH_LABELS do
-					local data = numeric [bar_index + offset]
-					local button = self.buttons [bar_index]
-					if (data) then
-
-						button:SetText (DeathGraphs:GetOnlyName (data.name))
-
-						if (data.class) then
-							local r, g, b = DeathGraphs:GetClassColor (data.class)
-							button.text_overlay:SetTextColor (.9, .9, .9)
-							local _, l, r, t, b = DeathGraphs:GetClassIcon (data.class)
-							button:SetIcon ([[Interface\AddOns\Details\images\classes_small_alpha]], 16, 16, "overlay", {l, r, t, b})
-						else
-							button.text_overlay:SetTextColor (1, 1, 1)
-							button:SetIcon ([[Interface\AddOns\Details\images\classes_small_alpha]], 16, 16, "overlay", {0.75, 1, 0.5, 0.75})
-						end
-
-						button.player_table = data
-						button.player_name = data.name
-
-						if (DeathGraphs.db.last_player == data.name) then
-							DeathGraphs.selected_texture_player:SetPoint ("topleft", button, "topleft", -2, 1)
-							DeathGraphs.selected_texture_player:SetPoint ("bottomleft", button, "bottomleft", -2, -3)
-							DeathGraphs.selected_texture_player:Show()
-							DeathGraphs.selected_texture_player2:Show()
-						end
-
-						button:Show()
-					else
-						button:Hide()
-					end
-				end
-			else
-				for bar_index = 1, AMOUNT_PLAYER_DEATH_LABELS do
-					local button = self.buttons [bar_index]
-					button:Hide()
-				end
-			end
-		end
-
-		local player_overall_anchor = CreateFrame ("frame", "DeathGraphsPlayerOverallAnchor", f)
-		player_overall_anchor:SetPoint ("topleft", enduranceFrameMenuAnchor, "topleft", 170, -45)
-		player_overall_anchor:SetSize (1, 1)
-
-		DeathGraphs.selected_texture_player = framework:NewImage (player_overall_anchor, "Interface\\SPELLBOOK\\Spellbook-Parts", 100, 50, "border", {0.31250000, 0.96484375, 0.37109375, 0.52343750})
-		DeathGraphs.selected_texture_player:SetBlendMode ("ADD")
-		DeathGraphs.selected_texture_player2 = framework:NewImage (player_overall_anchor, "Interface\\SPELLBOOK\\Spellbook-Parts", 100, 50, "border", {0.31250000, 0.96484375, 0.37109375, 0.52343750})
-		DeathGraphs.selected_texture_player2:SetBlendMode ("ADD")
-		DeathGraphs.selected_texture_player2:SetAllPoints (DeathGraphs.selected_texture_player.widget)
-
-		DeathGraphs.selected_texture_segment = framework:NewImage (player_overall_anchor, "Interface\\SPELLBOOK\\Spellbook-Parts", 90, 50, "border", {0.31250000, 0.96484375, 0.37109375, 0.52343750})
-		DeathGraphs.selected_texture_segment:SetBlendMode ("ADD")
-		DeathGraphs.selected_texture_segment2 = framework:NewImage (player_overall_anchor, "Interface\\SPELLBOOK\\Spellbook-Parts", 90, 50, "border", {0.31250000, 0.96484375, 0.37109375, 0.52343750})
-		DeathGraphs.selected_texture_segment2:SetBlendMode ("ADD")
-		DeathGraphs.selected_texture_segment2:SetAllPoints (DeathGraphs.selected_texture_segment.widget)
-
-		local player_scroll = CreateFrame ("scrollframe", "DeathGraphsPlayerScroll", f, "FauxScrollFrameTemplate")
-		player_scroll:SetScript ("OnVerticalScroll", function (self, offset) FauxScrollFrame_OnVerticalScroll (self, offset, 20, player_refresh) end)
-		player_scroll:SetPoint ("topleft", player_overall_anchor, "topleft", 0, 0)
-		player_scroll:SetSize (100, 360)
-		player_scroll:SetFrameLevel (f:GetFrameLevel()+2)
-
-		local player_bg_frame = CreateFrame ("frame", "DeathGraphsPlayerScrollBgFrame", f)
-		player_bg_frame:SetPoint ("topleft", player_scroll, "topleft")
-		player_bg_frame:SetPoint ("bottomright", player_scroll, "bottomright", -2, 0)
-		player_bg_frame:SetFrameLevel (f:GetFrameLevel()+1)
-
-		local clear_players_deaths = framework:NewButton (player_bg_frame, _, "$parentCleaPlayersDeathsButton", "CleaPlayersDeathsButton", 70, mode_buttons_height, clear_func, nil, nil, nil, "Clear", 1, options_dropdown_template)
-		clear_players_deaths:SetPoint ("bottomleft", endurance_frame, "topleft", 0, 9)
-
-		player_scroll:SetScript ("OnHide", function()
-			for i = 1, AMOUNT_PLAYER_DEATH_LABELS do
-				player_scroll.buttons[i]:Hide()
-			end
-		end)
-
-		player_scroll.buttons = {}
-
-		local player_button_on_click = function (self, button, param1, param2)
-			--> carrega lista de segmentos para este jogador
-			DeathGraphs.db.last_player = self.MyObject.player_name
-			DeathGraphs:RefreshSegmentScroll()
-
-			DeathGraphs:Select (nil, nil, 1)
-
-			DeathGraphs.selected_texture_player:SetPoint ("topleft", self, "topleft", -2, 1)
-			DeathGraphs.selected_texture_player:SetPoint ("bottomleft", self, "bottomleft", -2, -3)
-			DeathGraphs.selected_texture_player:Show()
-			DeathGraphs.selected_texture_player2:Show()
-		end
-
-		local player_on_enter = function (self, capsule)
-			self:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLORHIGHLIGHT))
-			capsule.textcolor = {1, 1, 1}
-		end
-		local player_on_leave = function (self, capsule)
-			self:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLOR))
-			capsule.textcolor = {.9, .9, .9}
-		end
-
-		for i = 1, AMOUNT_PLAYER_DEATH_LABELS do
-			local button = framework:NewButton (f, nil, "$parentPlayerButton" .. i, "PlayerButton" .. i, 94, 20, player_button_on_click, 1, nil, nil, "Player " .. i)
-			button:SetPoint ("topleft", player_scroll, "topleft", 0, -(i-1) * 21)
-			button.textalign = "left"
-			button.textsize = 10
-			tinsert (player_scroll.buttons, button)
-			button:Hide()
-			button:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16})
-			button:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLOR))
-			button:SetHook ("OnEnter", player_on_enter)
-			button:SetHook ("OnLeave", player_on_leave)
-		end
-
-		function DeathGraphs:RefreshPlayerScroll()
-			player_refresh (player_scroll)
-		end
-
-	--> segment scroll
-		local segment_refresh = function (self)
-			--> pega a lista de segmentos
-
-			local boss_hash = DeathGraphs.db.last_boss
-			local player_name = DeathGraphs.db.last_player
-
-			if (debugmode) then
-				print ("refresh segments:", boss_hash, player_name)
-			end
-
-			DeathGraphs.selected_texture_segment:Hide()
-			DeathGraphs.selected_texture_segment2:Hide()
-
-			if (player_name) then
-
-				local player_container = DeathGraphs.deaths_database [boss_hash] and DeathGraphs.deaths_database [boss_hash].player_db [player_name]
-
-				if (debugmode) then
-					print ("refresh segments:", player_container)
-				end
-
-				if (player_container) then
-					local amount = #player_container.deaths
-
-					FauxScrollFrame_Update (self, amount, 8, 41)
-
-					local offset = FauxScrollFrame_GetOffset (self)
-
-					for bar_index = 1, 8 do
-						local data = player_container.deaths [bar_index + offset]
-						local button = self.buttons [bar_index]
-						if (data) then
-							-- data [8] --combat_id
-
-							local minutos, segundos = math.floor (data[3]/60), math.floor (data[3]%60)
-							button.text1:SetText ("#" .. bar_index + offset .. " (" .. minutos .. "m " .. segundos .. "s)")
-							button.text2:SetText ("Try #" .. (data [8] or "0"))
-
-							button.death_table = data
-							button.index = bar_index + offset
-							button:Show()
-
-							if (DeathGraphs.db.last_segment == bar_index + offset) then
-								DeathGraphs.selected_texture_segment:SetPoint ("topleft", button, "topleft", -1, 1)
-								DeathGraphs.selected_texture_segment:SetPoint ("bottomleft", button, "bottomleft", -1, -3)
-								DeathGraphs.selected_texture_segment:Show()
-								DeathGraphs.selected_texture_segment2:Show()
-							end
-						else
-							button:Hide()
-						end
-					end
-				else
-					for bar_index = 1, 8 do
-						local button = self.buttons [bar_index]
-						button:Hide()
-					end
-				end
-			else
-				for bar_index = 1, 8 do
-					local button = self.buttons [bar_index]
-					button:Hide()
-				end
-			end
-		end
-
-		local segments_scroll = CreateFrame ("scrollframe", "DeathGraphsSegmentScroll", f, "FauxScrollFrameTemplate")
-		segments_scroll:SetScript ("OnVerticalScroll", function (self, offset) FauxScrollFrame_OnVerticalScroll (self, offset, 20, segment_refresh) end)
-		segments_scroll:SetPoint ("topleft", enduranceFrameMenuAnchor, "topleft", 320, -45)
-		segments_scroll:SetSize (100, 360)
-		segments_scroll:SetFrameLevel (f:GetFrameLevel()+2)
-
-		local segments_bg_frame = CreateFrame ("frame", nil, f)
-		segments_bg_frame:SetPoint ("topleft", segments_scroll, "topleft")
-		segments_bg_frame:SetPoint ("bottomright", segments_scroll, "bottomright", -5, 0)
-		segments_bg_frame:SetFrameLevel (f:GetFrameLevel()+1)
-
-		segments_scroll:SetScript ("OnHide", function()
-			for i = 1, 8 do
-				segments_scroll.buttons[i]:Hide()
-			end
-		end)
-
-		segments_scroll.buttons = {}
-
-		local segment_button_on_click = function (self, button, param1, param2)
-			--> mostra o gr�fico para este segmento
-			if (debugmode) then
-				print ("on click segment:", self.MyObject.death_table, self.MyObject.index, DeathGraphs.db.last_boss)
-			end
-			DeathGraphs.db.last_segment = self.MyObject.index
-
-			local death_table = DeathGraphs:GetBossTable (DeathGraphs.db.last_boss , nil, CONST_DBTYPE_DEATH)
-			local player_table = DeathGraphs:GetPlayerTable (death_table, DeathGraphs.db.last_player)
-
-			DeathGraphs:ShowGraphicForDeath (player_table.deaths [DeathGraphs.db.last_segment])
-
-			DeathGraphs.selected_texture_segment:SetPoint ("topleft", self, "topleft", -1, 1)
-			DeathGraphs.selected_texture_segment:SetPoint ("bottomleft", self, "bottomleft", -1, -3)
-			DeathGraphs.selected_texture_segment:Show()
-			DeathGraphs.selected_texture_segment2:Show()
-		end
-
-		local segments_on_enter = function (self)
-			self:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLORHIGHLIGHT))
-		end
-		local segments_on_leave = function (self)
-			self:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLOR))
-		end
-
-		for i = 1, 8 do
-			local button = framework:NewButton (f, nil, "$parentSegmentButton" .. i, "SegmentButton" .. i, 95, 40, segment_button_on_click, i)
-
-			button:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16})
-			button:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLOR))
-
-			button:SetHook ("OnEnter", segments_on_enter)
-			button:SetHook ("OnLeave", segments_on_leave)
-
-			button:SetPoint ("topleft", segments_scroll, "topleft", 0, -(i-1) * 41)
-			button.textalign = "left"
-
-			framework:CreateLabel (button, "label 1", nil, "white", "GameFontHighlightSmall", "text1")
-			framework:CreateLabel (button, "label 2", nil, "white", "GameFontHighlightSmall", "text2")
-
-			button.text1:SetPoint ("topleft", button, "topleft", 5, -10)
-			button.text2:SetPoint ("topleft", button, "topleft", 5, -20)
-
-			--button:InstallCustomTexture()
-			tinsert (segments_scroll.buttons, button)
-			button:Hide()
-		end
-
-		function DeathGraphs:RefreshSegmentScroll()
-			segment_refresh (segments_scroll)
 		end
 
 	--> ~endurance box
@@ -741,34 +392,7 @@ do
 			tutorialLabel4:SetJustifyV ("top")
 		--
 
-		if (not DetailsPluginContainerWindow) then
-			endurance_frame:EnableMouse (true)
-			endurance_frame:SetScript ("OnMouseDown",
-							function (self, botao)
-								if (botao == "LeftButton") then
-									if (f.isMoving) then
-										return
-									end
-									f:StartMoving()
-									f.isMoving = true
-								elseif (botao == "RightButton") then
-									if (f.isMoving) then
-										return
-									end
-									DeathGraphs:CloseWindow()
-								end
-							end)
-
-			endurance_frame:SetScript ("OnMouseUp",
-							function (self)
-								if (f.isMoving) then
-									f:StopMovingOrSizing()
-									f.isMoving = false
-								end
-							end)
-		else
-			endurance_frame:EnableMouse (false)
-		end
+		endurance_frame:EnableMouse (false)
 
 		endurance_frame.labels = {}
 		endurance_frame:Hide()
@@ -877,7 +501,6 @@ do
 			GameCooltip:SetOption ("FixedWidth", 300)
 
 			local total_encounters = capsule.encounters
-			local points_earned = capsule.points
 
 			GameCooltip:AddLine ("|cFFFFFF00Records: |r" .. total_encounters, "|cFFFFFF00Deaths: |r" .. #capsule.deaths .. (#capsule.deaths > 0 and " |cFFFFFF00(|r|cFFA0A0A01 each " .. format ("%.1f", total_encounters / #capsule.deaths) .. " tries|r|cFFFFFF00)|r" or ""), 1, "orange", "orange", 12, SharedMedia:Fetch ("font", "Friz Quadrata TT"))
 			GameCooltip:AddLine (" ")
@@ -958,7 +581,6 @@ do
 				label.points.text = string.format ("%.1f", math.abs ((#deaths / encounters * 100) - 100)) .. "%"
 
 				label.name.text = DeathGraphs:GetOnlyName (player_name)
-				local r, g, b = DeathGraphs:GetClassColor (player_class)
 				label.name:SetTextColor (.5, .5, .5)
 
 				label.gray_player = true
@@ -978,26 +600,11 @@ do
 			else
 				local percent_scaled = DeathGraphs:Scale (min, max, 0, 100, percent)
 
-				local r, g
-				if (percent_scaled < 50) then
-					r = 255
-				else
-					r = math.floor ( 255 - (percent_scaled * 2 - 100) * 255 / 100)
-				end
-
-				if (percent_scaled > 50) then
-					g = 255
-				else
-					g = math.floor ( (percent_scaled * 2) * 255 / 100)
-				end
-
-				label.points:SetTextColor (r/255, g/255, 0)
-				--label.recordsXdeaths:SetTextColor (r/255, g/255, 0)
+				label.points:SetTextColor (DeathGraphs:percent_color (percent_scaled))
 
 				label.points.text = string.format ("%.1f", percent) .. "%"
 
 				label.name.text = DeathGraphs:GetOnlyName (player_name)
-				local r, g, b = DeathGraphs:GetClassColor (player_class)
 				label.name:SetTextColor (.9, .9, .9)
 
 				local file, l, r, t, b = DeathGraphs:GetClassIcon (player_class)
@@ -1021,27 +628,12 @@ do
 			end
 		end
 
-		function endurance_frame:Cancel()
-			endurance_frame:Hide()
-			DeathGraphs.db.showing_type = 1
-
-			return
-		end
-
 		local reverse_sort = function (t1, t2)
 			return t1[4] < t2[4]
 		end
 
 		--> if from dropdown, ignore all auto boss selection
 		function DeathGraphs:ShowEndurance (boss, fromDropdown)
-
-			player_scroll:Show()
-			player_scroll:Hide()
-			segments_scroll:Show()
-			segments_scroll:Hide()
-			segments_bg_frame:Hide()
-			player_bg_frame:Hide()
-			DeathGraphs.overall_bg:Hide()
 
 			select_dropdown_10normal:Show()
 			select_dropdown_25normal:Show()
@@ -1052,8 +644,6 @@ do
 			dropdown_label_10heroic:Show()
 			dropdown_label_25heroic:Show()
 
-			DeathGraphs.graphic_frame:Hide()
-
 			--> refresh
 			DeathGraphs.db.showing_type = 2
 			DeathGraphs:RefreshBossScroll()
@@ -1061,9 +651,6 @@ do
 
 			--> get boss table
 			boss = boss or DeathGraphs.showing_endurance or DeathGraphs.db.last_boss
-			if (debugmode) then
-				print (":ShowEndurance", boss)
-			end
 
 			if (not boss) then
 				for hash, _ in pairs (DeathGraphs.endurance_database) do
@@ -1076,27 +663,7 @@ do
 
 			--> get the boss from the latest segment
 				if (not fromDropdown) then
-					local currentCombat = Details:GetCurrentCombat()
-					if (currentCombat) then
-						if (currentCombat.is_boss) then
-							--> get the map index
-							local mapID = currentCombat.is_boss.mapid
-							--> get the boss index within the raid
-							local bossIndex = Details:GetBossIndex (mapID, currentCombat.is_boss.id, currentCombat.is_boss.name)
-							if (bossIndex) then
-								--> get the encounter
-								local encounter = Details.EncounterInformation[mapID] and _detalhes.EncounterInformation[mapID].encounter_ids2[bossIndex]
-								if (encounter) then
-									--> if the encounter exists build the hash
-									local bossDificulty = currentCombat.is_boss.diff
-									local hash = tostring (encounter) .. tostring (bossDificulty)
-									if (hash) then
-										boss = hash
-									end
-								end
-							end
-						end
-					end
+					boss = current_boss_hash() or boss
 				end
 			--
 
@@ -1105,9 +672,6 @@ do
 			end
 
 			local boss_table = DeathGraphs.endurance_database [boss]
-			if (debugmode) then
-				print (":ShowEndurance", boss_table)
-			end
 
 			if (not boss_table) then
 				for hash, _ in pairs (DeathGraphs.endurance_database) do
@@ -1191,22 +755,8 @@ do
 			dropdown_label_10heroic:Hide()
 			dropdown_label_25heroic:Hide()
 
-			player_scroll:Show()
-			player_scroll:Hide()
-			segments_scroll:Show()
-			segments_scroll:Hide()
-
 			--endurance
 			endurance_frame:Hide()
-
-			--overall
-			player_scroll:Hide()
-			segments_scroll:Hide()
-			segments_bg_frame:Hide()
-			player_bg_frame:Hide()
-			DeathGraphs.graphic_frame:Hide()
-			DeathGraphs.overall_bg:Hide()
-			player_overall_anchor:Hide()
 
 			--current
 			DeathGraphsCurrentFrameDeaths:Hide()
@@ -1227,121 +777,10 @@ do
 			DeathGraphsPlayerGraphicDeaths.Refresh()
 		end
 
-		function DeathGraphs:ShowOverall()
-			player_scroll:Show()
-			segments_scroll:Show()
-			segments_bg_frame:Show()
-			player_bg_frame:Show()
-
-			select_dropdown_10normal:Show()
-			select_dropdown_25normal:Show()
-			select_dropdown_10heroic:Show()
-			select_dropdown_25heroic:Show()
-			dropdown_label_10normal:Show()
-			dropdown_label_25normal:Show()
-			dropdown_label_10heroic:Show()
-			dropdown_label_25heroic:Show()
-
-			player_overall_anchor:Show()
-
-			DeathGraphs.db.showing_type = 1
-
-			local boss = DeathGraphs.db.last_boss
-			if (not DeathGraphs.deaths_database [boss]) then
-				for hash, _ in pairs (DeathGraphs.deaths_database) do
-					DeathGraphs.db.last_boss = hash
-					if (DeathGraphs.db.last_boss) then
-						break
-					end
-				end
-			end
-
-			DeathGraphs:RefreshBossScroll()
-			DeathGraphs:RefreshPlayerScroll()
-			DeathGraphs:RefreshSegmentScroll()
-
-			if (DeathGraphs.db.last_segment) then
-				DeathGraphs.graphic_frame:Show()
-				DeathGraphs.overall_bg:Show()
-			end
-		end
-
-		function DeathGraphs:HideEndurance()
-			DeathGraphs.db.showing_type = 1
-			endurance_frame:Hide()
-
-			player_scroll:Show()
-			segments_scroll:Show()
-			segments_bg_frame:Show()
-			player_bg_frame:Show()
-
-			local boss = DeathGraphs.db.last_boss
-			if (not DeathGraphs.deaths_database [boss]) then
-				for hash, _ in pairs (DeathGraphs.deaths_database) do
-					DeathGraphs.db.last_boss = hash
-					if (DeathGraphs.db.last_boss) then
-						break
-					end
-				end
-			end
-
-			DeathGraphs:RefreshBossScroll()
-			DeathGraphs:RefreshPlayerScroll()
-			DeathGraphs:RefreshSegmentScroll()
-
-			if (DeathGraphs.db.last_segment) then
-				DeathGraphs.graphic_frame:Show()
-				DeathGraphs.overall_bg:Show()
-			end
-		end
-
-		function DeathGraphs:HideEnduranceAndDeaths()
-			endurance_frame:Hide()
-			player_scroll:Hide()
-			segments_scroll:Hide()
-			segments_bg_frame:Hide()
-			player_bg_frame:Hide()
-			DeathGraphs.graphic_frame:Hide()
-			DeathGraphs.overall_bg:Hide()
-		end
-
-	--> bottom menu bar
-
-	--> dropdown select type
-		local select_type_label = framework:NewLabel (f, nil, "$parentTypeLabel", nil, "Showing:", "GameFontNormal")
-
-		local OnSelectType = function (_, _, type)
-			--> mostrar ou esconder o box de endurance
-			if (type == 2) then
-				DeathGraphs:ShowEndurance()
-
-			elseif (type == 1) then
-				DeathGraphs:HideEndurance()
-			end
-		end
-
-		local death_desc = Loc ["STRING_DEATH_DESC"]
-		local endurance_desc = Loc ["STRING_ENDURANCE_DESC"]
-
-		local type_menu = {
-			{value = 1, label = Loc ["STRING_DEATHS"], onclick = OnSelectType, icon = [[Interface\GROUPFRAME\UI-GROUP-MAINASSISTICON]], desc = death_desc},
-			{value = 2, label = Loc ["STRING_ENDURANCE"], onclick = OnSelectType, icon = [[Interface\GROUPFRAME\UI-GROUP-MAINASSISTICON]], desc = endurance_desc},
-			{value = 4, label = Loc ["STRING_OVERTIME"], onclick = OnSelectType, icon = [[Interface\GROUPFRAME\UI-GROUP-MAINASSISTICON]], desc = endurance_desc},
-			{value = 3, label = Loc ["STRING_LATEST"], onclick = OnSelectType, icon = [[Interface\GROUPFRAME\UI-GROUP-MAINASSISTICON]], desc = endurance_desc},
-		}
-
-		local select_type_dropdown = framework:NewDropDown (f, nil, "$parentSegmentDropdown", "ModeDropdown", 150, 20, function() return type_menu end, DeathGraphs.db.showing_type)
-		select_type_label:SetPoint ("bottomleft", f, "bottomleft", 15, 14)
-		select_type_dropdown:SetPoint ("left", select_type_label, "right", 2, 0)
-
-		select_type_label:Hide()
-		select_type_dropdown:Hide()
-
 	--> mode buttons:
 
 		local BUTTON_INDEX_CURRENT = 1
 		local BUTTON_INDEX_TIMELINE = 2
-		local BUTTON_INDEX_OVERALL = 3
 		local BUTTON_INDEX_ENDURANCE = 4
 		local options_button_template = framework:GetTemplate ("button", "ADL_BUTTON_TEMPLATE")
 
@@ -1356,10 +795,6 @@ do
 			elseif (selected_mode == BUTTON_INDEX_TIMELINE) then
 				--> timeline
 				DeathGraphs:ShowTimeline() --internal index: 4
-
-			elseif (selected_mode == BUTTON_INDEX_OVERALL) then
-				--> overall
-				DeathGraphs:ShowOverall() --internal index: 1
 
 			elseif (selected_mode == BUTTON_INDEX_ENDURANCE) then
 				--> endurance
@@ -1393,35 +828,12 @@ do
 		--endurance_button:SetTextColor ("orange")
 
 		--> overall ~overall
-		--local overall_button = framework:NewButton (f, _, "$parentModeOverallButton", "ModeOverallButton", mode_buttons_width, mode_buttons_height, change_mode, BUTTON_INDEX_OVERALL, nil, nil, "Overall", 1, options_button_template)
-		--overall_button:SetPoint ("bottomleft", endurance_button, "bottomright", 5, 0)
-		--overall_button:SetIcon ([[Interface\Buttons\UI-MicroButton-Spellbook-Up]], nil, nil, nil, {0, 1, 0.4, 1}, nil, nil, 2)
-		--overall_button:SetTextColor ("orange")
 
 		--> highlight buttons when the mouse hoverover // change the color of button for the current selected module
 		local all_buttons = {current_encounter_button, timeline_button, endurance_button} --overall_button,
 
 		local set_button_as_pressed = function (button)
 
-			--[=[
-			local onenter = button.onenter_backdrop
-			local onleave = button.onleave_backdrop
-			onenter[1], onenter[2], onenter[3], onenter[4] = .8, .8, .8, 1
-			onleave[1], onleave[2], onleave[3], onleave[4] = .1, .1, .1, 1
-
-			local border_onenter = button.onenter_backdrop_border_color
-			border_onenter[1], border_onenter[2], border_onenter[3], border_onenter[4] = 1, 1, 0, 1
-			local border_onleave = button.onleave_backdrop_border_color
-			border_onleave[1], border_onleave[2], border_onleave[3], border_onleave[4] = 1, .8, 0, 1
-
-			if (button:IsMouseOver()) then
-				button:SetBackdropColor (onenter[1], onenter[2], onenter[3], onenter[4])
-				button:SetBackdropBorderColor (border_onenter[1], border_onenter[2], border_onenter[3], border_onenter[4])
-			else
-				button:SetBackdropColor (onleave[1], onleave[2], onleave[3], onleave[4])
-				button:SetBackdropBorderColor (border_onleave[1], border_onleave[2], border_onleave[3], border_onleave[4])
-			end
-			--]=]
 
 			button:SetTemplate (framework:GetTemplate ("button", "ADL_MENUBUTTON_SELECTED_TEMPLATE"))
 		end
@@ -1429,27 +841,11 @@ do
 		function DeathGraphs:RefreshButtons()
 			--> reset endurance button
 			for _, button in ipairs (all_buttons) do
-				--[=[
-				local onenter = button.onenter_backdrop
-				onenter[1], onenter[2], onenter[3], onenter[4] = .6, .6, .6, .9
-				local onleave = button.onleave_backdrop
-				onleave[1], onleave[2], onleave[3], onleave[4] = .3, .3, .3, .9
-				local border_onenter = button.onenter_backdrop_border_color
-				border_onenter[1], border_onenter[2], border_onenter[3], border_onenter[4] = 0, 0, 0, 1
-				local border_onleave = button.onleave_backdrop_border_color
-				border_onleave[1], border_onleave[2], border_onleave[3], border_onleave[4] = 0, 0, 0, 1
-
-				button:SetBackdropColor (onleave[1], onleave[2], onleave[3], onleave[4])
-				button:SetBackdropBorderColor (border_onleave[1], border_onleave[2], border_onleave[3], border_onleave[4])
-				--]=]
 
 				button:SetTemplate (framework:GetTemplate ("button", "ADL_MENUBUTTON_TEMPLATE"))
 			end
 
-			if (DeathGraphs.db.showing_type == 1) then --overall
-				set_button_as_pressed (overall_button)
-
-			elseif (DeathGraphs.db.showing_type == 2) then --endurance
+			if (DeathGraphs.db.showing_type == 2) then --endurance
 				set_button_as_pressed (endurance_button)
 
 			elseif (DeathGraphs.db.showing_type == 3) then --current
@@ -1474,8 +870,6 @@ do
 			DeathGraphs.db.last_player = false
 			DeathGraphs.db.last_segment = false
 			DeathGraphs.db.last_boss = false
-			DeathGraphs.graphic_frame:Reset()
-			DeathGraphs:ClearOverall()
 			DeathGraphs:Refresh()
 			DeathGraphs:CanShowIcon()
 
@@ -1507,10 +901,7 @@ do
 			DeathGraphs:RefreshBossScroll()
 			DeathGraphs:HideAll()
 
-			if (DeathGraphs.db.showing_type == 1) then --overall
-				DeathGraphs:ShowOverall()
-
-			elseif (DeathGraphs.db.showing_type == 2) then --endurance
+			if (DeathGraphs.db.showing_type == 2) then --endurance
 				DeathGraphs:ShowEndurance()
 
 			elseif (DeathGraphs.db.showing_type == 3) then --current
@@ -1522,542 +913,7 @@ do
 			end
 
 			DeathGraphs:RefreshButtons()
-
-			if (DeathGraphs.db.showing_type == 1) then --else or nothing to show on endurance
-
-				local last_boss = DeathGraphs.db.last_boss
-
-				if (last_boss) then
-					--> check if the last table exists
-					if (DeathGraphs.deaths_database [last_boss]) then
-						local last_player = DeathGraphs.db.last_player
-						local last_segment = DeathGraphs.db.last_segment
-					else
-						local last_encounter = DeathGraphs.last_encounter_hash
-						if (last_encounter and DeathGraphs.deaths_database [last_encounter]) then
-							DeathGraphs.db.last_boss = DeathGraphs.last_encounter_hash
-						else
-							DeathGraphs.db.last_boss = false
-						end
-
-						DeathGraphs.db.last_player = false
-						DeathGraphs.db.last_segment = false
-					end
-				else
-					local last_encounter = DeathGraphs.last_encounter_hash
-					if (last_encounter and DeathGraphs.deaths_database [last_encounter]) then
-						DeathGraphs.db.last_boss = DeathGraphs.last_encounter_hash
-					else
-						DeathGraphs.db.last_boss = false
-					end
-
-					DeathGraphs.db.last_player = false
-					DeathGraphs.db.last_segment = false
-				end
-
-				DeathGraphs:RefreshBossScroll()
-				DeathGraphs:RefreshPlayerScroll()
-				DeathGraphs:RefreshSegmentScroll()
-
-				--> show graphic
-				DeathGraphs:Select()
-
-				--> show damage taken
-
-			end
 		end
-
-	--> select boss / player / segment
-		function DeathGraphs:Select (boss, player, segment)
-			if (not boss) then
-				boss = DeathGraphs.db.last_boss
-			else
-				DeathGraphs.db.last_boss = boss
-			end
-			if (not player) then
-				player = DeathGraphs.db.last_player
-			else
-				DeathGraphs.db.last_player = player
-			end
-			if (not segment) then
-				segment = DeathGraphs.db.last_segment
-			else
-				DeathGraphs.db.last_segment = segment
-			end
-
-			if (boss and player and segment) then
-				local death_table = DeathGraphs:GetBossTable (boss , nil, CONST_DBTYPE_DEATH)
-				local player_table = DeathGraphs:GetPlayerTable (death_table, player)
-				DeathGraphs:ShowGraphicForDeath (player_table.deaths [segment])
-			end
-
-			DeathGraphs:RefreshBossScroll()
-			DeathGraphs:RefreshPlayerScroll()
-			DeathGraphs:RefreshSegmentScroll()
-		end
-
-	--> graphic
-
-		local log
-		local loglines = {}
-		local linhas = {}
-		local gradeframes = {}
-		local gradelinhas = {}
-
-		local gballs = {}
-
-		local GetSpellInfo = _detalhes.getspellinfo
-		local flag_logmouseover = false
-
-		local gframe = CreateFrame ("frame", nil, f)
-		gframe:SetSize (475, 160)
-		gframe:SetPoint ("topleft", f, "topleft", 449, -95)
-		gframe.CustomLine = [[Interface\AddOns\Details\Libs\LibGraph-2.0\line]]
-		DeathGraphs.graphic_frame = gframe
-
-		local g = LibStub:GetLibrary ("LibGraph-2.0")
-
-		--> graphic lines on enter and leave
-		local on_enter = function (self)
-
-			self:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLORHIGHLIGHT))
-			local ball = gballs [self.id]
-			ball:SetBlendMode ("ADD")
-			local line = ball.line
-
-			if (not line) then
-				return
-			end
-
-			if (self.data [2] ~= 0) then
-				GameCooltip:Reset()
-
-				GameCooltip:SetOption ("ButtonsYMod", 0)
-				GameCooltip:SetOption ("YSpacingMod", -5)
-				GameCooltip:SetOption ("IgnoreButtonAutoHeight", true)
-				GameCooltip:SetColor (1, 0.5, 0.5, 0.5, 0.5)
-
-				local spellname, _, spellicon = GetSpellInfo (self.data [2])
-
-				GameCooltip:AddLine (spellname, nil, 1, "orange", nil, 12, SharedMedia:Fetch ("font", "Friz Quadrata TT"))
-				GameCooltip:AddIcon (spellicon, 1, 1, 16, 16)
-
-				--> death parser
-				if (type (self.data [1]) == "boolean") then --> damage or heal
-					if (self.data [1]) then
-
-						if (self.data [7] and self.data [7] > 0) then
-							GameCooltip:AddLine ("-" .. DeathGraphs:comma_value (self.data [3]) .. " |cFF11FF11(|r" .. DeathGraphs:comma_value (self.data [7]) .. " |cFFFFFFBBabsorbed|r|cFF11FF11)|r") --> damage with absorb
-						else
-							GameCooltip:AddLine ("-" .. DeathGraphs:comma_value (self.data [3])) --> damage
-						end
-
-						GameCooltip:AddLine ("School: " .. DeathGraphs:GetSpellSchoolFormatedName (self.data [8]))
-					else
-						GameCooltip:AddLine ("+" .. DeathGraphs:comma_value (self.data [3]))
-					end
-
-				elseif (type (self.data [1]) == "number") then
-					if (self.data [1] == 1) then --cooldown
-						GameCooltip:AddLine ("Cooldown")
-					elseif (self.data [1] == 2) then --battle ress
-						GameCooltip:AddLine ("Battleress")
-					end
-				end
-
-				GameCooltip:AddLine ("Source: " .. self.data [6])
-
-				if (type (self.data [1]) == "boolean" and self.data [1] and self.data [9]) then --> damage or heal
-					GameCooltip:AddLine ("|cFFFF0000Friendly Fire|r")
-				end
-
-				GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, cooltip_block_bg, _detalhes.tooltip_border_color)
-
-				GameCooltip:SetOwner (ball.tooltip_anchor, "bottomleft", "topright")
-				GameCooltip:Show()
-			end
-
-		end
-		local on_leave = function (self)
-			self:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLOR))
-			local ball = gballs [self.id]
-			ball:SetBlendMode ("BLEND")
-			local line = ball.line
-			if (line) then
-				line:SetBlendMode ("BLEND")
-			end
-			GameCooltip:Hide()
-		end
-
-		--> graphic lines
-		for i = 1, 16 do
-			linhas [i] = g:DrawLine (gframe, 400, 500, 600, 700, 20, {1, 1, 1, 1}, "artwork")
-
-			local f = CreateFrame ("Button", nil, gframe)
-			f:SetPoint ("left", gframe, "left", (i-1)*29, 0)
-			f:SetSize (29, 160)
-			gradeframes [i] = f
-			f.id = i
-			f:SetScript ("OnEnter", on_enter)
-			f:SetScript ("OnLeave", on_leave)
-
-			f:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16})
-			f:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLOR))
-
-			local t = gframe:CreateTexture (nil, "background")
-			t:SetSize (1, 160)
-			t:SetPoint ("left", gframe, "left", i*29, 0)
-			t:SetTexture (1, 1, 1, .1)
-			gradelinhas [i] = t
-
-			local b = f:CreateTexture (nil, "overlay")
-			b:SetTexture ([[Interface\COMMON\Indicator-Yellow]])
-			b:SetSize (16, 16)
-			local anchor = CreateFrame ("frame", nil, f)
-			anchor:SetAllPoints (b)
-			b.tooltip_anchor = anchor
-			gballs [i] = b
-
-			local spellicon = f:CreateTexture (nil, "artwork")
-			spellicon:SetPoint ("bottom", b, "bottom", 0, 10)
-			spellicon:SetSize (16, 16)
-			b.spellicon = spellicon
-		end
-
-		function gframe:ShowGrid()
-			for _, frame in ipairs (gradeframes) do
-				frame:Show()
-			end
-			for _, line in ipairs (gradelinhas) do
-				line:Show()
-			end
-			for _, bola in ipairs (gballs) do
-				bola:Show()
-			end
-			gframe.timeline:Show()
-		end
-		function gframe:HideGrid()
-			for _, frame in ipairs (gradeframes) do
-				frame:Hide()
-			end
-			for _, line in ipairs (gradelinhas) do
-				line:Hide()
-			end
-			for _, bola in ipairs (gballs) do
-				bola:Hide()
-			end
-			gframe.timeline:Hide()
-		end
-
-		function gframe:Reset()
-			for i = #gframe.GraphLib_Lines_Used, 1, -1 do
-				local line = tremove (gframe.GraphLib_Lines_Used)
-				tinsert (gframe.GraphLib_Lines, line)
-				line:Hide()
-			end
-		end
-
-		--> timeline
-		local timeline_bg = CreateFrame ("frame", nil, gframe)
-		gframe.timeline = timeline_bg
-		timeline_bg:SetPoint ("topleft", gframe, "bottomleft", 0, -1)
-		timeline_bg:SetPoint ("topright", gframe, "bottomright", -11, -1)
-		timeline_bg:SetHeight (20)
-		timeline_bg:SetBackdrop ({bgFile = "Interface\\AddOns\\Details\\images\\background", tile = true, tileSize = 16,
-			insets = {left = 0, right = 0, top = 0, bottom = 0}})
-		timeline_bg:SetBackdropColor (.1, .1, .1, .3)
-		timeline_bg.labels = {}
-		for i = 1, 16 do
-			local l = timeline_bg:CreateFontString (nil, "overlay", "GameFontNormal")
-			DeathGraphs:SetFontSize (l, 9)
-			DeathGraphs:SetFontColor (l, "silver")
-			l:SetPoint ("left", timeline_bg, "left", (i-1) * 29, 0)
-			timeline_bg.labels [i] = l
-		end
-
-		local red = {.9, .1, .1, 1}
-		local green = {.1, .9, .1, 1}
-		local white = {1, 1, 1, 1}
-		local gray = {.5, .5, .5, 1}
-		local orange = {1, .6, 0, 1}
-
-		function DeathGraphs:ShowGraphicForDeath (data)
-
-			gframe:Reset()
-			gframe:ShowGrid()
-			gframe:Show()
-
-			if (not data) then
-				return
-			end
-
-			local timeline = data [1]
-			local max_health = data[4]
-
-			if (#timeline < 16) then
-				while (#timeline < 16) do
-					table.insert (timeline, 1, {false, 0, 0, data[6], max_health, "-1"})
-				end
-			end
-
-			log = timeline
-
-			local h = gframe:GetHeight()/100
-
-			local o = 1
-			local lastlife = 156
-
-			--for i = 16, 1, -1 do
-			for i = 1, 16, 1 do
-				local t = timeline [i]
-				if (type (t) == "table") then
-
-					--> death parser
-
-					local evtype = t [1] --event type
-					local spellid = t [2] --spellid
-					local amount = t [3] --amount healed or damaged
-					local time = t [4] --time
-					local life = t [5] --health
-					local source = t [6] --source
-
-					local plife = life / max_health * 100
-					if (plife > 98) then
-						plife = 98
-					end
-					plife = plife*h
-
-					local line
-
-					if (source == "-1") then
-						--> neutral line
-						line = g:DrawLine (gframe, (o-1)*29, lastlife, o*29, plife, 50, gray, "overlay")
-
-					elseif (type (evtype) == "boolean") then
-						--> damage or heal
-						if (evtype) then
-							--> damage
-							if (t [9]) then
-								--> friendly fire
-								line = g:DrawLine (gframe, (o-1)*29, lastlife, o*29, plife, 50, orange, "overlay")
-							else
-								--> normal damage
-								line = g:DrawLine (gframe, (o-1)*29, lastlife, o*29, plife, 50, red, "overlay")
-							end
-						elseif (not evtype) then
-							--> heal
-							line = g:DrawLine (gframe, (o-1)*29, lastlife, o*29, plife, 50, green, "overlay")
-						end
-
-					elseif (type (evtype) == "number") then
-						--> cooldown / bres / last cooldown
-						if (evtype == 1) then
-							--> cooldown
-							line = g:DrawLine (gframe, (o-1)*29, lastlife, o*29, plife, 50, white, "overlay")
-
-						elseif (evtype == 2 and not battleress) then
-							--> battle ress
-							local p = plife
-							local next = timeline [i+1]
-							if (next) then
-								local plife = next [5] / max_health * 100
-								if (plife > 98) then
-									plife = 98
-								end
-								p = plife*h
-							end
-							line = g:DrawLine (gframe, (o-1)*29, lastlife, o*29, p, 50, white, "overlay")
-							plife = p
-
-						elseif (evtype == 3) then
-							--> last cooldown used
-							line = g:DrawLine (gframe, (o-1)*29, lastlife, o*29, plife, 50, gray, "overlay")
-						end
-					end
-
-					local ball = gballs [o]
-					ball:SetPoint ("bottomleft", gframe, "bottomleft", (o*29)-8, plife-8)
-					if (type (evtype) == "boolean" and evtype) then --> damage
-						ball.spellicon:SetTexture (select (3, GetSpellInfo (spellid)))
-						ball.spellicon:SetTexCoord (4/64, 60/64, 4/64, 60/64)
-					else
-						ball.spellicon:SetTexture (nil)
-					end
-
-					ball.line = line
-
-					local clock = data[6] - time
-					if (type (evtype) == "number" and evtype == 2) then
-						if (clock <= 100) then
-							timeline_bg.labels [o]:SetText (math.floor (clock))
-						else
-							timeline_bg.labels [o]:SetText (string.format ("%.1f", clock))
-						end
-					else
-						timeline_bg.labels [o]:SetText ("-" .. string.format ("%.1f", clock))
-					end
-
-					local frame = gradeframes [o]
-					frame.data = t
-
-					lastlife = plife
-					o = o + 1
-				end
-			end
-
-			DeathGraphs:UpdateOverall()
-
-		end
-
-		local overall = {}
-		local amount_of_overall_blocks = 16
-
-		local overall_bg = CreateFrame ("frame", "DeathGraphsOverallDamageBackground", f)
-		DeathGraphs.overall_bg = overall_bg
-
-		overall_bg:SetPoint ("topleft", gframe, "bottomleft", 0, -30)
-		overall_bg:SetSize (464, 148)
-
-		framework:CreateLabel (overall_bg, "Overall Damage Taken Before All Deaths:", nil, nil, "GameFontNormal", "overall")
-		overall_bg.overall:SetPoint ("topleft", gframe, "bottomleft", 5, -38)
-
-		local overall_on_enter = function (self)
-			self:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLORHIGHLIGHT))
-			if (self.spell) then
-				GameTooltip:SetOwner (self, "ANCHOR_TOPLEFT")
-				if (self.spell == 1) then
-					GameTooltip:SetSpellByID (6603)
-				else
-					GameTooltip:SetSpellByID (self.spell)
-				end
-				GameTooltip:Show()
-			end
-		end
-		local overall_on_leave = function (self)
-			self:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLOR))
-			GameTooltip:Hide()
-		end
-
-		local x, y = 0, -7
-		for i = 1, amount_of_overall_blocks do
-			local frame = CreateFrame ("Button", nil, overall_bg)
-			frame:SetSize (220, 19)
-
-			local icon = framework:NewImage (frame, "", 18, 18)
-			local label = framework:CreateLabel (frame, ""..i)
-			icon:SetPoint ("left", frame, "left")
-			label:SetPoint ("left", icon, "right", 2, 0)
-
-			local label2 = framework:CreateLabel (frame, ""..i)
-			label2:SetPoint ("right", frame, "right")
-
-			tinsert (overall, {frame = frame, icon = icon, label = label, label2 = label2})
-
-			frame:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16})
-			frame:SetBackdropColor (unpack (BUTTON_BACKGROUND_COLOR))
-
-			frame:SetScript ("OnEnter", overall_on_enter)
-			frame:SetScript ("OnLeave", overall_on_leave)
-
-			frame:SetPoint ("topleft", overall_bg.overall.widget, "bottomleft", x, y)
-			y = y - 20
-
-			if (y < -150) then
-				x = x + 232
-				y = -7
-			end
-		end
-
-		--> report overall
-		local report_overall_func = function()
-			local boss = DeathGraphs.db.last_boss
-			if (not boss) then
-				return
-			end
-			local boss_table = DeathGraphs.endurance_database [boss]
-			if (not boss_table) then
-				return
-			end
-
-			local reportFunc = function (IsCurrent, IsReverse, AmtLines)
-
-				local boss_table = DeathGraphs:GetBossTable (DeathGraphs.db.last_boss , nil, CONST_DBTYPE_DEATH)
-				local player_table = DeathGraphs:GetPlayerTable (boss_table, DeathGraphs.db.last_player)
-
-				if (not boss_table or not player_table) then
-					DeathGraphs:Msg ("Nothing to report.")
-					return
-				end
-
-				DeathGraphs.report_lines = {"Details!: overall damage taken before death for " .. (player_table.name or "Unknown") .. " on " .. (boss_table.name or "Unknown") .. " (A.D.L (plugin)):"}
-				for i = 1, math.min (#overall, AmtLines) do
-					local label = overall [i]
-					if (label.frame:IsShown()) then
-
-						local spellid = label.frame.spell
-						local spelllink
-						if (spellid > 10) then
-							spelllink = GetSpellLink (spellid)
-						else
-							spelllink = label.label.text
-						end
-
-						tinsert (DeathGraphs.report_lines, spelllink .. ": " .. label.label2.text)
-					end
-				end
-				DeathGraphs:SendReportLines (DeathGraphs.report_lines)
-			end
-
-			local use_slider = true
-			DeathGraphs:SendReportWindow (reportFunc, nil, nil, use_slider)
-		end
-
-		local report_overall = framework:NewButton (overall_bg, _, "$parentReportOverallDamageButton", "ReportOverallDamageButton", 70, mode_buttons_height, report_overall_func, nil, nil, nil, "Report", 1, options_dropdown_template)
-		report_overall:SetPoint ("topright", overall_bg, "topright", -6, -3)
-
-		function DeathGraphs:UpdateOverall()
-			DeathGraphs:ClearOverall()
-
-			local death_table = DeathGraphs:GetBossTable (DeathGraphs.db.last_boss , nil, CONST_DBTYPE_DEATH)
-			local player_table = DeathGraphs:GetPlayerTable (death_table, DeathGraphs.db.last_player)
-
-			local numeric = {}
-			for spellid, amount in pairs (player_table.overall) do
-				tinsert (numeric, {spellid, amount})
-			end
-			table.sort (numeric, DeathGraphs.Sort2) --> sort by index 2
-
-			for i, spelltable in ipairs (numeric) do
-				local t = overall[i]
-
-				if (t) then
-					local spellname, _, spellicon = DeathGraphs.GetSpellInfo (spelltable[1])
-					t.frame:Show()
-					t.frame.spell = spelltable[1]
-					t.icon.texture = spellicon
-					t.icon.texcoord = CONST_COORDS_NO_BORDER
-					t.label.text = spellname .. ": "
-					t.label2.text = DeathGraphs:comma_value (spelltable [2])
-				end
-			end
-
-			overall_bg:Show()
-		end
-
-		function DeathGraphs:ClearOverall()
-			for i = 1, amount_of_overall_blocks do
-				local t = overall[i]
-				t.icon.texture = ""
-				t.label.text = ""
-				t.frame.spell = nil
-				t.frame:Hide()
-			end
-		end
-
-		gframe:Reset()
-		gframe:HideGrid()
-		DeathGraphs:ClearOverall()
-
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2074,8 +930,6 @@ do
 	local currentFrame = CreateFrame ("frame", "DeathGraphsCurrentFrameDeaths", f)
 	currentFrame:SetPoint ("topleft", 10, -50)
 	currentFrame:SetSize (800, 400)
-
-	f.CurrentDeathFrame = currentFrame
 
 	local segment_label = framework:NewLabel (currentFrame, nil, "$parentSegmentLabel", nil, "Segment:", "GameFontNormal")
 
@@ -2232,32 +1086,6 @@ do
 
 	local temp_summary_table = {}
 
-	--<
-	function deathPanel.ShowPlayerScaleByDamage (index)
-		local encounter = currentFrame.current_encounter
-		if (encounter) then
-			local deaths = encounter.deaths
-			local player = deaths [index]
-			if (player) then
-				local events = player.events
-				local total_damage = 0
-				local total_time = 0
-				local max_health = player.maxhealth
-				local time_death = player.time
-
-				for _, event in ipairs (player.events) do
-					total_time = total_time + (event [4] - time_death)
-					total_damage = total_damage + event [3]
-				end
-
-				local damage_per_second = total_damage / total_time
-				damage_per_second = floor (damage_per_second)
-
-				return damage_per_second
-			end
-		end
-	end
-
 	--> build the death events for the selected player
 	function deathPanel.ShowPlayerDeath (index)
 
@@ -2275,7 +1103,6 @@ do
 				local maxhealth = player.maxhealth
 				local time = player.time or events [1][4]
 
-				local added = 1
 				local number_format_func = Details:GetCurrentToKFunction()
 				--local NumOfEvents = min (#events, CONST_MAX_DEATH_EVENTS)
 
@@ -2605,7 +1432,7 @@ do
 			-- DataTable = { .deaths = hash{},  .spells = hash{},  .ids = hash{} }
 
 			for hash, infoTable in pairs (db) do
-				local EI, diff = hash:match ("(%d%d%d%d.-)(%d)")
+				local EI, diff = hash:match ("^(%d+)(%d)$")
 				EI, diff = tonumber (EI), tonumber (diff)
 
 				local mapId = DeathGraphs:GetInstanceIdFromEncounterId (EI)
@@ -2649,26 +1476,9 @@ do
 		boss_dropdown:SetPoint ("topleft", boss_label, "bottomleft", 0, -5)
 
 		function boss_dropdown:SelectLastEncounter()
-			local currentCombat = Details:GetCurrentCombat()
-			if (currentCombat) then
-				if (currentCombat.is_boss) then
-					--> get the map index
-					local mapID = currentCombat.is_boss.mapid
-					--> get the boss index within the raid
-					local bossIndex = Details:GetBossIndex (mapID, currentCombat.is_boss.id, currentCombat.is_boss.name)
-					if (bossIndex) then
-						--> get the encounter
-						local encounter = Details.EncounterInformation[mapID] and _detalhes.EncounterInformation[mapID].encounter_ids2[bossIndex]
-						if (encounter) then
-							--> if the encounter exists build the hash
-							local bossDificulty = currentCombat.is_boss.diff
-							local hash = tostring (encounter) .. tostring (bossDificulty)
-							if (hash) then
-								boss_dropdown:Select (hash)
-							end
-						end
-					end
-				end
+			local hash = current_boss_hash()
+			if (hash) then
+				boss_dropdown:Select (hash)
 			end
 		end
 
@@ -2719,7 +1529,6 @@ do
 		tutorialLabel2:SetPoint ("left", redBlock, "right", 4, 1)
 		tutorialLabel2.text = "Red squares are occurences\nof enemy spells"
 
-		local y = -100
 		graphFrame.SpellsLines = {}
 
 		local spellLineOnEnter = function (self)
@@ -2753,7 +1562,6 @@ do
 
 		local setSpellBlockPosition = function (self, block, time)
 			local startTime = graphFrame.currentStartTime
-			local endTime = graphFrame.currentEndTime
 
 			--> get the position
 			time = time - startTime

@@ -1,8 +1,5 @@
 
-local debugmode = false
-
 local Loc = LibStub ("AceLocale-3.0"):GetLocale ("Details_DeathGraphs")
-local SharedMedia = LibStub:GetLibrary("LibSharedMedia-3.0")
 
 --> create the plugin object
 	local DeathGraphs = _detalhes:NewPluginObject ("Details_DeathGraphs", DETAILSPLUGIN_ALWAYSENABLED)
@@ -10,7 +7,7 @@ local SharedMedia = LibStub:GetLibrary("LibSharedMedia-3.0")
 --> main frame (shortcut)
 	local DeathGraphsFrame = DeathGraphs.Frame
 
-DeathGraphs.version_string = "v3.8"
+DeathGraphs.version_string = "v3.9"
 
 local CONST_DBTYPE_DEATH = "deaths"
 local CONST_DBTYPE_ENDURANCE = "endurance"
@@ -20,12 +17,6 @@ DeathGraphs:SetPluginDescription (Loc ["STRING_PLUGIN_DESC"])
 local combat_log_event_listener = CreateFrame ("frame")
 
 local function CreatePluginFunctions()
-
-	function DeathGraphs:DebugMsg (msg, sec)
-		if (debugmode) then
-			DeathGraphs:Msg (msg, sec)
-		end
-	end
 
 	function DeathGraphs.RefreshWindow()
 		if (not DeathGraphs.frames_built) then
@@ -46,20 +37,7 @@ local function CreatePluginFunctions()
 	end
 
 	function DeathGraphs:OpenWindow()
-		if (not DeathGraphs.frames_built) then
-			_detalhes.DeathGraphsWindowBuilder (DeathGraphs)
-			_detalhes.DeathGraphsWindowBuilder = nil
-			DeathGraphs.frames_built = true
-
-			local current_segment = DeathGraphs:GetCurrentCombat()
-			if (current_segment and current_segment.is_boss and current_segment.is_boss.diff and current_segment.is_boss.id) then
-				DeathGraphs.db.last_boss = DeathGraphs.last_encounter_hash or ("" .. current_segment.is_boss.id .. current_segment.is_boss.diff)
-			end
-
-			DeathGraphs.db.showing_type = 3
-		end
-
-		DeathGraphs:Refresh()
+		DeathGraphs.RefreshWindow()
 		DetailsPluginContainerWindow.OpenPlugin (DeathGraphs)
 	end
 
@@ -71,18 +49,7 @@ local function CreatePluginFunctions()
 
 		local CoolTip = GameCooltip2
 
-		CoolTip:Reset()
-		CoolTip:SetType ("menu")
-
-		CoolTip:SetOption ("TextSize", Details.font_sizes.menus)
-		CoolTip:SetOption ("TextFont", Details.font_faces.menus)
-
-		CoolTip:SetOption ("LineHeightSizeOffset", 3)
-		CoolTip:SetOption ("VerticalOffset", 2)
-		CoolTip:SetOption ("VerticalPadding", -4)
-		CoolTip:SetOption ("FrameHeightSizeOffset", -3)
-
-		Details:SetTooltipMinWidth()
+		Details:SetPluginMenuCooltip()
 
 		--build the menu options
 			--> death log
@@ -208,7 +175,6 @@ local function CreatePluginFunctions()
 			DeathGraphs.BossEncounterStartAt = GetTime()
 
 		elseif (event == "COMBAT_PLAYER_LEAVE") then --> combat ended
-			DeathGraphs:DebugMsg ("combat finished -> calling CombatFinished()")
 			DeathGraphs:CombatFinished (...)
 			combat_log_event_listener:UnregisterEvent ("COMBAT_LOG_EVENT_UNFILTERED")
 
@@ -220,8 +186,6 @@ local function CreatePluginFunctions()
 
 		end
 	end
-
-	DeathGraphsFrame:RegisterEvent ("PLAYER_REGEN_ENABLED")
 
 	function DeathGraphs:GetEncounterDiffString (diffInteger)
 		if (diffInteger == 1) then
@@ -245,12 +209,13 @@ local function CreatePluginFunctions()
 			return player_table
 		end
 
+		local _, playerClassToken = UnitClass (player_name)
 		if (boss_table.type == CONST_DBTYPE_DEATH) then
 			local t = {
 				overall = {},
 				deaths = {},
 				name = player_name,
-				class = select (2, UnitClass (player_name))
+				class = playerClassToken
 			}
 			boss_table.player_db [player_name] = t
 			return t
@@ -260,7 +225,7 @@ local function CreatePluginFunctions()
 				points = 0,
 				encounters = 0,
 				deaths = {},
-				class = select (2, UnitClass (player_name))
+				class = playerClassToken
 			}
 			boss_table.player_db [player_name] = t
 			return t
@@ -310,6 +275,60 @@ local function CreatePluginFunctions()
 		return t
 	end
 
+	local MAX_STORED_DEATHS = 25
+
+	local function TrimTimeline (timeline_boss)
+		local per_attempt, attempts = {}, {}
+		for _, list in pairs (timeline_boss.deaths) do
+			for i = 1, #list do
+				local stamp = list [i]
+				if (not per_attempt [stamp]) then
+					per_attempt [stamp] = 0
+					attempts [#attempts+1] = stamp
+				end
+				per_attempt [stamp] = per_attempt [stamp] + 1
+			end
+		end
+
+		table.sort (attempts, function (a, b) return a > b end)
+
+		local kept, cutoff = 0, nil
+		for _, stamp in ipairs (attempts) do
+			if (kept > 0 and kept + per_attempt [stamp] > MAX_STORED_DEATHS) then
+				cutoff = stamp + 1
+				break
+			end
+			kept = kept + per_attempt [stamp]
+		end
+
+		if (not cutoff) then
+			return
+		end
+
+		for second, list in pairs (timeline_boss.deaths) do
+			for i = #list, 1, -1 do
+				if (list [i] < cutoff) then
+					tremove (list, i)
+				end
+			end
+			if (#list == 0) then
+				timeline_boss.deaths [second] = nil
+			end
+		end
+
+		for spellname, list in pairs (timeline_boss.spells) do
+			for i = #list, 1, -1 do
+				if (list [i][2] < cutoff) then
+					tremove (list, i)
+				end
+			end
+			if (#list == 0) then
+				timeline_boss.spells [spellname] = nil
+				timeline_boss.ids [spellname] = nil
+			end
+		end
+	end
+
 	function DeathGraphs:CombatFinished (combat)
 
 		if (not DeathGraphs.EnemySkillTable) then
@@ -323,25 +342,21 @@ local function CreatePluginFunctions()
 			--> 10 Normal
 			if (difficult == 1) then
 				if (not DeathGraphs.db.captures [1]) then
-					DeathGraphs:DebugMsg ("10 Normal mode isn't active, not recording this segment.")
 					return
 				end
 			--> 25 Normal
 			elseif (difficult == 2) then
 				if (not DeathGraphs.db.captures [2]) then
-					DeathGraphs:DebugMsg ("25 Normal mode isn't active, not recording this segment.")
 					return
 				end
 			--> 10 Heroic
 			elseif (difficult == 3) then
 				if (not DeathGraphs.db.captures [3]) then
-					DeathGraphs:DebugMsg ("10 Heroic mode isn't active, not recording this segment.")
 					return
 				end
 			--> 25 Heroic
 			elseif (difficult == 4) then
 				if (not DeathGraphs.db.captures [4]) then
-					DeathGraphs:DebugMsg ("25 Heroic mode isn't active, not recording this segment.")
 					return
 				end
 			else
@@ -352,27 +367,18 @@ local function CreatePluginFunctions()
 		--> read all deaths
 
 		local boss = combat:GetBossInfo()
-		DeathGraphs:DebugMsg ("bossinfo", boss)
-
-		DeathGraphs.db.last_combat_id = DeathGraphs.combat_id
 
 		if (boss) then
 
-			DeathGraphs:DebugMsg ("boss found", boss.name)
-
-			local EI = DeathGraphs:GetEncounterIdFromBossIndex (boss.mapid, boss.index)
+			local EI = DeathGraphs:GetBossEncounter (boss.mapid, boss.index)
 			if (EI) then
-
-				DeathGraphs:DebugMsg ("boss EI: " .. EI .. " diff: " .. combat:GetDifficulty())
 
 				local diff = combat:GetDifficulty()
 				if (not diff) then
 					return
 				end
 
-				DeathGraphs:DebugMsg ("" .. EI .. boss.diff)
-
-				local boss_table = DeathGraphs:GetBossTable (EI, boss, CONST_DBTYPE_DEATH)
+				DeathGraphs:GetBossTable (EI, boss, CONST_DBTYPE_DEATH)
 				local endurance_table = DeathGraphs:GetBossTable (EI, boss, CONST_DBTYPE_ENDURANCE)
 
 				DeathGraphs.last_encounter_hash = "" .. EI .. boss.diff
@@ -381,16 +387,11 @@ local function CreatePluginFunctions()
 				local death_list = combat:GetDeaths()
 				local endurance_failed = {}
 
-				DeathGraphs:DebugMsg ("deaths: " .. #death_list)
-
 				if (#death_list > 0) then
 
 					--> get raid size
 					--local size = select (5, GetInstanceInfo())
 					if (combat:GetCombatTime() > 40) then
-						local group_size = GetNumGroupMembers()
-						local size = group_size
-
 						local max_endurance = DeathGraphs.db.endurance_threshold
 						local max_deaths = DeathGraphs.db.deaths_threshold
 						local max_deaths_for_current = DeathGraphs.db.max_deaths_for_current
@@ -426,7 +427,8 @@ local function CreatePluginFunctions()
 							--> save the spellId for this spell
 							timeline_boss.ids [SpellName] = SpellId
 							--> add the spell to the table
-							tinsert (timeline_boss.spells [SpellName], {TimeAt, timenow})
+							local spell_list = timeline_boss.spells [SpellName]
+						spell_list[#spell_list+1] = {TimeAt, timenow}
 						end
 
 						local max_timeline_deaths = DeathGraphs.db.max_deaths_for_timeline
@@ -444,37 +446,15 @@ local function CreatePluginFunctions()
 
 							-------------------------------------
 							--> for 'last try' deaths stuff
-								local _, class = UnitClass (t[3])
 								local playername, playerclass, deathtime, deathcombattime, deathtimestring, playermaxhealth, deathevents, lastcooldown = DeathGraphs:UnpackDeathTable (t)
 								if (#current_table.deaths < max_deaths_for_current) then
-									tinsert (current_table.deaths, {name = playername, class = playerclass, time = deathtime, timestring = deathtimestring, timeofdeath = deathcombattime, events = deathevents, maxhealth = playermaxhealth})
+									current_table.deaths[#current_table.deaths+1] = {name = playername, class = playerclass, time = deathtime, timestring = deathtimestring, timeofdeath = deathcombattime, events = deathevents, maxhealth = playermaxhealth}
 								end
 							-------------------------------------
 
 							if (deaths_stored < max_deaths) then
-								local player_table = DeathGraphs:GetPlayerTable (boss_table, t[3])
-
 								deaths_stored = deaths_stored + 1
-
-								--> store death
-								local d = table_deepcopy (t[1])
-
-								local last = d [#d]
-								if (last [4]) then
-									if (type (last[1]) == "number" and last[1] == 3) then
-										tremove (d, #d)
-									end
-								end
-
-								while (#d > 16) do
-									tremove (d, 1)
-								end
-
-								--> store overall
-								local d_stored = 0
-								local time_of_death = t[2]
-
-							end --if deaths_stored < max_deaths
+							end
 
 							--> store endurance
 								if (i <= max_endurance) then
@@ -489,7 +469,10 @@ local function CreatePluginFunctions()
 									player_table.encounters = player_table.encounters + 1
 
 									local last_hit = DeathGraphs:GetLastHit (t[1])
-									tinsert (player_table.deaths, {combat.is_boss.try_number or 0, t.dead_at, last_hit})
+									player_table.deaths[#player_table.deaths+1] = {combat.is_boss.try_number or 0, t.dead_at, last_hit}
+									if (#player_table.deaths > MAX_STORED_DEATHS) then
+										tremove (player_table.deaths, 1)
+									end
 									endurance_failed [t[3]] = true
 								end
 
@@ -500,7 +483,8 @@ local function CreatePluginFunctions()
 									local TimeAt = floor (deathcombattime)
 									--add to the table
 									timeline_boss.deaths [TimeAt] = timeline_boss.deaths [TimeAt] or {}
-									tinsert (timeline_boss.deaths [TimeAt], timenow)
+									local deaths_at = timeline_boss.deaths [TimeAt]
+								deaths_at[#deaths_at+1] = timenow
 								end
 
 							--> everything is on max
@@ -509,6 +493,8 @@ local function CreatePluginFunctions()
 								end
 
 						end --loop
+
+						TrimTimeline (timeline_boss)
 					end --combat time > 40
 				end --#death_list > 0
 
@@ -536,8 +522,6 @@ local function CreatePluginFunctions()
 				DeathGraphs:CanShowIcon()
 
 			end
-		else
-			DeathGraphs:DebugMsg ("boss not found on latest segment.")
 		end --is boss
 
 	end --combat finished
@@ -619,7 +603,7 @@ local build_options_panel = function()
 			name = Loc ["STRING_10HEROIC"],
 			desc = Loc ["STRING_10HEROIC_DESC"],
 			order = 1,
-			get = function() return DeathGraphs.db.captures[4] end,
+			get = function() return DeathGraphs.db.captures[3] end,
 			set = function (self, val)
 				DeathGraphs.db.captures[3] = not DeathGraphs.db.captures[3]
 			end,
@@ -663,7 +647,7 @@ combat_log_event_listener:SetScript ("OnEvent", function (self, event, time, tok
 		if (bit.band (who_flags, 0x00000040) ~= 0) then --> check if the actor is a enemy        DeathGraphs.BossEncounterStartAt
 			local t = floor (GetTime() - DeathGraphs.BossEncounterStartAt) --> get the combat time
 			if (DeathGraphs.EnemySkillTableDelay [spellid] ~= t) then --> avoid a spell be recorded more than once per second
-				tinsert (DeathGraphs.EnemySkillTable, {t, spellid, spellname}) --> add the spell
+				DeathGraphs.EnemySkillTable[#DeathGraphs.EnemySkillTable+1] = {t, spellid, spellname} --> add the spell
 				DeathGraphs.EnemySkillTableDelay [spellid] = t
 			end
 		end
@@ -673,101 +657,91 @@ end)
 function DeathGraphs:OnEvent (_, event, ...)
 
 	if (event == "ADDON_LOADED") then
-		local AddonName = select (1, ...)
+		local AddonName = (...)
 		if (AddonName == "Details_DeathGraphs") then
 
-			if (_G._detalhes) then
+			--> catch data
+			DeathGraphs.deaths_database = DeathGraphsDBDeaths or {}
+			DeathGraphsDBDeaths = DeathGraphs.deaths_database
 
-				--> catch data
-				DeathGraphs.deaths_database = DeathGraphsDBDeaths or {}
-				DeathGraphsDBDeaths = DeathGraphs.deaths_database
-
-				--> clean up
-				local time_threshold = time() - 604800 -- one week
-				for hash, bosstable in pairs (DeathGraphs.deaths_database) do
-					for playername, playertable in pairs (bosstable.player_db) do
-						for i = #(playertable.deaths or {}), 1, -1 do
-							local this_death = playertable.deaths [i]
-							if ((this_death [6] or 0) < time_threshold) then
-								tremove (playertable.deaths, i)
-								--print ("Death removed for player", playername, this_death [6])
-							end
+			--> clean up
+			local time_threshold = time() - 604800 -- one week
+			for hash, bosstable in pairs (DeathGraphs.deaths_database) do
+				for playername, playertable in pairs (bosstable.player_db) do
+					for i = #(playertable.deaths or {}), 1, -1 do
+						local this_death = playertable.deaths [i]
+						if ((this_death [6] or 0) < time_threshold) then
+							tremove (playertable.deaths, i)
+							--print ("Death removed for player", playername, this_death [6])
 						end
 					end
 				end
-
-				DeathGraphs.endurance_database = DeathGraphsDBEndurance or {}
-				DeathGraphsDBEndurance = DeathGraphs.endurance_database
-
-				--new (current deaths)
-				DeathGraphs.current_database = DeathGraphsDBCurrent or {}
-				DeathGraphsDBCurrent = DeathGraphs.current_database
-				--new (graph stuff)
-				DeathGraphs.graph_database = DeathGraphsDBGraph or {}
-				DeathGraphsDBGraph = DeathGraphs.graph_database
-
-				--> check old versions without endurance amount
-				for bossid, bosstable in pairs (DeathGraphs.endurance_database) do
-					for playername, playertable in pairs (bosstable.player_db) do
-						if (not playertable.encounters) then
-							DeathGraphs.endurance_database [bossid].player_db [playername] = nil
-						end
-					end
-				end
-
-			--	DeathGraphs.endurance_database -> hashboss, bosstable -> player_db -> playername, playertable -> encounters
-			--	/run DeathGraphsDBEndurance=nil;DeathGraphsDBDeaths=nil
-
-				--> create widgets
-				CreatePluginFunctions()
-
-				--> core version required
-				local MINIMAL_DETAILS_VERSION_REQUIRED = 128
-
-				local defaults = {
-					show_icon = 1,
-					last_boss = false,
-					last_player = false,
-					last_segment = false,
-					last_encounter_hash = false,
-					showing_type = 4,
-					last_combat_id = 0,
-					captures = {false, true, true, true},
-					first_run = false,
-					deaths_threshold = 10,
-					endurance_threshold = 3,
-					max_segments_for_current = 2,
-					max_deaths_for_current = 20,
-					max_deaths_for_timeline = 5,
-					timeline_cutoff_time = 3,
-					timeline_cutoff_delete_time = 3,
-				}
-
-				--> Install
-				local install, saveddata = _G._detalhes:InstallPlugin ("TOOLBAR", Loc ["STRING_PLUGIN_NAME"], "Interface\\AddOns\\Details_DeathGraphs\\icon", DeathGraphs, "DETAILS_PLUGIN_DEATH_GRAPHICS", MINIMAL_DETAILS_VERSION_REQUIRED, "Details! Team", DeathGraphs.version_string, defaults)
-				if (type (install) == "table" and install.error) then
-					print (install.error)
-				end
-
-				--> Register needed events
-				_G._detalhes:RegisterEvent (DeathGraphs, "COMBAT_BOSS_FOUND")
-				_G._detalhes:RegisterEvent (DeathGraphs, "DETAILS_DATA_RESET")
-				_G._detalhes:RegisterEvent (DeathGraphs, "COMBAT_PLAYER_LEAVE")
-				_G._detalhes:RegisterEvent (DeathGraphs, "COMBAT_PLAYER_ENTER")
-
-				--> store the install time for deactive tutorials by time
-				DeathGraphs.db.InstalledAt = DeathGraphs.db.InstalledAt or time()
-				if (not DeathGraphs.db.v1) then
-					DeathGraphs.db.v1 = true
-					wipe (DeathGraphsDBGraph)
-				end
-
-				--> embed the plugin into the plugin window
-				if (DetailsPluginContainerWindow) then
-					DetailsPluginContainerWindow.EmbedPlugin (DeathGraphs, DeathGraphs.Frame)
-				end
-
 			end
+
+			DeathGraphs.endurance_database = DeathGraphsDBEndurance or {}
+			DeathGraphsDBEndurance = DeathGraphs.endurance_database
+
+			--new (current deaths)
+			DeathGraphs.current_database = DeathGraphsDBCurrent or {}
+			DeathGraphsDBCurrent = DeathGraphs.current_database
+			--new (graph stuff)
+			DeathGraphs.graph_database = DeathGraphsDBGraph or {}
+			DeathGraphsDBGraph = DeathGraphs.graph_database
+
+			--> check old versions without endurance amount
+			for bossid, bosstable in pairs (DeathGraphs.endurance_database) do
+				for playername, playertable in pairs (bosstable.player_db) do
+					if (not playertable.encounters) then
+						DeathGraphs.endurance_database [bossid].player_db [playername] = nil
+					end
+				end
+			end
+
+		--	DeathGraphs.endurance_database -> hashboss, bosstable -> player_db -> playername, playertable -> encounters
+		--	/run DeathGraphsDBEndurance=nil;DeathGraphsDBDeaths=nil
+
+			--> create widgets
+			CreatePluginFunctions()
+
+			--> core version required
+			local MINIMAL_DETAILS_VERSION_REQUIRED = 128
+
+			local defaults = {
+				show_icon = 1,
+				last_boss = false,
+				last_player = false,
+				last_segment = false,
+				last_encounter_hash = false,
+				showing_type = 4,
+				captures = {false, true, true, true},
+				first_run = false,
+				deaths_threshold = 10,
+				endurance_threshold = 3,
+				max_segments_for_current = 2,
+				max_deaths_for_current = 20,
+				max_deaths_for_timeline = 5,
+				timeline_cutoff_time = 3,
+				timeline_cutoff_delete_time = 3,
+			}
+
+			--> Install
+			local install, saveddata = _G._detalhes:InstallPlugin ("TOOLBAR", Loc ["STRING_PLUGIN_NAME"], "Interface\\AddOns\\Details_DeathGraphs\\icon", DeathGraphs, "DETAILS_PLUGIN_DEATH_GRAPHICS", MINIMAL_DETAILS_VERSION_REQUIRED, "Accidev", DeathGraphs.version_string, defaults)
+			if (type (install) == "table" and install.error) then
+				print (install.error)
+			end
+
+			--> Register needed events
+			_G._detalhes:RegisterEvent (DeathGraphs, "COMBAT_BOSS_FOUND")
+			_G._detalhes:RegisterEvent (DeathGraphs, "COMBAT_PLAYER_LEAVE")
+			_G._detalhes:RegisterEvent (DeathGraphs, "COMBAT_PLAYER_ENTER")
+
+			if (not DeathGraphs.db.v1) then
+				DeathGraphs.db.v1 = true
+				wipe (DeathGraphsDBGraph)
+			end
+
+			--> embed the plugin into the plugin window
+			DetailsPluginContainerWindow.EmbedPlugin (DeathGraphs, DeathGraphs.Frame)
 		end
 	end
 end

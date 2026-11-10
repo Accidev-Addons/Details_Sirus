@@ -44,7 +44,7 @@ local _
 	--> install wow interface skin:
 	_detalhes:InstallSkin ("WoW Interface", {
 		file = [[Interface\AddOns\Details\images\skins\default_skin.blp]],
-		author = "Details!",
+		author = "Accidev",
 		version = "1.0",
 		site = "unknown",
 		desc = "This was the first skin made for Details!, inspired in the standard wow interface",
@@ -278,7 +278,7 @@ local _
 
 	_detalhes:InstallSkin ("Minimalistic", {
 		file = [[Interface\AddOns\Details\images\skins\classic_skin_v1.blp]],
-		author = "Details!",
+		author = "Accidev",
 		version = "1.0",
 		site = "unknown",
 		desc = "Simple skin with soft gray color and half transparent frames.", --\n
@@ -502,7 +502,7 @@ local _
 
 	_detalhes:InstallSkin ("Minimalistic v2", {
 		file = [[Interface\AddOns\Details\images\skins\classic_skin.blp]],
-		author = "Details!",
+		author = "Accidev",
 		version = "1.0",
 		site = "unknown",
 		desc = "Same as the first Minimalistic, but this one is more darker and less transparent.",
@@ -722,7 +722,7 @@ local _
 
 	_detalhes:InstallSkin ("Serenity", {
 		file = [[Interface\AddOns\Details\images\skins\flat_skin.blp]],
-		author = "Details!",
+		author = "Accidev",
 		version = "1.0",
 		site = "unknown",
 		desc = "Light blue, this skin fits on almost all interfaces.\n\nFor ElvUI interfaces, change the window color to black to get an compatible visual.",
@@ -1040,7 +1040,7 @@ local _
 
 	_detalhes:InstallSkin ("Forced Square", {
 		file = [[Interface\AddOns\Details\images\skins\simplygray_skin.blp]],
-		author = "Details!",
+		author = "Accidev",
 		version = "1.0",
 		site = "unknown",
 		desc = "Very clean skin without textures and only with a black contour.",
@@ -1070,13 +1070,6 @@ local _
 		icon_point_anchor_bottom = {-37, 12},
 		left_corner_anchor_bottom = {-107, 0},
 		right_corner_anchor_bottom = {96, 0},
-
-		--[[ callback function execute after all changes on the window, first argument is this skin table, second is the instance where the skin was applied --]]
-		callback = function (self, instance) end,
-		--[[ control_script is a OnUpdate script, it start right after all changes on the window and also after the callback --]]
-		--[[ control_script_on_start run before the control_script, use it to reset values if needed --]]
-		control_script_on_start = nil,
-		control_script = nil,
 
 		icon_ignore_alpha = true,
 		icon_titletext_position = {3, 4},
@@ -1298,384 +1291,9 @@ local _
 
 	})
 
-	--[[
-
-	--> install imperial skin:
-	_detalhes:InstallSkin ("Imperial Skin", {
-		file = "Interface\\AddOns\\Details\\images\\skins\\imperial_skin.blp",
-		author = "Details!",
-		version = "1.1",
-		site = "unknown",
-		desc = "imperial skin for Details!",
-
-		can_change_alpha_head = true,
-		icon_anchor_main = {-1, -5},
-		icon_anchor_plugins = {-7, -13},
-		icon_plugins_size = {19, 18},
-
-		-- the four anchors:
-		icon_point_anchor = {-37, 0},
-		left_corner_anchor = {-107, 0},
-		close_button_anchor = {5, -7},
-		right_corner_anchor = {96, 0},
-
-		icon_point_anchor_bottom = {-37, 0},
-		left_corner_anchor_bottom = {-107, 0},
-		close_button_anchor_bottom = {5, 6},
-		right_corner_anchor_bottom = {96, 0},
-
-		instance_cprops = {
-			["show_statusbar"] = false,
-			["menu_icons_size"] = 1,
-			["color"] = {
-				1, -- [1]
-				1, -- [2]
-				1, -- [3]
-				1, -- [4]
-			},
-			["menu_anchor"] = {
-				-18, -- [1]
-				1, -- [2]
-				["side"] = 1,
-			},
-			["bg_r"] = 0.0941176470588235,
-			["bars_inverted"] = false,
-			["following"] = {
-				["enabled"] = false,
-				["bar_color"] = {
-					1, -- [1]
-					1, -- [2]
-					1, -- [3]
-				},
-				["text_color"] = {
-					1, -- [1]
-					1, -- [2]
-					1, -- [3]
-				},
-			},
-			["color_buttons"] = {
-				1, -- [1]
-				1, -- [2]
-				1, -- [3]
-				1, -- [4]
-			},
-			["bars_sort_direction"] = 1,
-			["hide_in_combat_type"] = 1,
-			["stretch_button_side"] = 1,
-			["row_show_animation"] = {
-				["anim"] = "Fade",
-				["options"] = {
-				},
-			},
-			["bars_grow_direction"] = 1,
-			["tooltip"] = {
-				["n_abilities"] = 3,
-				["n_enemies"] = 3,
-			},
-			["bg_alpha"] = 0.424401819705963,
-			["instance_button_anchor"] = {
-				-27, -- [1]
-				1, -- [2]
-			},
-			["attribute_text"] = {
-				["show_timer"] = {
-					true, -- [1]
-					true, -- [2]
-					true, -- [3]
-				},
-				["shadow"] = false,
-				["side"] = 1,
-				["text_color"] = {
-					1, -- [1]
-					1, -- [2]
-					1, -- [3]
-					0.798004299402237, -- [4]
-				},
-				["custom_text"] = "{name}",
-				["text_face"] = "Arial Narrow",
-				["anchor"] = {
-					74, -- [1]
-					2, -- [2]
-				},
-				["text_size"] = 14,
-				["enable_custom_text"] = false,
-				["enabled"] = true,
-			},
-			["menu_alpha"] = {
-				["enabled"] = false,
-				["onenter"] = 1,
-				["iconstoo"] = true,
-				["ignorebars"] = false,
-				["onleave"] = 1,
-			},
-			["menu_anchor_down"] = {
-				5, -- [1]
-				1, -- [2]
-			},
-			["strata"] = "LOW",
-			["statusbar_info"] = {
-				["alpha"] = 1,
-				["overlay"] = {
-					1, -- [1]
-					1, -- [2]
-					1, -- [3]
-				},
-			},
-			["menu_icons"] = {
-				true, -- [1]
-				true, -- [2]
-				true, -- [3]
-				true, -- [4]
-				true, -- [5]
-				false, -- [6]
-				["space"] = 1,
-				["shadow"] = false,
-			},
-			["micro_displays_side"] = 2,
-			["micro_displays_locked"] = true,
-			["window_scale"] = 1,
-			["auto_hide_menu"] = {
-				["left"] = false,
-				["right"] = false,
-			},
-			["desaturated_menu"] = false,
-			["plugins_grow_direction"] = 2,
-			["hide_icon"] = true,
-			["auto_current"] = true,
-			["toolbar_side"] = 1,
-			["bg_g"] = 0.0941176470588235,
-			["backdrop_texture"] = "Details Ground",
-			["show_sidebars"] = true,
-			["wallpaper"] = {
-				["enabled"] = true,
-				["texture"] = "Interface\\ACHIEVEMENTFRAME\\UI-Achievement-Stat-Buttons",
-				["texcoord"] = {
-					0.00100000001490116, -- [1]
-					1, -- [2]
-					0.758000030517578, -- [3]
-					1, -- [4]
-				},
-				["overlay"] = {
-					0.999997794628143, -- [1]
-					0.999997794628143, -- [2]
-					0.999997794628143, -- [3]
-					0.498038113117218, -- [4]
-				},
-				["anchor"] = "all",
-				["height"] = 225.999969482422,
-				["alpha"] = 0.498039245605469,
-				["width"] = 265.999969482422,
-			},
-			["total_bar"] = {
-				["enabled"] = false,
-				["only_in_group"] = true,
-				["icon"] = "Interface\\ICONS\\INV_Sigil_Thorim",
-				["color"] = {
-					1, -- [1]
-					1, -- [2]
-					1, -- [3]
-				},
-			},
-			["row_info"] = {
-				["textR_outline"] = false,
-				["spec_file"] = "Interface\\AddOns\\Details\\images\\spec_icons_normal_alpha",
-				["textL_outline"] = false,
-				["textR_outline_small"] = true,
-				["textR_show_data"] = {
-					true, -- [1]
-					true, -- [2]
-					true, -- [3]
-				},
-				["textL_enable_custom_text"] = false,
-				["fixed_text_color"] = {
-					1, -- [1]
-					1, -- [2]
-					1, -- [3]
-				},
-				["space"] = {
-					["right"] = -3,
-					["left"] = 1,
-					["between"] = 1,
-				},
-				["texture_background_class_color"] = false,
-				["start_after_icon"] = false,
-				["font_face_file"] = "Interface\\Addons\\Details\\fonts\\Accidental Presidency.ttf",
-				["backdrop"] = {
-					["enabled"] = false,
-					["size"] = 11,
-					["color"] = {
-						1, -- [1]
-						1, -- [2]
-						1, -- [3]
-						1, -- [4]
-					},
-					["texture"] = "Details BarBorder 2",
-				},
-				["models"] = {
-					["upper_model"] = "Spells\\AcidBreath_SuperGreen.M2",
-					["lower_model"] = "World\\EXPANSION02\\DOODADS\\Coldarra\\COLDARRALOCUS.m2",
-					["upper_alpha"] = 0.5,
-					["lower_enabled"] = false,
-					["lower_alpha"] = 0.1,
-					["upper_enabled"] = false,
-				},
-				["texture_custom_file"] = "Interface\\AddOns\\Details\\images\\bar_skyline_2",
-				["texture_file"] = "Interface\\AddOns\\Details\\images\\bar_skyline",
-				["use_spec_icons"] = true,
-				["textR_bracket"] = "(",
-				["icon_file"] = "Interface\\AddOns\\Details\\images\\classes_small",
-				["icon_grayscale"] = false,
-				["font_size"] = 17,
-				["texture_background_file"] = "Interface\\AddOns\\Details\\images\\bar_background",
-				["textR_enable_custom_text"] = false,
-				["textL_custom_text"] = "{data1}. {data3}{data2}",
-				["fixed_texture_color"] = {
-					0, -- [1]
-					0, -- [2]
-					0, -- [3]
-				},
-				["textL_show_number"] = true,
-				["textL_outline_small_color"] = {
-					0, -- [1]
-					0, -- [2]
-					0, -- [3]
-					1, -- [4]
-				},
-				["textL_outline_small"] = true,
-				["textR_custom_text"] = "{data1} ({data2}, {data3}%)",
-				["texture"] = "Skyline",
-				["texture_custom"] = "AddOns\\Details\\images\\bar_skyline_2",
-				["percent_type"] = 1,
-				["texture_background"] = "DGround",
-				["textR_outline_small_color"] = {
-					0, -- [1]
-					0, -- [2]
-					0, -- [3]
-					1, -- [4]
-				},
-				["textL_class_colors"] = false,
-				["textR_class_colors"] = false,
-				["alpha"] = 1,
-				["no_icon"] = false,
-				["icon_offset"] = {
-					-2, -- [1]
-					0, -- [2]
-				},
-				["texture_highlight"] = "Interface\\FriendsFrame\\UI-FriendsList-Highlight",
-				["font_face"] = "Accidental Presidency",
-				["texture_class_colors"] = true,
-				["fixed_texture_background_color"] = {
-					0.113725490196078, -- [1]
-					0.113725490196078, -- [2]
-					0.113725490196078, -- [3]
-					0.42424601316452, -- [4]
-				},
-				["fast_ps_update"] = false,
-				["textR_separator"] = ",",
-				["height"] = 22.4808311462402,
-			},
-			["toolbar_icon_file"] = "Interface\\AddOns\\Details\\images\\toolbar_icons2",
-			["grab_on_top"] = false,
-			["bg_b"] = 0.0941176470588235,
-		},
-
-		--> control scripts for aninations
-		--> on skin change we need create the widgets
-		control_script_on_start = function (skin, instance)
-
-			if (not instance.baseframe.imperial_skin_texture1) then
-				local texture1 = instance.baseframe:CreateTexture (nil, "artwork")
-				texture1:SetTexture ("Interface\\AddOns\\Details\\images\\skins\\imperial_skin")
-				texture1:SetTexCoord (0, 0.99951171875, 0.61474609375, 0.63623046875)
-				texture1:SetHeight (17)
-				instance.baseframe.imperial_skin_texture1 = texture1
-				texture1:SetPoint ("BOTTOMLEFT", instance.baseframe.cabecalho.ball, "BOTTOMLEFT", 108, 1)
-				texture1:SetPoint ("BOTTOMRIGHT", instance.baseframe.cabecalho.ball_r, "BOTTOMRIGHT", -98, 1)
-			end
-
-			--> custom parameters for animations
-			instance.imperial_skin_tick_time = 2
-			instance.imperial_skin_tick_elapsed = 0
-			instance.imperial_skin_texture_step = 0
-
-			if (instance.hide_icon) then
-				instance.baseframe.cabecalho.ball:SetDrawLayer ("background")
-			else
-				instance.baseframe.cabecalho.ball:SetDrawLayer ("overlay")
-			end
-
-		end,
-
-		--> do the animation
-		control_script = function (frame, elapsed)
-
-			--frame.instance = instance where this skin is applied.
-			--frame.skin = this skin table.
-
-			frame.instance.imperial_skin_tick_elapsed = frame.instance.imperial_skin_tick_elapsed + elapsed
-
-			if (frame.instance.imperial_skin_tick_elapsed > frame.instance.imperial_skin_tick_time) then
-
-				frame.instance.imperial_skin_tick_elapsed = 0
-				local step = frame.instance.imperial_skin_texture_step
-				step = step + 1
-
-				local firstpoint = step * 0.00048828125
-				local secondpoint = (firstpoint + 0.99951171875) - 1
-
-				--print (math.floor (step/2))
-
-				frame.instance.baseframe.imperial_skin_texture1:SetTexCoord (firstpoint, secondpoint, 0.61474609375, 0.63623046875)
-
-				if (step == 2047) then
-					step = 0
-				end
-
-				frame.instance.imperial_skin_texture_step = step
-
-				--> this is bad, we need a event handler on options panel for sending appearance changes events
-				if (frame.instance.hide_icon) then
-					frame.instance.baseframe.cabecalho.ball:SetDrawLayer ("background")
-				else
-					frame.instance.baseframe.cabecalho.ball:SetDrawLayer ("overlay")
-				end
-				if (frame.instance.toolbar_side == 1) then
-					frame.instance.baseframe.imperial_skin_texture1:SetPoint ("BOTTOMLEFT", frame.instance.baseframe.cabecalho.ball, "BOTTOMLEFT", 108, 1)
-					frame.instance.baseframe.imperial_skin_texture1:SetPoint ("BOTTOMRIGHT", frame.instance.baseframe.cabecalho.ball_r, "BOTTOMRIGHT", -98, 1)
-				else
-					frame.instance.baseframe.imperial_skin_texture1:SetPoint ("BOTTOMLEFT", frame.instance.baseframe.cabecalho.ball, "BOTTOMLEFT", 108, 106)
-					frame.instance.baseframe.imperial_skin_texture1:SetPoint ("BOTTOMRIGHT", frame.instance.baseframe.cabecalho.ball_r, "BOTTOMRIGHT", -98, 106)
-				end
-
-			end
-
-		end,
-
-	})
-	--]]
-
-	--[[
-	local f = CreateFrame ("Frame",nil, UIParent)
-	f:SetPoint ("CENTER", UIParent, "CENTER")
-	f:SetSize (200, 200)
-	local t = f:CreateTexture (nil, "overlay")
-	t:SetPoint ("CENTER", f, "CENTER")
-	t:SetSize (200, 200)
-	t:SetTexture ("Interface\ARCHEOLOGY\ARCH-RACE-ORC")
-
-	local t2 = f:CreateTexture (nil, "overlay")
-	t2:SetPoint ("CENTER", f, "CENTER")
-	t2:SetSize (200, 200)
-	t2:SetTexture ("Interface\ARCHEOLOGY\ARCH-RACE-ORC")
-
-	t:SetTexCoord (.4, 1, 0, 1)
-	t2:SetTexCoord (0, .4, 0, 1)
-	--]]
-
-
 	_detalhes:InstallSkin ("ElvUI Frame Style", {
 		file = [[Interface\AddOns\Details\images\skins\elvui.blp]],
-		author = "Details!",
+		author = "Accidev",
 		version = "1.0",
 		site = "unknown",
 		desc = "This skin is based on ElvUI's addons, relying with black and transparent frames.",
@@ -1705,13 +1323,6 @@ local _
 		icon_point_anchor_bottom = {-37, 12},
 		left_corner_anchor_bottom = {-107, 0},
 		right_corner_anchor_bottom = {96, 0},
-
-		--[[ callback function execute after all changes on the window, first argument is this skin table, second is the instance where the skin was applied --]]
-		callback = function (self, instance) end,
-		--[[ control_script is a OnUpdate script, it start right after all changes on the window and also after the callback --]]
-		--[[ control_script_on_start run before the control_script, use it to reset values if needed --]]
-		control_script_on_start = nil,
-		control_script = nil,
 
 		--instance overwrites
 		--[[ when a skin is selected, all customized properties of the window is reseted and then the overwrites are applied]]
@@ -1924,7 +1535,7 @@ local _
 
 	_detalhes:InstallSkin ("ElvUI Style II", {
 		file = [[Interface\AddOns\Details\images\skins\elvui_opaque.blp]],
-		author = "Details!",
+		author = "Accidev",
 		version = "1.0",
 		site = "unknown",
 		desc = "based on AddonSkins for ElvUI, this skin has opaque title bar and background.",
@@ -1954,13 +1565,6 @@ local _
 		icon_point_anchor_bottom = {-37, 12},
 		left_corner_anchor_bottom = {-107, 0},
 		right_corner_anchor_bottom = {96, 0},
-
-		--[[ callback function execute after all changes on the window, first argument is this skin table, second is the instance where the skin was applied --]]
-		callback = function (self, instance) end,
-		--[[ control_script is a OnUpdate script, it start right after all changes on the window and also after the callback --]]
-		--[[ control_script_on_start run before the control_script, use it to reset values if needed --]]
-		control_script_on_start = nil,
-		control_script = nil,
 
 		--instance overwrites
 		--[[ when a skin is selected, all customized properties of the window is reseted and then the overwrites are applied]]
@@ -2069,7 +1673,6 @@ local _
 			["toolbar_side"] = 1,
 			["bg_g"] = 0.517647058823529,
 			["backdrop_texture"] = "Details Ground",
-			["hide_in_combat"] = false,
 			["skin"] = "ElvUI Style II",
 			["menu_icons_size"] = 0.850000023841858,
 			["wallpaper"] = {
@@ -2107,7 +1710,7 @@ local _
 
 	_detalhes:InstallSkin ("New Gray", {
 		file = [[Interface\AddOns\Details\images\skins\classic_skin_v1.blp]],
-		author = "Details!",
+		author = "Accidev",
 		version = "1.0",
 		site = "unknown",
 		desc = "Simple skin with soft gray color and half transparent frames.", --\n
@@ -2161,11 +1764,6 @@ local _
 				1, -- [4]
 			},
 			["bars_sort_direction"] = 1,
-			["row_show_animation"] = {
-				["anim"] = "Fade",
-				["options"] = {
-				},
-			},
 			["total_bar"] = {
 				["enabled"] = false,
 				["only_in_group"] = true,
@@ -2266,7 +1864,7 @@ local _
 				["anchor"] = "all",
 				["height"] = 225.999984741211,
 				["alpha"] = 0.498039245605469,
-				["texture"] = "Interface\\TALENTFRAME\\bg-priest-shadow",
+				["texture"] = "Interface\\TALENTFRAME\\PriestShadow-TopLeft",
 			},
 			["stretch_button_side"] = 1,
 			["micro_displays_locked"] = true,
@@ -2369,7 +1967,7 @@ local _
 
 		_detalhes:InstallSkin ("Safe Skin Legion Beta", {
 		file = [[Interface\AddOns\Details\images\skins\classic_skin_v1.blp]],
-		author = "Details!",
+		author = "Accidev",
 		version = "1.0",
 		site = "unknown",
 		desc = "Simple skin with soft gray color and half transparent frames.", --\n
@@ -2416,7 +2014,6 @@ local _
 				["side"] = 2,
 			},
 			["bg_r"] = 0.0941176470588235,
-			["hide_out_of_combat"] = false,
 			["following"] = {
 				["bar_color"] = {
 					1, -- [1]
@@ -2442,15 +2039,6 @@ local _
 				-3, -- [2]
 			},
 			["micro_displays_locked"] = true,
-			["row_show_animation"] = {
-				["anim"] = "Fade",
-				["options"] = {
-				},
-			},
-			["tooltip"] = {
-				["n_abilities"] = 3,
-				["n_enemies"] = 3,
-			},
 			["total_bar"] = {
 				["enabled"] = false,
 				["only_in_group"] = true,

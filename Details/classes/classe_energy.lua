@@ -3,14 +3,9 @@
 local _cstr = string.format
 local _math_floor = math.floor
 local _table_sort = table.sort
-local _table_insert = table.insert
 local _setmetatable = setmetatable
 local _ipairs = ipairs
 local _pairs = pairs
-local _rawget= rawget
-local _math_min = math.min
-local _math_max = math.max
-local _bit_band = bit.band
 local _unpack = unpack
 local _type = type
 --api locals
@@ -28,23 +23,16 @@ local _
 
 local gump = 			_detalhes.gump
 
-local alvo_da_habilidade = 	_detalhes.alvo_da_habilidade
 local container_habilidades = 	_detalhes.container_habilidades
-local container_combatentes = _detalhes.container_combatentes
-local container_pets =		_detalhes.container_pets
 local atributo_energy =		_detalhes.atributo_energy
-local habilidade_energy = 	_detalhes.habilidade_energy
 
 local container_energy = _detalhes.container_type.CONTAINER_ENERGY_CLASS
 
---local modo_ALONE = _detalhes.modos.alone
 local modo_GROUP = _detalhes.modos.group
 local modo_ALL = _detalhes.modos.all
 
 local class_type = _detalhes.atributos.e_energy
 
-local DATA_TYPE_START = _detalhes._detalhes_props.DATA_TYPE_START
-local DATA_TYPE_END = _detalhes._detalhes_props.DATA_TYPE_END
 
 local ToKFunctions = _detalhes.ToKFunctions
 local SelectedToKFunction = ToKFunctions [1]
@@ -89,46 +77,6 @@ function atributo_energy:NovaTabela (serial, nome, link)
 	return _new_energyActor
 end
 
---> resources sort
-
-function _detalhes.SortGroupResource (container, keyName2)
-	keyName = keyName2
-	return _table_sort (container, _detalhes.SortKeyGroupResources)
-end
-
-function _detalhes.SortKeyGroupResources (table1, table2)
-	if (table1.grupo and table2.grupo) then
-		return table1 [keyName] > table2 [keyName]
-	elseif (table1.grupo and not table2.grupo) then
-		return true
-	elseif (not table1.grupo and table2.grupo) then
-		return false
-	else
-		return table1 [keyName] > table2 [keyName]
-	end
-end
-
-function _detalhes.SortKeySimpleResources (table1, table2)
-	return table1 [keyName] > table2 [keyName]
-end
-
-function _detalhes:ContainerSortResources (container, amount, keyName2)
-	keyName = keyName2
-	_table_sort (container,  _detalhes.SortKeySimpleResources)
-
-	if (amount) then
-		for i = amount, 1, -1 do --> de tr�s pra frente
-			if (container[i][keyName] < 1) then
-				amount = amount-1
-			else
-				break
-			end
-		end
-
-		return amount
-	end
-end
-
 --> power types sort
 
 local power_table = {0, 1, 3, 6}
@@ -168,84 +116,6 @@ local sort_energy_group = function (t1, t2)
 	end
 end
 
---> resource refresh
-
-local function RefreshBarraResources (tabela, barra, instancia)
-	tabela:AtualizarResources (tabela.minha_barra, barra.colocacao, instancia)
-end
-
-function atributo_energy:AtualizarResources (qual_barra, colocacao, instancia)
-
-	local esta_barra = instancia.barras [qual_barra]
-
-	if (not esta_barra) then
-		print ("DEBUG: problema com <instancia.esta_barra> "..qual_barra.." "..colocacao)
-		return
-	end
-
-	self._refresh_window = RefreshBarraResources
-
-	local tabela_anterior = esta_barra.minha_tabela
-	esta_barra.minha_tabela = self
-	self.minha_barra = qual_barra
-	esta_barra.colocacao = colocacao
-
-	local total = instancia.showing.totals.resources
-
-	local combat_time = instancia.showing:GetCombatTime()
-	local rps = _math_floor (self.resource / combat_time)
-
-	local formated_resource = SelectedToKFunction (_, self.resource)
-	local formated_rps = _cstr ("%.2f", self.resource / combat_time)
-
-	local porcentagem
-
-	if (instancia.row_info.percent_type == 1) then
-		porcentagem = _cstr ("%.1f", self.resource / total * 100)
-	elseif (instancia.row_info.percent_type == 2) then
-		porcentagem = _cstr ("%.1f", self.resource / instancia.top * 100)
-	end
-
-	local bars_show_data = instancia.row_info.textR_show_data
-	local bars_brackets = instancia:GetBarBracket()
-	local bars_separator = instancia:GetBarSeparator()
-
-	if (not bars_show_data [1]) then
-		formated_resource = ""
-	end
-	if (not bars_show_data [2]) then
-		formated_rps = ""
-	end
-	if (not bars_show_data [3]) then
-		porcentagem = ""
-	else
-		porcentagem = porcentagem .. "%"
-	end
-
-	local rightText = formated_resource .. bars_brackets[1] .. formated_rps .. " r/s" .. bars_separator .. porcentagem .. bars_brackets[2]
-	if (UsingCustomRightText) then
-		esta_barra.texto_direita:SetText (_string_replace (instancia.row_info.textR_custom_text, formated_resource, formated_rps, porcentagem, self, instancia.showing, instancia, rightText))
-	else
-		esta_barra.texto_direita:SetText (rightText)
-	end
-
-	esta_barra.texto_esquerdo:SetText (colocacao .. ". " .. self.nome)
-	esta_barra.texto_esquerdo:SetSize (esta_barra:GetWidth() - esta_barra.texto_direita:GetStringWidth() - 20, 15)
-
-	esta_barra:SetValue (100)
-
-	if (esta_barra.hidden or esta_barra.fading_in or esta_barra.faded) then
-		gump:Fade (esta_barra, "out")
-	end
-
-	--> texture color
-	actor_class_color_r, actor_class_color_g, actor_class_color_b = self:GetBarColor()
-	self:SetBarColors (esta_barra, instancia, actor_class_color_r, actor_class_color_g, actor_class_color_b)
-	--> icon
-	self:SetClassIcon (esta_barra.icone_classe, instancia, self.classe)
-
-end
-
 --> refresh function
 
 function atributo_energy:RefreshWindow (instancia, tabela_do_combate, forcar, exportar)
@@ -280,6 +150,7 @@ function atributo_energy:RefreshWindow (instancia, tabela_do_combate, forcar, ex
 	end
 
 	if (modo == modo_ALL) then
+		_table_sort (conteudo, sort_energy)
 		for i = amount, 1, -1 do
 			if (conteudo[i].received < 1) then
 				amount = amount-1
@@ -345,17 +216,7 @@ function atributo_energy:RefreshWindow (instancia, tabela_do_combate, forcar, ex
 	local following = instancia.following.enabled
 
 	if (following) then
-		if (using_cache) then
-			local pname = _detalhes.playername
-			for i, actor in _ipairs (conteudo) do
-				if (actor.nome == pname) then
-					myPos = i
-					break
-				end
-			end
-		else
-			myPos = showing._NameIndexTable [_detalhes.playername]
-		end
+		myPos = showing._NameIndexTable [_detalhes.playername]
 	end
 
 	local combat_time = instancia.showing:GetCombatTime()
@@ -376,24 +237,7 @@ function atributo_energy:RefreshWindow (instancia, tabela_do_combate, forcar, ex
 		if (use_total_bar and instancia.barraS[1] == 1) then
 
 			qual_barra = 2
-			local iter_last = instancia.barraS[2]
-			if (iter_last == instancia.rows_fit_in_window) then
-				iter_last = iter_last - 1
-			end
-
-			local row1 = barras_container [1]
-			row1.minha_tabela = nil
-			row1.texto_esquerdo:SetText (Loc ["STRING_TOTAL"])
-			row1.texto_direita:SetText (_detalhes:ToK2 (total) .. " (" .. _detalhes:ToK (total / combat_time) .. ")")
-
-			row1:SetValue (100)
-			local r, g, b = unpack (instancia.total_bar.color)
-			row1.textura:SetVertexColor (r, g, b)
-
-			row1.icone_classe:SetTexture (instancia.total_bar.icon)
-			row1.icone_classe:SetTexCoord (0.0625, 0.9375, 0.0625, 0.9375)
-
-			gump:Fade (row1, "out")
+			local iter_last = _detalhes:ShowTotalBar (instancia, total, combat_time)
 
 			if (following and myPos and myPos > instancia.rows_fit_in_window and instancia.barraS[2] < myPos) then
 				for i = instancia.barraS[1], iter_last-1, 1 do --> vai atualizar s� o range que esta sendo mostrado
@@ -432,24 +276,7 @@ function atributo_energy:RefreshWindow (instancia, tabela_do_combate, forcar, ex
 		if (use_total_bar and instancia.barraS[1] == 1) then
 
 			qual_barra = 2
-			local iter_last = instancia.barraS[2]
-			if (iter_last == instancia.rows_fit_in_window) then
-				iter_last = iter_last - 1
-			end
-
-			local row1 = barras_container [1]
-			row1.minha_tabela = nil
-			row1.texto_esquerdo:SetText (Loc ["STRING_TOTAL"])
-			row1.texto_direita:SetText (_detalhes:ToK2 (total) .. " (" .. _detalhes:ToK (total / combat_time) .. ")")
-
-			row1:SetValue (100)
-			local r, g, b = unpack (instancia.total_bar.color)
-			row1.textura:SetVertexColor (r, g, b)
-
-			row1.icone_classe:SetTexture (instancia.total_bar.icon)
-			row1.icone_classe:SetTexCoord (0.0625, 0.9375, 0.0625, 0.9375)
-
-			gump:Fade (row1, "out")
+			local iter_last = _detalhes:ShowTotalBar (instancia, total, combat_time)
 
 			if (following and myPos and myPos > instancia.rows_fit_in_window and instancia.barraS[2] < myPos) then
 				for i = iter_last-1, instancia.barraS[1], -1 do --> vai atualizar s� o range que esta sendo mostrado
@@ -502,7 +329,7 @@ end
 
 function atributo_energy:AtualizaBarra (instancia, barras_container, qual_barra, lugar, total, sub_atributo, forcar, keyName, combat_time, percentage_type, use_animations, bars_show_data, bars_brackets, bars_separator)
 
-	local esta_barra = instancia.barras[qual_barra] --> pega a refer�ncia da barra na janela
+	local esta_barra = barras_container [qual_barra] --> pega a refer�ncia da barra na janela
 
 	if (not esta_barra) then
 		print ("DEBUG: problema com <instancia.esta_barra> "..qual_barra.." "..lugar)
@@ -518,16 +345,17 @@ function atributo_energy:AtualizaBarra (instancia, barras_container, qual_barra,
 	self.colocacao = lugar
 
 	local esta_e_energy_total = self [keyName] --> total de dano que este jogador deu
+	local instancia_top = instancia.top
 
 --	local porcentagem = esta_e_energy_total / total * 100
 	local porcentagem
 	if (percentage_type == 1) then
 		porcentagem = _cstr ("%.1f", esta_e_energy_total / total * 100)
 	elseif (percentage_type == 2) then
-		porcentagem = _cstr ("%.1f", esta_e_energy_total / instancia.top * 100)
+		porcentagem = _cstr ("%.1f", esta_e_energy_total / instancia_top * 100)
 	end
 
-	local esta_porcentagem = _math_floor ((esta_e_energy_total/instancia.top) * 100)
+	local esta_porcentagem = _math_floor ((esta_e_energy_total/instancia_top) * 100)
 
 	local formated_energy = SelectedToKFunction (_, esta_e_energy_total)
 
@@ -556,74 +384,7 @@ function atributo_energy:AtualizaBarra (instancia, barras_container, qual_barra,
 	return self:RefreshBarra2 (esta_barra, instancia, tabela_anterior, forcar, esta_porcentagem, qual_barra, barras_container, use_animations)
 end
 
-function atributo_energy:RefreshBarra2 (esta_barra, instancia, tabela_anterior, forcar, esta_porcentagem, qual_barra, barras_container, use_animations)
-
-	--> primeiro colocado
-	if (esta_barra.colocacao == 1) then
-		if (not tabela_anterior or tabela_anterior ~= esta_barra.minha_tabela or forcar) then
-			esta_barra:SetValue (100)
-
-			if (esta_barra.hidden or esta_barra.fading_in or esta_barra.faded) then
-				gump:Fade (esta_barra, "out")
-			end
-
-			return self:RefreshBarra (esta_barra, instancia)
-		else
-			return
-		end
-	else
-
-		if (esta_barra.hidden or esta_barra.fading_in or esta_barra.faded) then
-
-			if (use_animations) then
-				esta_barra.animacao_fim = esta_porcentagem
-			else
-				esta_barra:SetValue (esta_porcentagem)
-				esta_barra.animacao_ignorar = true
-			end
-
-			gump:Fade (esta_barra, "out")
-
-			if (instancia.row_info.texture_class_colors) then
-				esta_barra.textura:SetVertexColor (actor_class_color_r, actor_class_color_g, actor_class_color_b)
-			end
-			if (instancia.row_info.texture_background_class_color) then
-				esta_barra.background:SetVertexColor (actor_class_color_r, actor_class_color_g, actor_class_color_b)
-			end
-
-			return self:RefreshBarra (esta_barra, instancia)
-
-		else
-			--> agora esta comparando se a tabela da barra � diferente da tabela na atualiza��o anterior
-			if (not tabela_anterior or tabela_anterior ~= esta_barra.minha_tabela or forcar) then --> aqui diz se a barra do jogador mudou de posi��o ou se ela apenas ser� atualizada
-
-				if (use_animations) then
-					esta_barra.animacao_fim = esta_porcentagem
-				else
-					esta_barra:SetValue (esta_porcentagem)
-					esta_barra.animacao_ignorar = true
-				end
-
-				esta_barra.last_value = esta_porcentagem --> reseta o ultimo valor da barra
-
-				return self:RefreshBarra (esta_barra, instancia)
-
-			elseif (esta_porcentagem ~= esta_barra.last_value) then --> continua mostrando a mesma tabela ent�o compara a porcentagem
-				--> apenas atualizar
-				if (use_animations) then
-					esta_barra.animacao_fim = esta_porcentagem
-				else
-					esta_barra:SetValue (esta_porcentagem)
-				end
-				esta_barra.last_value = esta_porcentagem
-
-				return self:RefreshBarra (esta_barra, instancia)
-			end
-		end
-
-	end
-
-end
+atributo_energy.RefreshBarra2 = _detalhes.RefreshBarra2
 
 function atributo_energy:RefreshBarra (esta_barra, instancia, from_resize)
 
@@ -645,14 +406,8 @@ function atributo_energy:RefreshBarra (esta_barra, instancia, from_resize)
 end
 
 --------------------------------------------- // TOOLTIPS // ---------------------------------------------
-function atributo_energy:KeyNames (sub_atributo)
-	return "total"
-end
-
 ---------> TOOLTIPS BIFURCA��O ~tooltip
 
-local resource_bg_color = {.1, .1, .1, 0.6}
-local resource_bg_coords = {.6, 0.1, 0, 0.64453125}
 
 function atributo_energy:ToolTip(instancia, numero, barra, keydown)
 	return self:ToolTipRegenRecebido (instancia, numero, barra, keydown)
@@ -834,7 +589,7 @@ function atributo_energy:ToolTipRegenRecebido (instancia, numero, barra, keydown
 	local allGeneratorSpells = {}
 	local allGenerated = 0
 	for spellid, spellObject in _pairs (self.spells._ActorTable) do
-		tinsert (allGeneratorSpells, {spellObject, spellObject.total})
+		allGeneratorSpells[#allGeneratorSpells+1] = {spellObject, spellObject.total}
 		allGenerated = allGenerated + spellObject.total
 	end
 
@@ -875,8 +630,6 @@ function atributo_energy:MontaInfoRegenRecebido()
 	reset_tooltips_table()
 
 	local barras = info.barras1
-	local barras2 = info.barras2
-	local barras3 = info.barras3
 
 	local instancia = info.instancia
 
@@ -949,11 +702,7 @@ function atributo_energy:MontaInfoRegenRecebido()
 		local spellname, _, spellicon = _GetSpellInfo (tabela [1])
 		local percent = tabela [2] / total_regenerado * 100
 
-		self:UpdadeInfoBar (barra, index, tabela[1], spellname, tabela[2], _detalhes:comma_value (tabela[2]), max_, percent, spellicon, true)
-
-		barra.minha_tabela = self
-		barra.show = tabela[1]
-		barra:Show()
+		self:UpdadeInfoBar (barra, index, tabela[1], spellname, tabela[2], _detalhes:comma_value (tabela[2]), max_, percent, spellicon)
 
 		if (self.detalhes and self.detalhes == barra.show) then
 			self:MontaDetalhes (self.detalhes, barra)
@@ -1053,6 +802,7 @@ function atributo_energy:MontaDetalhesRegenRecebido (nome, barra)
 
 	local spellid = nome
 	local who_name = self.nome
+	local powertype = self.powertype
 
 	--> who is regenerating with the spell -> nome
 
@@ -1088,7 +838,7 @@ function atributo_energy:MontaDetalhesRegenRecebido (nome, barra)
 	local max_ = energy_tooltips_table [1][2]
 
 	local barra
-	for index, tabela in _ipairs (from) do
+	for index, tabela in _ipairs (energy_tooltips_table) do
 
 		if (tabela [2] < 1) then
 			break
@@ -1169,7 +919,7 @@ function atributo_energy:MontaTooltipAlvos (esta_barra, index)
 
 			local spellname, _, spellicon = _GetSpellInfo (spell [1])
 			GameTooltip:AddDoubleLine (spellname .. ": ", _detalhes:comma_value (spell [2]) .. " (" .. _cstr ("%.1f", (spell [2] / total_regenerado) * 100).."%)", 1, 1, 1, 1, 1, 1)
-			GameTooltip:AddTexture (icone_magia)
+			GameTooltip:AddTexture (spellicon)
 		end
 	end
 
@@ -1204,16 +954,6 @@ end
 			end
 
 		end
-		function atributo_energy:add_total (combat_table)
-			--print ("add total:", combat_table.totals [class_type] [self.powertype], self.total)
-			if (self.powertype and combat_table.totals [class_type] [self.powertype]) then
-				combat_table.totals [class_type] [self.powertype] = combat_table.totals [class_type] [self.powertype] + self.total
-
-				if (self.grupo) then
-					combat_table.totals_grupo [class_type] [self.powertype] = combat_table.totals_grupo [class_type] [self.powertype] + self.total
-				end
-			end
-		end
 
 	--> restaura e liga o ator com a sua shadow durante a inicializa��o
 
@@ -1221,21 +961,7 @@ end
 
 			--> criar uma shadow desse ator se ainda n�o tiver uma
 				local overall_energy = _detalhes.tabela_overall [3]
-				local shadow = overall_energy._ActorTable [overall_energy._NameIndexTable [actor.nome]]
-
-				if (not shadow) then
-					shadow = overall_energy:PegarCombatente (actor.serial, actor.nome, actor.flag_original, true)
-
-					shadow.classe = actor.classe
-					shadow.spec = actor.spec
-					shadow.grupo = actor.grupo
-					shadow.pvp = actor.pvp
-					shadow.isTank = actor.isTank
-					shadow.boss = actor.boss
-					shadow.boss_fight_component = actor.boss_fight_component
-					shadow.fight_component = actor.fight_component
-
-				end
+				local shadow = overall_energy:GetShadowOf (actor)
 
 			--> restaura a meta e indexes ao ator
 				_detalhes.refresh:r_atributo_energy (actor, shadow)
@@ -1264,21 +990,7 @@ end
 
 			--> criar uma shadow desse ator se ainda n�o tiver uma
 				local overall_energy = host_combat [3]
-				local shadow = overall_energy._ActorTable [overall_energy._NameIndexTable [actor.nome]]
-
-				if (not shadow) then
-					shadow = overall_energy:PegarCombatente (actor.serial, actor.nome, actor.flag_original, true)
-
-					shadow.classe = actor.classe
-					shadow.spec = actor.spec
-					shadow.grupo = actor.grupo
-					shadow.pvp = actor.pvp
-					shadow.isTank = actor.isTank
-					shadow.boss = actor.boss
-					shadow.boss_fight_component = actor.boss_fight_component
-					shadow.fight_component = actor.fight_component
-
-				end
+				local shadow = overall_energy:GetShadowOf (actor)
 
 			--> restaura a meta e indexes ao ator
 				if (not no_refresh) then
@@ -1355,71 +1067,3 @@ function _detalhes.clear:c_atributo_energy (este_jogador)
 	_detalhes.clear:c_container_habilidades (este_jogador.spells)
 end
 
-atributo_energy.__add = function (tabela1, tabela2)
-
-	if (not tabela1.powertype) then
-		tabela1.powertype = tabela2.powertype
-	end
-
-	--> total and received
-		tabela1.total = tabela1.total + tabela2.total
-		tabela1.received = tabela1.received + tabela2.received
-
-	--> targets
-		for target_name, amount in _pairs (tabela2.targets) do
-			tabela1.targets [target_name] = (tabela1.targets [target_name] or 0) + amount
-		end
-
-	--> spells
-		for spellid, habilidade in _pairs (tabela2.spells._ActorTable) do
-
-			local habilidade_tabela1 = tabela1.spells:PegaHabilidade (spellid, true, "SPELL_ENERGY", false)
-
-			habilidade_tabela1.total = habilidade_tabela1.total + habilidade.total
-			habilidade_tabela1.counter = habilidade_tabela1.counter + habilidade.counter
-
-			--> spell targets
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) + amount
-			end
-
-		end
-
-	return tabela1
-end
-
-atributo_energy.__sub = function (tabela1, tabela2)
-	if (not tabela1.powertype) then
-		tabela1.powertype = tabela2.powertype
-	end
-
-	--> total and received
-		tabela1.total = tabela1.total - tabela2.total
-		tabela1.received = tabela1.received - tabela2.received
-
-	--> targets
-		for target_name, amount in _pairs (tabela2.targets) do
-			if (tabela1.targets [target_name]) then
-				tabela1.targets [target_name] = tabela1.targets [target_name] - amount
-			end
-		end
-
-	--> spells
-		for spellid, habilidade in _pairs (tabela2.spells._ActorTable) do
-
-			local habilidade_tabela1 = tabela1.spells:PegaHabilidade (spellid, true, "SPELL_ENERGY", false)
-
-			habilidade_tabela1.total = habilidade_tabela1.total - habilidade.total
-			habilidade_tabela1.counter = habilidade_tabela1.counter - habilidade.counter
-
-			--> spell targets
-			for target_name, amount in _pairs (habilidade.targets) do
-				if (habilidade_tabela1.targets [target_name]) then
-					habilidade_tabela1.targets [target_name] = habilidade_tabela1.targets [target_name] - amount
-				end
-			end
-
-		end
-
-	return tabela1
-end

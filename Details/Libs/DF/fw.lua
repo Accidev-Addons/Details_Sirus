@@ -30,8 +30,8 @@ SMALL_NUMBER = 0.000001
 ALPHA_BLEND_AMOUNT = 0.8400251
 local LibGroupTalents = LibStub ("LibGroupTalents-1.0")
 DF.AuthorInfo = {
-	Name = "Terciob",
-	Discord = "https://discord.gg/7cjU9xvcQY",
+	Name = "Accidev",
+	Discord = "https://discord.gg/wRPF8CCpNV",
 }
 
 function DF.IsClassicWow()
@@ -74,20 +74,6 @@ local specIDs = {
 	["HUNTER"] = {253, 254, 255},
 	["SHAMAN"] = {262, 263, 264},
 }
-
-local function GetFeralSubSpec(unit)
-	--57881 = Natural Reactions - Increase bear dodge and regen rage on dodge.
-	--other options:
-	--57877 = Protector of the Pack - Increase attack power by 6% and reduced damage taken by 12% in bear form.
-	--16858 = Feral Aggression (0 points in bear) - Increased attack power reduction of demo roar and increase ferocious bite damage.
-	--16931 = Thick Hide - Increase armor from cloth and leather items. 
-	local points = LibGroupTalents:UnitHasTalent(unit, GetSpellInfo(57881), LibGroupTalents:GetActiveTalentGroup(unit))
-	if points and points > 0 then
-		return 3 -- we are a guardian druid
-	else
-		return 2
-	end
-end
 
 local function GetFeralSubSpec(unit)
 	--57881 = Natural Reactions - Increase bear dodge and regen rage on dodge.
@@ -532,7 +518,7 @@ function DF:GroupIterator (func, ...)
 		end
 
 	elseif (IsInGroup()) then
-		for i = 1, GetNumGroupMembers() - 1 do
+		for i = 1, GetNumPartyMembers() do
 			DF:QuickDispatch (func, "party" .. i, ...)
 		end
 

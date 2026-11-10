@@ -11,7 +11,6 @@ local _setmetatable = setmetatable -- lua local
 local _ipairs = ipairs -- lua local
 local _bit_band = bit.band -- lua local
 local _date = date -- lua local
-local _table_remove = table.remove -- lua local
 local _rawget = rawget
 local _math_max = math.max
 local _math_floor = math.floor
@@ -35,15 +34,6 @@ local _tempo = _GetTime()
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> api functions
-
---combat(container type, actor name)
-_detalhes.call_combate = function(self, class_type, name)
-	local container = self[class_type]
-	local index_mapa = container._NameIndexTable[name]
-	local actor = container._ActorTable[index_mapa]
-	return actor
-end
-combate.__call = _detalhes.call_combate
 
 --get the start date and end date
 function combate:GetDate()
@@ -217,6 +207,7 @@ function combate:GetActor(container, name)
 	end
 	return nil
 end
+combate.__call = combate.GetActor
 
 --return the combat time in seconds
 function combate:GetFormatedCombatTime()
@@ -289,6 +280,10 @@ function combate:CreateNewCombatTable()
 	return combate:NovaTabela()
 end
 
+local new_totals = function()
+	return {0, 0, {[0] = 0, [1] = 0, [3] = 0, [6] = 0}, {cc_break = 0, ress = 0, interrupt = 0, dispell = 0, dead = 0, cooldowns_defensive = 0, buff_uptime = 0, debuff_uptime = 0}}
+end
+
 --class constructor
 function combate:NovaTabela(iniciada, _tabela_overall, combatId, ...)
 	local esta_tabela = {true, true, true, true, true}
@@ -325,7 +320,6 @@ function combate:NovaTabela(iniciada, _tabela_overall, combatId, ...)
 	--> start/end time(duration)
 	esta_tabela.data_fim = 0
 	esta_tabela.data_inicio = 0
-	esta_tabela.tempo_start = _tempo
 
 	--> record deaths
 	esta_tabela.last_events_tables = {}
@@ -335,28 +329,13 @@ function combate:NovaTabela(iniciada, _tabela_overall, combatId, ...)
 
 	--> players in the raid
 	esta_tabela.raid_roster = {}
-	esta_tabela.raid_roster_indexed = {}
 
 	--> frags
 	esta_tabela.frags = {}
-	esta_tabela.frags_need_refresh = false
 
 	--> time data container
 	esta_tabela.TimeData = _detalhes:TimeDataCreateCombatTables()
 	esta_tabela.PhaseData = {{1, 1}, damage = {}, heal = {}, damage_section = {}, heal_section = {}} --[1] phase number[2] phase started
-
-	--> for external plugin usage, these tables are guaranteed to be saved with the combat
-	esta_tabela.spells_cast_timeline = {}
-	esta_tabela.aura_timeline = {}
-	esta_tabela.cleu_timeline = {}
-
-	--> cleu events
-	esta_tabela.cleu_events = {
-		n = 1 --event counter
-	}
-
-	--> Skill cache(not used)
-	esta_tabela.CombatSkillCache = {}
 
 	-- a tabela sem o tempo de inicio � a tabela descartavel do inicio do addon
 	if iniciada then
@@ -382,52 +361,10 @@ function combate:NovaTabela(iniciada, _tabela_overall, combatId, ...)
 		esta_tabela[4].shadow = _tabela_overall[4]
 	end
 
-	esta_tabela.totals = {
-		0, --> dano
-		0, --> cura
-		{--> e_energy
-			[0] = 0, --> mana
-			[1] = 0, --> rage
-			[3] = 0, --> energy(rogues cat)
-			[6] = 0, --> runepower(dk)
-		},
-		{--> misc
-			cc_break = 0, --> armazena quantas quebras de CC
-			ress = 0, --> armazena quantos pessoas ele reviveu
-			interrupt = 0, --> armazena quantos interrupt a pessoa deu
-			dispell = 0, --> armazena quantos dispell esta pessoa recebeu
-			dead = 0, --> armazena quantas vezes essa pessia morreu
-			cooldowns_defensive = 0, --> armazena quantos cooldowns a raid usou
-			buff_uptime = 0, --> armazena quantos cooldowns a raid usou
-			debuff_uptime = 0 --> armazena quantos cooldowns a raid usou
-		},
-
-		--> avoid using this values bellow, they aren't updated by the parser, only on demand by a user interaction.
-			voidzone_damage = 0,
-			frags_total = 0,
-		--> end
-	}
-
-	esta_tabela.totals_grupo = {
-		0, --> dano
-		0, --> cura
-		{--> e_energy
-			[0] = 0, --> mana
-			[1] = 0, --> rage
-			[3] = 0, --> energy(rogues cat)
-			[6] = 0, --> runepower(dk)
-		},
-		{--> misc
-			cc_break = 0, --> armazena quantas quebras de CC
-			ress = 0, --> armazena quantos pessoas ele reviveu
-			interrupt = 0, --> armazena quantos interrupt a pessoa deu
-			dispell = 0, --> armazena quantos dispell esta pessoa recebeu
-			dead = 0, --> armazena quantas vezes essa oessia morreu
-			cooldowns_defensive = 0, --> armazena quantos cooldowns a raid usou
-			buff_uptime = 0,
-			debuff_uptime = 0
-		}
-	}
+	esta_tabela.totals = new_totals()
+	esta_tabela.totals.voidzone_damage = 0
+	esta_tabela.totals.frags_total = 0
+	esta_tabela.totals_grupo = new_totals()
 
 	return esta_tabela
 end
@@ -495,80 +432,13 @@ end
 
 function _detalhes.refresh:r_combate(tabela_combate, shadow)
 	_setmetatable(tabela_combate, _detalhes.combate)
-	tabela_combate.__index = _detalhes.combate
 	tabela_combate.shadow = shadow
 end
 
 function _detalhes.clear:c_combate(tabela_combate)
-	--tabela_combate.__index = {}
-	tabela_combate.__index = nil
-	tabela_combate.__call = {}
-	tabela_combate._combat_table = nil
 	tabela_combate.shadow = nil
 end
 
-combate.__sub = function(combate1, combate2)
-	if combate1 ~= _detalhes.tabela_overall then
-		return
-	end
-
-	--> sub dano
-	for _, actor_T2 in _ipairs(combate2[1]._ActorTable) do
-		local actor_T1 = combate1[1]:PegarCombatente(actor_T2.serial, actor_T2.nome, actor_T2.flag_original, true)
-		actor_T1 = actor_T1 - actor_T2
-		actor_T2:subtract_total(combate1)
-	end
-	combate1[1].need_refresh = true
-
-	--> sub heal
-	for _, actor_T2 in _ipairs(combate2[2]._ActorTable) do
-		local actor_T1 = combate1[2]:PegarCombatente(actor_T2.serial, actor_T2.nome, actor_T2.flag_original, true)
-		actor_T1 = actor_T1 - actor_T2
-		actor_T2:subtract_total(combate1)
-	end
-	combate1[2].need_refresh = true
-
-	--> sub energy
-	for _, actor_T2 in _ipairs(combate2[3]._ActorTable) do
-		local actor_T1 = combate1[3]:PegarCombatente(actor_T2.serial, actor_T2.nome, actor_T2.flag_original, true)
-		actor_T1 = actor_T1 - actor_T2
-		actor_T2:subtract_total(combate1)
-	end
-	combate1[3].need_refresh = true
-
-	--> sub misc
-	for _, actor_T2 in _ipairs(combate2[4]._ActorTable) do
-		local actor_T1 = combate1[4]:PegarCombatente(actor_T2.serial, actor_T2.nome, actor_T2.flag_original, true)
-		actor_T1 = actor_T1 - actor_T2
-		actor_T2:subtract_total(combate1)
-	end
-	combate1[4].need_refresh = true
-
-	--> reduz o tempo
-	combate1.start_time = combate1.start_time + combate2:GetCombatTime()
-
-	--> apaga as mortes da luta diminuida
-	local amt_mortes =  #combate2.last_events_tables --> quantas mortes teve nessa luta
-	if amt_mortes > 0 then
-		for i = #combate1.last_events_tables, #combate1.last_events_tables-amt_mortes, -1 do
-			_table_remove(combate1.last_events_tables, #combate1.last_events_tables)
-		end
-	end
-
-	--> frags
-	for fragName, fragAmount in pairs(combate2.frags) do
-		if fragAmount then
-			if combate1.frags[fragName] then
-				combate1.frags[fragName] = combate1.frags[fragName] - fragAmount
-			else
-				combate1.frags[fragName] = fragAmount
-			end
-		end
-	end
-	combate1.frags_need_refresh = true
-
-	return combate1
-end
 
 combate.__add = function(combate1, combate2)
 	local all_containers = {combate2[class_type_dano]._ActorTable, combate2[class_type_cura]._ActorTable, combate2[class_type_e_energy]._ActorTable, combate2[class_type_misc]._ActorTable}
@@ -577,8 +447,8 @@ combate.__add = function(combate1, combate2)
 		custom_combat = combate1
 	end
 
-	for class_type, actor_container in ipairs(all_containers) do
-		for _, actor in ipairs(actor_container) do
+	for class_type, actor_container in _ipairs(all_containers) do
+		for _, actor in _ipairs(actor_container) do
 			local shadow
 
 			if class_type == class_type_dano then

@@ -5,12 +5,8 @@ local gump = 			_detalhes.gump
 local _
 
 --lua locals
-local _cstr = tostring --> lua local
-local _math_ceil = math.ceil --> lua local
 local _math_floor = math.floor --> lua local
 local _string_len = string.len --> lua local
-local _pairs = pairs --> lua local
-local	_tinsert = tinsert --> lua local
 local _IsInRaid = IsInRaid --> lua local
 
 local _CreateFrame = CreateFrame --> wow api locals
@@ -256,8 +252,7 @@ local _UIParent = UIParent --> wow api locals
 		local UIscale = UIParent:GetScale()
 		x = x * UIscale / scale
 		y = y * UIscale / scale
-		self:ClearAllPoints()
-		self:SetPoint ("CENTER", UIParent, "CENTER", x, y)
+		self:ClearAndSetPoint ("CENTER", UIParent, "CENTER", x, y)
 	end
 	local function seta_scripts (este_gump)
 		--> Janela
@@ -331,7 +326,7 @@ local function cria_drop_down (este_gump)
 		{Loc ["STRING_REPORTFRAME_OFFICERS"], "OFFICER", _IsInGuild, {iconsize = iconsize, icon = [[Interface\FriendsFrame\UI-Toast-ToastIcons]], coords = {0.8046875, 0.96875, 0.125, 0.390625}, color = {0.25, 0.74, 0.25}}},
 		{Loc ["STRING_REPORTFRAME_WHISPER"], "WHISPER", nil, {iconsize = iconsize, icon = [[Interface\FriendsFrame\UI-Toast-ToastIcons]], coords = {0.0546875, 0.1953125, 0.625, 0.890625}, color = {1, 0.49, 1}}},
 		{Loc ["STRING_REPORTFRAME_WHISPERTARGET"], "WHISPER2", nil, {iconsize = iconsize, icon = [[Interface\FriendsFrame\UI-Toast-ToastIcons]], coords = {0.0546875, 0.1953125, 0.625, 0.890625}, color = {1, 0.49, 1}}},
-		{Loc ["STRING_REPORTFRAME_SAY"], "SAY", IsInInstance, {iconsize = iconsize, icon = [[Interface\FriendsFrame\UI-Toast-ToastIcons]], coords = {0.0390625, 0.203125, 0.09375, 0.375}, color = {1, 1, 1}}},
+		{Loc ["STRING_REPORTFRAME_SAY"], "SAY", nil, {iconsize = iconsize, icon = [[Interface\FriendsFrame\UI-Toast-ToastIcons]], coords = {0.0390625, 0.203125, 0.09375, 0.375}, color = {1, 1, 1}}},
 		{Loc ["STRING_REPORTFRAME_COPY"], "COPY", nil, {iconsize = iconsize, icon = [[Interface\Buttons\UI-GuildButton-PublicNote-Disabled]], coords = {0, 1, 0, 1}, color = {1, 1, 1}}},
 	}
 
@@ -351,16 +346,6 @@ local function cria_drop_down (este_gump)
 			local channels = {_GetChannelList()} --> coloca o resultado em uma tabela .. {id1, canal1, id2, canal2}
 			for i = 1, #channels, 2 do --> total de canais
 				output_array [#output_array + 1] = {iconsize = iconsize, value = "CHANNEL|"..channels [i+1], label = channels [i]..". "..channels [i+1], onclick = on_click, icon = [[Interface\FriendsFrame\UI-Toast-ToastIcons]], texcoord = {0.3046875, 0.4453125, 0.109375, 0.390625}, iconcolor = {149/255, 112/255, 112/255}}
-			end
-
-			local bnet_friends = {}
-
-			local BnetFriends = BNGetNumFriends()
-			for i = 1, BnetFriends do
-				local presenceID, presenceName, battleTag, isBattleTagPresence, toonName, toonID, client, isOnline, lastOnline, isAFK, isDND, messageText, noteText, isRIDFriend, broadcastTime, canSoR = BNGetFriendInfo (i)
-				if (isOnline) then
-					output_array [#output_array + 1] = {iconsize = iconsize, value = "REALID|" .. presenceID, label = presenceName, onclick = on_click, icon = [[Interface\FriendsFrame\Battlenet-Battleneticon]], texcoord = {0.125, 0.875, 0.125, 0.875}, iconcolor = {1, 1, 1}}
-				end
 			end
 
 			return output_array
@@ -441,7 +426,7 @@ local function cria_drop_down (este_gump)
 		slider:SetHeight (20)
 
 		local last_value = _detalhes.report_lines or 5
-		slider:SetValue (math.floor (last_value))
+		slider:SetValue (_math_floor (last_value))
 
 		slider.amt = slider:CreateFontString (nil, "OVERLAY", "GameFontHighlightSmall")
 		local amt = slider:GetValue()
@@ -454,7 +439,7 @@ local function cria_drop_down (este_gump)
 		slider.amt:SetPoint ("CENTER", slider.thumb, "CENTER")
 
 		slider:SetScript ("OnValueChanged", function (self)
-			local amt = math.floor (self:GetValue())
+			local amt = _math_floor (self:GetValue())
 			_detalhes.report_lines = amt
 			if (amt < 10) then
 				amt = "0"..amt
@@ -645,18 +630,15 @@ local function cria_check_buttons (este_gump)
 		local b = window.recently_report_buttons [10]
 		b:Hide()
 
-		window.dropdown:ClearAllPoints()
 		window.dropdown:SetWidth (155)
-		window.dropdown:SetPoint ("TOPLEFT", window, "TOPLEFT", anchorX, -30)
+		window.dropdown:ClearAndSetPoint ("TOPLEFT", window, "TOPLEFT", anchorX, -30)
 		window.dropdown:SetBackdrop ({bgFile = [[Interface\DialogFrame\UI-DialogBox-Background-Dark]], edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, tile=true,
 		tileSize = 64, insets = {left = 0, right = 0, top = 0, bottom = 0}})
 		window.dropdown:SetBackdropBorderColor (0, 0, 0, 0.5)
 		window.dropdown:SetBackdropColor (0, 0, 0, 0.1)
 
-		window.wisp_who:ClearAllPoints()
-		window.editbox:ClearAllPoints()
-		window.wisp_who:SetPoint ("TOPLEFT", window.dropdown.widget, "BOTTOMLEFT", 0, -10)
-		window.editbox:SetPoint ("TOPLEFT", window.wisp_who, "BOTTOMLEFT", 0, -3)
+		window.wisp_who:ClearAndSetPoint ("TOPLEFT", window.dropdown.widget, "BOTTOMLEFT", 0, -10)
+		window.editbox:ClearAndSetPoint ("TOPLEFT", window.wisp_who, "BOTTOMLEFT", 0, -3)
 		window.editbox:SetWidth (155)
 		window.editbox:SetHeight (20)
 		window.editbox:SetBackdrop ({bgFile = [[Interface\DialogFrame\UI-DialogBox-Background-Dark]], edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, tile=true,
@@ -664,11 +646,9 @@ local function cria_check_buttons (este_gump)
 		window.editbox:SetBackdropBorderColor (0, 0, 0, 0.5)
 		window.editbox:SetBackdropColor (0, 0, 0, 0.3)
 
-		window.linhas_amt:ClearAllPoints()
-		window.linhas_amt:SetPoint ("TOPLEFT", window.editbox, "BOTTOMLEFT", 0, -10)
-		window.slider:ClearAllPoints()
+		window.linhas_amt:ClearAndSetPoint ("TOPLEFT", window.editbox, "BOTTOMLEFT", 0, -10)
 		window.slider:SetWidth (155)
-		window.slider:SetPoint ("TOPLEFT", window.linhas_amt, "BOTTOMLEFT", 0, -3)
+		window.slider:ClearAndSetPoint ("TOPLEFT", window.linhas_amt, "BOTTOMLEFT", 0, -3)
 		window.slider:SetBackdrop ({bgFile = [[Interface\DialogFrame\UI-DialogBox-Background-Dark]], edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, tile=true,
 		tileSize = 64, insets = {left = 0, right = 0, top = 0, bottom = 0}})
 		window.slider:SetBackdropBorderColor (0, 0, 0, 0.5)
@@ -682,28 +662,22 @@ local function cria_check_buttons (este_gump)
 		Details_Report_CB_1:Hide()
 		local reverse_checkbox = Details_Report_CB_2
 		reverse_checkbox:Show()
-		reverse_checkbox:ClearAllPoints()
 		reverse_checkbox:SetBackdrop ({bgFile = [[Interface\DialogFrame\UI-DialogBox-Background-Dark]], edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, tile=true,
 		tileSize = 64, insets = {left = 0, right = 0, top = 0, bottom = 0}})
 		reverse_checkbox:SetBackdropBorderColor (0, 0, 0, 0.5)
 		reverse_checkbox:SetBackdropColor (0, 0, 0, 0.3)
-		reverse_checkbox:SetPoint ("TOPLEFT", window.slider, "BOTTOMLEFT", 0, -8)
+		reverse_checkbox:ClearAndSetPoint ("TOPLEFT", window.slider, "BOTTOMLEFT", 0, -8)
 		reverse_checkbox:SetSize (14, 14)
 		reverse_checkbox:SetNormalTexture (nil)
 		reverse_checkbox:SetPushedTexture (nil)
 		reverse_checkbox:SetHighlightTexture (nil)
-		_G [reverse_checkbox:GetName().."Text"]:ClearAllPoints()
-		_G [reverse_checkbox:GetName().."Text"]:SetPoint ("LEFT", reverse_checkbox, "RIGHT", 2, 0)
+		_G [reverse_checkbox:GetName().."Text"]:ClearAndSetPoint ("LEFT", reverse_checkbox, "RIGHT", 2, 0)
 
-		window.enviar:ClearAllPoints()
-		window.enviar:SetPoint ("BOTTOM", window, "BOTTOM", 0, 10)
+		window.enviar:ClearAndSetPoint ("BOTTOM", window, "BOTTOM", 0, 10)
 		window.enviar:SetBackdrop ({bgFile = [[Interface\DialogFrame\UI-DialogBox-Background-Dark]], edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, tile=true,
 		tileSize = 64, insets = {left = 0, right = 0, top = 0, bottom = 0}})
 		window.enviar:SetBackdropBorderColor (0, 0, 0, 0.5)
 		window.enviar:SetBackdropColor (0, 0, 0, 0.3)
---		window.enviar.Left:Hide()
---		window.enviar.Middle:Hide()
---		window.enviar.Right:Hide()
 
 		window.enviar:SetSize (342/2 - 15, 20)
 
@@ -716,13 +690,7 @@ local function cria_check_buttons (este_gump)
 		if (not window.elvui_widgets) then
 			window.elvui_widgets = {}
 
-			local titlebar = CreateFrame ("Frame", window:GetName() .. "ElvUITitleBar", window)
-			titlebar:SetPoint ("TOPLEFT", window, "TOPLEFT", 2, -3)
-			titlebar:SetPoint ("TOPRIGHT", window, "TOPRIGHT", -2, -3)
-			titlebar:SetHeight (20)
-			titlebar:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-			titlebar:SetBackdropColor (.5, .5, .5, 1)
-			titlebar:SetBackdropBorderColor (0, 0, 0, 1)
+			local titlebar = _detalhes:CreateWindowTitleBar (window, window:GetName() .. "ElvUITitleBar")
 
 			local bg1 = window:CreateTexture (nil, "background")
 			bg1:SetTexture ([[Interface\AddOns\Details\images\background]], true)
@@ -732,14 +700,13 @@ local function cria_check_buttons (este_gump)
 			bg1:SetHorizTile (true)
 			bg1:SetAllPoints()
 
-			tinsert (window.all_widgets, bg1)
-			tinsert (window.elvui_widgets, bg1)
-			tinsert (window.all_widgets, titlebar)
-			tinsert (window.elvui_widgets, titlebar)
+			window.all_widgets[#window.all_widgets+1] = bg1
+			window.elvui_widgets[#window.elvui_widgets+1] = bg1
+			window.all_widgets[#window.all_widgets+1] = titlebar
+			window.elvui_widgets[#window.elvui_widgets+1] = titlebar
 		end
 
-		window.title:ClearAllPoints()
-		window.title:SetPoint ("CENTER", window, "CENTER")
+		window.title:ClearAndSetPoint ("CENTER", window, "CENTER")
 		window.title:SetPoint ("TOP", window, "TOP", 0, -7)
 		window.title:SetParent (_G [window:GetName() .. "ElvUITitleBar"])
 		window.title:SetTextColor (.8, .8, .8, 1)
@@ -796,24 +763,19 @@ local function cria_check_buttons (este_gump)
 		Details_Report_CB_1:Hide()
 		Details_Report_CB_2:Hide()
 
-		window.dropdown:ClearAllPoints()
 		window.dropdown:SetWidth (145)
-		window.dropdown:SetPoint ("TOPLEFT", window, "TOPLEFT", 175, -68)
+		window.dropdown:ClearAndSetPoint ("TOPLEFT", window, "TOPLEFT", 175, -68)
 
-		window.wisp_who:ClearAllPoints()
-		window.editbox:ClearAllPoints()
-		window.wisp_who:SetPoint ("TOPLEFT", window.dropdown.widget, "BOTTOMLEFT", 0, -10)
-		window.editbox:SetPoint ("TOPLEFT", window.wisp_who, "BOTTOMLEFT", 0, -3)
+		window.wisp_who:ClearAndSetPoint ("TOPLEFT", window.dropdown.widget, "BOTTOMLEFT", 0, -10)
+		window.editbox:ClearAndSetPoint ("TOPLEFT", window.wisp_who, "BOTTOMLEFT", 0, -3)
 		window.editbox:SetWidth (145)
 		window.editbox:SetHeight (20)
 		window.editbox:SetBackdrop ({bgFile = [[Interface\DialogFrame\UI-DialogBox-Background-Dark]], edgeFile = [[Interface\AddOns\Details\images\border_3]], tile=true,
 		edgeSize = 15, tileSize = 64, insets = {left = 3, right = 3, top = 4, bottom = 4}})
 
-		window.linhas_amt:ClearAllPoints()
-		window.linhas_amt:SetPoint ("TOPLEFT", window.editbox, "BOTTOMLEFT", 0, -7)
-		window.slider:ClearAllPoints()
+		window.linhas_amt:ClearAndSetPoint ("TOPLEFT", window.editbox, "BOTTOMLEFT", 0, -7)
 		window.slider :SetWidth (145)
-		window.slider:SetPoint ("TOPLEFT", window.linhas_amt, "BOTTOMLEFT", 0, -3)
+		window.slider:ClearAndSetPoint ("TOPLEFT", window.linhas_amt, "BOTTOMLEFT", 0, -3)
 		window.slider:SetBackdrop ({bgFile = [[Interface\DialogFrame\UI-DialogBox-Background-Dark]], edgeFile = [[Interface\AddOns\Details\images\border_3]], tile=true,
 		edgeSize = 15, tileSize = 64, insets = {left = 3, right = 3, top = 4, bottom = 4}})
 
@@ -824,18 +786,15 @@ local function cria_check_buttons (este_gump)
 		Details_Report_CB_1:Hide()
 		local reverse_checkbox = Details_Report_CB_2
 		reverse_checkbox:Show()
-		reverse_checkbox:ClearAllPoints()
 		reverse_checkbox:SetBackdrop (nil)
-		reverse_checkbox:SetPoint ("TOPLEFT", window.slider, "BOTTOMLEFT", -1, -4)
+		reverse_checkbox:ClearAndSetPoint ("TOPLEFT", window.slider, "BOTTOMLEFT", -1, -4)
 		reverse_checkbox:SetSize (26, 26)
 		reverse_checkbox:SetNormalTexture ([[Interface\Buttons\UI-CheckBox-Up]])
 		reverse_checkbox:SetPushedTexture ([[Interface\Buttons\UI-CheckBox-Down]])
 		reverse_checkbox:SetHighlightTexture ([[Interface\Buttons\UI-CheckBox-Highlight]])
-		_G [reverse_checkbox:GetName().."Text"]:ClearAllPoints()
-		_G [reverse_checkbox:GetName().."Text"]:SetPoint ("LEFT", reverse_checkbox, "RIGHT", 2, 0)
+		_G [reverse_checkbox:GetName().."Text"]:ClearAndSetPoint ("LEFT", reverse_checkbox, "RIGHT", 2, 0)
 
-		window.enviar:ClearAllPoints()
-		window.enviar:SetPoint ("TOPLEFT", reverse_checkbox, "BOTTOMLEFT", 0, -4)
+		window.enviar:ClearAndSetPoint ("TOPLEFT", reverse_checkbox, "BOTTOMLEFT", 0, -4)
 		window.enviar.Left:Show()
 		window.enviar.Middle:Show()
 		window.enviar.Right:Show()
@@ -864,8 +823,8 @@ local function cria_check_buttons (este_gump)
 				window:Hide()
 			end)
 
-			tinsert (window.classic_widgets, f)
-			tinsert (window.all_widgets, f)
+			window.classic_widgets[#window.classic_widgets+1] = f
+			window.all_widgets[#window.all_widgets+1] = f
 		end
 
 		for _, widget in ipairs (window.classic_widgets) do
@@ -887,7 +846,6 @@ local function cria_check_buttons (este_gump)
 	function _detalhes:CheckLastReportsIntegrity()
 		local last_reports = _detalhes.latest_report_table or {}
 		if (#last_reports > 0) then
-			local i = 1
 			for index = #last_reports, 1, -1 do
 				local report = last_reports [index]
 				local instance_id, atributo, sub_atributo, amt, where, custom_name = unpack (report)
@@ -1001,7 +959,7 @@ local function cria_check_buttons (este_gump)
 				b.icon = icon
 				b.text = text
 				b:SetScript ("OnClick", recently_on_click)
-				tinsert (window.recently_report_buttons, b)
+				window.recently_report_buttons[#window.recently_report_buttons+1] = b
 			end
 
 			history_Background:Hide()

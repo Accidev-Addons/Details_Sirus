@@ -171,19 +171,11 @@ local BarMetaFunctions = _G [DF.GlobalWidgetControlNames ["normal_bar"]]
 	end
 	--> show
 	local smember_shown = function (_object, _value)
-		if (_value) then
-			return _object:Show()
-		else
-			return _object:Hide()
-		end
+		return _object:SetShown(_value)
 	end
 	--> hide
 	local smember_hide = function (_object, _value)
-		if (_value) then
-			return _object:Hide()
-		else
-			return _object:Show()
-		end
+		return _object:SetShown(not _value)
 	end
 	--> width
 	local smember_width = function (_object, _value)
@@ -419,11 +411,7 @@ local BarMetaFunctions = _G [DF.GlobalWidgetControlNames ["normal_bar"]]
 
 --> show div
 	function BarMetaFunctions:ShowDiv (bool)
-		if (bool) then
-			self.div:Show()
-		else
-			self.div:Hide()
-		end
+		self.div:SetShown(bool)
 	end
 
 -- tooltip

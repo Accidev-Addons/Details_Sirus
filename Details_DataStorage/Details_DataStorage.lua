@@ -20,17 +20,12 @@ f:SetScript("OnEvent", function (self, event, addonName)
 		DetailsDataStorage = DetailsDataStorage or _detalhes:CreateStorageDB()
 
 		if DetailsDataStorage.VERSION < DETAILS_STORAGE_VERSION then
-			--> do revisions
-			if DetailsDataStorage.VERSION < 6 then
-				table.wipe(DetailsDataStorage)
-				DetailsDataStorage = _detalhes:CreateStorageDB()
-			end
+			table.wipe(DetailsDataStorage)
+			DetailsDataStorage = _detalhes:CreateStorageDB()
 		end
 
 		if _detalhes and _detalhes.debug then
 			print ("|cFFFFFF00Details! Storage|r: loaded!")
 		end
-
-		DETAILS_STORAGE_LOADED = true
 	end
 end)

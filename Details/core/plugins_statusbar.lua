@@ -18,7 +18,6 @@
 	local _math_floor = math.floor --> api local
 	local _ipairs = ipairs --> api local
 
-	local UnitGroupRolesAssigned = DetailsFramework.UnitGroupRolesAssigned
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> status bar core functions
@@ -73,36 +72,30 @@
 	end
 
 	function _detalhes.StatusBar:AlignPluginText (child, default)
-		local side = child.options.textAlign
-		if (child.options.textAlign == 0) then
+		local options = child.options
+		local side = options.textAlign
+		if (side == 0) then
 			side = default
 		end
 
-		child.text:ClearAllPoints()
+		local text = child.text
+		local frame = child.frame
+		local xMod, yMod = options.textXMod, options.textYMod
+
+		text:ClearAllPoints()
 		if (side == 1) then
-			child.text:SetPoint ("LEFT", child.frame, "LEFT", child.options.textXMod, child.options.textYMod)
+			text:SetPoint ("LEFT", frame, "LEFT", xMod, yMod)
 		elseif (side == 2) then
-			child.text:SetPoint ("CENTER", child.frame, "CENTER", child.options.textXMod, child.options.textYMod)
+			text:SetPoint ("CENTER", frame, "CENTER", xMod, yMod)
 		elseif (side == 3) then
-			child.text:SetPoint ("RIGHT", child.frame, "RIGHT", child.options.textXMod, child.options.textYMod)
+			text:SetPoint ("RIGHT", frame, "RIGHT", xMod, yMod)
 		end
 	end
 
 	--> functions to set the three statusbar places: left, center and right
-		function _detalhes.StatusBar:SetCenterPlugin (instance, childObject, fromStartup)
-			childObject.frame:Show()
-			childObject.frame:ClearAllPoints()
-
-			if (instance.micro_displays_side == 2) then --> default - bottom
-				childObject.frame:SetPoint ("CENTER", instance.baseframe.rodape.StatusBarCenterAnchor, "CENTER")
-			elseif (instance.micro_displays_side == 1) then --> top side
-				childObject.frame:SetPoint ("CENTER", instance.baseframe.cabecalho.StatusBarCenterAnchor, "CENTER")
-			end
-
-			_detalhes.StatusBar:AlignPluginText (childObject, 2)
-
-			instance.StatusBar.center = childObject
-			childObject.anchor = "center"
+		local attach_child = function (instance, childObject, fromStartup, slot)
+			instance.StatusBar [slot] = childObject
+			childObject.anchor = slot
 			childObject.enabled = true
 			if (childObject.OnEnable) then
 				childObject:OnEnable()
@@ -116,6 +109,21 @@
 			end
 
 			return true
+		end
+
+		function _detalhes.StatusBar:SetCenterPlugin (instance, childObject, fromStartup)
+			childObject.frame:Show()
+			childObject.frame:ClearAllPoints()
+
+			if (instance.micro_displays_side == 2) then --> default - bottom
+				childObject.frame:SetPoint ("CENTER", instance.baseframe.rodape.StatusBarCenterAnchor, "CENTER")
+			elseif (instance.micro_displays_side == 1) then --> top side
+				childObject.frame:SetPoint ("CENTER", instance.baseframe.cabecalho.StatusBarCenterAnchor, "CENTER")
+			end
+
+			_detalhes.StatusBar:AlignPluginText (childObject, 2)
+
+			return attach_child (instance, childObject, fromStartup, "center")
 		end
 
 		function _detalhes.StatusBar:SetLeftPlugin (instance, childObject, fromStartup)
@@ -135,21 +143,7 @@
 
 			_detalhes.StatusBar:AlignPluginText (childObject, 1)
 
-			instance.StatusBar.left = childObject
-			childObject.anchor = "left"
-			childObject.enabled = true
-			if (childObject.OnEnable) then
-				childObject:OnEnable()
-			end
-
-			if (fromStartup and childObject.options.isHidden) then
-				childObject.frame.text:Hide()
-				if (childObject.frame.texture) then
-					childObject.frame.texture:Hide()
-				end
-			end
-
-			return true
+			return attach_child (instance, childObject, fromStartup, "left")
 		end
 
 		function _detalhes.StatusBar:SetRightPlugin (instance, childObject, fromStartup)
@@ -164,21 +158,7 @@
 
 			_detalhes.StatusBar:AlignPluginText (childObject, 3)
 
-			instance.StatusBar.right = childObject
-			childObject.anchor = "right"
-			childObject.enabled = true
-			if (childObject.OnEnable) then
-				childObject:OnEnable()
-			end
-
-			if (fromStartup and childObject.options.isHidden) then
-				childObject.frame.text:Hide()
-				if (childObject.frame.texture) then
-					childObject.frame.texture:Hide()
-				end
-			end
-
-			return true
+			return attach_child (instance, childObject, fromStartup, "right")
 		end
 
 	--> disable all plugin childs attached to an specified instance and reactive the childs taking the instance statusbar anchors
@@ -215,11 +195,8 @@
 
 		GameCooltip:Close()
 
-		local byuser = false
-
 		if (type (index) == "table") then
 			index, current_child, anchor = unpack (index)
-			byuser = true
 		end
 
 		if (index and index == -1) then --> hide
@@ -424,54 +401,6 @@
 		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.right, "textxmod")
 		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.right, "textymod")
 		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.right, "hidden")
-	end
-
-	function _detalhes.StatusBar:UpdateChilds (instance)
-
-		local left = instance.StatusBarSaved.left
-		local center = instance.StatusBarSaved.center
-		local right = instance.StatusBarSaved.right
-
-		local left_index = _detalhes.StatusBar:GetIndexFromAbsoluteName (left)
-		ChoosePlugin (nil, nil, left_index, instance.StatusBar.left, "left")
-
-		local center_index = _detalhes.StatusBar:GetIndexFromAbsoluteName (center)
-		ChoosePlugin (nil, nil, center_index, instance.StatusBar.center, "center")
-
-		local right_index = _detalhes.StatusBar:GetIndexFromAbsoluteName (right)
-		ChoosePlugin (nil, nil, right_index, instance.StatusBar.right, "right")
-
-		if (instance.StatusBarSaved.options and instance.StatusBarSaved.options [left]) then
-			instance.StatusBar.left.options = table_deepcopy (instance.StatusBarSaved.options [left])
-		end
-		if (instance.StatusBarSaved.options and instance.StatusBarSaved.options [center]) then
-			instance.StatusBar.center.options = table_deepcopy (instance.StatusBarSaved.options [center])
-		end
-		if (instance.StatusBarSaved.options and instance.StatusBarSaved.options [right]) then
-			instance.StatusBar.right.options = table_deepcopy (instance.StatusBarSaved.options [right])
-		end
-
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.left, "textcolor")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.left, "textsize")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.left, "textface")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.left, "textxmod")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.left, "textymod")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.left, "hidden")
-
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.center, "textcolor")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.center, "textsize")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.center, "textface")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.center, "textxmod")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.center, "textymod")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.center, "hidden")
-
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.right, "textcolor")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.right, "textsize")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.right, "textface")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.right, "textxmod")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.right, "textymod")
-		_detalhes.StatusBar:ApplyOptions (instance.StatusBar.right, "hidden")
-
 	end
 
 	--> build-in function for create a frame for an plugin child
@@ -837,8 +766,8 @@ do
 			-----------------------------------------------------------------------------------------------------------------------------
 
 			--> now we insert all widgets created on widgets table
-			table.insert (widgets, window.segmentOptionLabel)
-			table.insert (widgets, window.segmentTypeDropdown)
+			widgets[#widgets+1] = window.segmentOptionLabel
+			widgets[#widgets+1] = window.segmentTypeDropdown
 
 			--> after first call we replace this function with widgets table
 			PSegment.ExtraOptions = widgets
@@ -1024,8 +953,8 @@ do
 			-----------------------------------------------------------------------------------------------------------------------------
 
 			--> now we insert all widgets created on widgets table
-			table.insert (widgets, window.ClockTypeLabel)
-			table.insert (widgets, window.ClockTypeDropdown)
+			widgets[#widgets+1] = window.ClockTypeLabel
+			widgets[#widgets+1] = window.ClockTypeDropdown
 
 			--> after first call we replace this function with widgets table
 			Clock.ExtraOptions = widgets
@@ -1044,10 +973,6 @@ do
 			local myframe = _detalhes.StatusBar:CreateChildFrame (instance, "DetailsClockInstance"..instance:GetInstanceId(), DEFAULT_CHILD_WIDTH, DEFAULT_CHILD_HEIGHT)
 
 			--> we place custom frame, widgets inside this function
-			--local texture = myframe:CreateTexture (nil, "overlay")
-			--texture:SetTexture ("Interface\\AddOns\\Details\\images\\clock")
-			--texture:SetPoint ("RIGHT", myframe.text.widget, "LEFT")
-			--myframe.texture = texture
 
 			local new_child = _detalhes.StatusBar:CreateChildTable (instance, Clock, myframe)
 
@@ -1086,7 +1011,6 @@ end
 do
 
 		local _UnitDetailedThreatSituation = UnitDetailedThreatSituation --> wow api
-		local _cstr = string.format --> lua api
 		local _math_abs = math.abs --> lua api
 
 		--> Create the plugin Object
@@ -1096,15 +1020,7 @@ do
 			return
 		end
 
-		Threat.isTank = nil
-
 		function Threat:PlayerEnterCombat()
---			local role = UnitGroupRolesAssigned ("player")
---			if (role == "TANK") then
---				Threat.isTank = true
---			else
---				Threat.isTank = nil
---			end
 			Threat.tick = _detalhes:ScheduleRepeatingTimer ("ThreatPluginTick", 1)
 		end
 
@@ -1120,11 +1036,7 @@ do
 					local isTanking, status, threatpct, rawthreatpct, threatvalue = _UnitDetailedThreatSituation ("player", "target")
 					if (threatpct) then
 						child.text:SetText (_math_floor (threatpct).."%")
---						if (Threat.isTank) then
---							child.text:SetTextColor (_math_abs (threatpct-100)*0.01, threatpct*0.01, 0, 1)
---						else
 							child.text:SetTextColor (threatpct*0.01, _math_abs (threatpct-100)*0.01, 0, 1)
---						end
 					else
 						child.text:SetText ("0%")
 						child.text:SetTextColor (1, 1, 1, 1)
@@ -1211,7 +1123,7 @@ do
 		end
 
 		function PLatency:UpdateLatency()
-			local _, _, _, lagWorld = GetNetStats()
+			local _, _, lagWorld = GetNetStats()
 			self.text:SetText (_math_floor (lagWorld) .. " ms")
 		end
 
@@ -1246,7 +1158,7 @@ do
 		local _GetInventoryItemDurability = GetInventoryItemDurability
 
 		--> Create the plugin Object
-		local PDurability = _detalhes:NewPluginObject ("Details_Statusbar_Latency", DETAILSPLUGIN_ALWAYSENABLED, "STATUSBAR")
+		local PDurability = _detalhes:NewPluginObject ("Details_Statusbar_Durability", DETAILSPLUGIN_ALWAYSENABLED, "STATUSBAR")
 		--> Handle events (must have)
 		function PDurability:OnDetailsEvent (event)
 			return
@@ -1282,12 +1194,10 @@ do
 		end
 
 		function PDurability:OnEnable()
-			self.frame.widget:RegisterEvent ("PLAYER_DEAD")
-			self.frame.widget:RegisterEvent ("PLAYER_UNGHOST")
-			self.frame.widget:RegisterEvent ("UPDATE_INVENTORY_DURABILITY")
-			self.frame.widget:RegisterEvent ("MERCHANT_SHOW")
-			self.frame.widget:RegisterEvent ("MERCHANT_CLOSED")
-			self.frame.widget:RegisterEvent ("ZONE_CHANGED_NEW_AREA")
+			FrameUtil.RegisterFrameForEvents(self.frame.widget, {
+				"PLAYER_DEAD", "PLAYER_UNGHOST", "UPDATE_INVENTORY_DURABILITY",
+				"MERCHANT_SHOW", "MERCHANT_CLOSED", "ZONE_CHANGED_NEW_AREA",
+			})
 			self:UpdateDurability()
 		end
 
@@ -1358,9 +1268,8 @@ do
 			texture:SetHeight (12)
 			myframe.texture = texture
 
-			myframe.widget:RegisterEvent ("PLAYER_MONEY")
-			myframe.widget:RegisterEvent ("PLAYER_ENTERING_WORLD")
-			myframe.widget:SetScript ("OnEvent", function (event)
+			FrameUtil.RegisterFrameForEvents(myframe.widget, {"PLAYER_MONEY", "PLAYER_ENTERING_WORLD"})
+			myframe.widget:SetScript ("OnEvent", function (_, event)
 				if (event == "PLAYER_ENTERING_WORLD") then
 					return PGold:ScheduleTimer ("GoldPluginTick", 10)
 				end
@@ -1433,8 +1342,8 @@ do
 			-----------------------------------------------------------------------------------------------------------------------------
 
 			--> now we insert all widgets created on widgets table
-			table.insert (widgets, window.TimeTypeLabel)
-			table.insert (widgets, window.TimeTypeDropdown)
+			widgets[#widgets+1] = window.TimeTypeLabel
+			widgets[#widgets+1] = window.TimeTypeDropdown
 
 			--> after first call we replace this function with widgets table
 			PTime.ExtraOptions = widgets

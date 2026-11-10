@@ -1,16 +1,8 @@
 local _detalhes = _G._detalhes
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
---> local pointers
-local _ipairs = ipairs --lua local
-local _pairs = pairs --lua local
-local _UnitAura = UnitAura --api local
-
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> constants
 local habilidade_dano = _detalhes.habilidade_dano
-
-local _recording_ability_with_buffs = false
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> internals
@@ -20,10 +12,6 @@ function habilidade_dano:NovaTabela(id, link, token)
 		counter = 0, --counter
 		id = id, --spellid
 		successful_casted = 0, --successful casted times(only for enemies)
-
---		off_amt = 0,
---		off_dmg = 0,
---		main_amt = 0,
 
 		--> normal hits
 		n_min = 0,
@@ -119,71 +107,5 @@ function habilidade_dano:Add(serial, nome, flag, amount, who_nome, resisted, blo
 			self.n_min = amount
 		end
 	end
-
-	if _recording_ability_with_buffs then
-		if who_nome == _detalhes.playername then --aqui ele vai detalhar tudo sobre a magia usada
-			local SpellBuffDetails = self.BuffTable
-			if not SpellBuffDetails then
-				self.BuffTable = {}
-				SpellBuffDetails = self.BuffTable
-			end
-
-			if token == "SPELL_PERIODIC_DAMAGE" then
-				--> precisa ver se ele tinha na hora que aplicou
-				local SoloDebuffPower = _detalhes.tabela_vigente.SoloDebuffPower
-				if SoloDebuffPower then
-					local ThisDebuff = SoloDebuffPower[self.id]
-					if ThisDebuff then
-						local ThisDebuffOnTarget = ThisDebuff[serial]
-						if ThisDebuffOnTarget then
-							for _, buff_name in _ipairs(ThisDebuffOnTarget.buffs) do
-								local buff_info = SpellBuffDetails[buff_name] or {["counter"] = 0, ["total"] = 0, ["critico"] = 0, ["critico_dano"] = 0}
-								buff_info.counter = buff_info.counter + 1
-								buff_info.total = buff_info.total + amount
-
-								if critical ~= nil then
-									buff_info.critico = buff_info.critico + 1
-									buff_info.critico_dano = buff_info.critico_dano+amount
-								end
-
-								SpellBuffDetails[buff_name] = buff_info
-							end
-						end
-					end
-				end
-			else
-				for BuffName, _ in _pairs(_detalhes.Buffs.BuffsTable) do
-					local name = _UnitAura("player", BuffName)
-					if name ~= nil then
-						local buff_info = SpellBuffDetails[name] or {["counter"] = 0, ["total"] = 0, ["critico"] = 0, ["critico_dano"] = 0}
-						buff_info.counter = buff_info.counter + 1
-						buff_info.total = buff_info.total + amount
-
-						if critical ~= nil then
-							buff_info.critico = buff_info.critico + 1
-							buff_info.critico_dano = buff_info.critico_dano + amount
-						end
-
-						SpellBuffDetails[name] = buff_info
-					end
-				end
-			end
-		end
-	end
 	-- print("last")
 end
-
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
---> core
-function _detalhes:UpdateDamageAbilityGears()
-	_recording_ability_with_buffs = _detalhes.RecordPlayerAbilityWithBuffs
-end
-
---[[
-if isoffhand then
-	self.off_amt = self.off_amt + 1
-	self.off_dmg = self.off_dmg + amount
-else
-	self.main_amt = self.main_amt + 1
-end
-]]

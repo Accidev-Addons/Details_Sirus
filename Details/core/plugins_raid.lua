@@ -19,7 +19,6 @@ local CLASS_ICON_TCOORDS = CLASS_ICON_TCOORDS
 --> constants
 
 local modo_raid = _detalhes._detalhes_props["MODO_RAID"]
-local modo_alone = _detalhes._detalhes_props["MODO_ALONE"]
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> internal functions
@@ -57,10 +56,6 @@ function _detalhes.RaidTables:EnableRaidMode(instance, plugin_name, from_cooltip
 	end
 
 	--> set the mode
-	if instance.modo == modo_alone then
-		instance:SoloMode(false)
-	end
-
 	instance.modo = modo_raid
 
 	--> hide rows, scrollbar
@@ -119,7 +114,7 @@ function _detalhes.RaidTables:GetAvailablePlugins()
 	local available = {}
 	for index, plugin in ipairs(self.Menu) do
 		if not self.PluginsInUse[plugin[4]] and plugin[3].__enabled then -- 3 = plugin object 4 = absolute name
-			tinsert(available, plugin)
+			available[#available+1] = plugin
 		end
 	end
 	return available
@@ -154,7 +149,7 @@ end
 ----------------
 function _detalhes.RaidTables:switch(_, plugin_name, instance)
 	local update_menu = false
-	if not self then --came from cooltip
+	if self ~= _detalhes.RaidTables then
 		self = _detalhes.RaidTables
 		update_menu = true
 	end
@@ -235,14 +230,14 @@ function _detalhes:SendMsgToChannel(msg, channel, towho)
 		SendChatMessage(msg, channel, nil, towho)
 	elseif channel == "PRINT" then
 		print(msg)
-	else -- say channel?
-		-- print("da")
-		if IsInInstance() then --patch 80205 cannot use 'say' channel outside instances
-			SendChatMessage(msg, channel,GetDefaultLanguage("player"))
-		end
-	--	elseif(channel == "SAY" or channel == "YELL" or channel == "RAID_WARNING" or channel == "OFFICER" or channel == "GUILD" or channel == "EMOTE") then     -----TODO
-
+	else
+		SendChatMessage(msg, channel, GetDefaultLanguage("player"))
 	end
+end
+
+local class_icon_prefix = function(class)
+	local coords = CLASS_ICON_TCOORDS[class]
+	return "|TInterface\\AddOns\\Details\\images\\classes_small_alpha:12:12:0:0:128:128:" .. coords[1]*128 .. ":" .. coords[2]*128 .. ":" .. coords[3]*128 .. ":" .. coords[4]*128 .. "|t |c" .. RAID_CLASS_COLORS [class].colorStr
 end
 
 --/run local s = "teste {spell}"; s = s:gsub("{spell}", "tercio"); print(s)
@@ -255,9 +250,9 @@ function _detalhes:interrupt_announcer(token, time, who_serial, who_name, who_fl
 
 		local spellname
 		if spellid > 10 then
-			spellname = GetSpellLink(extraSpellID)
+			spellname = GetSpellLink(extraSpellID) or extraSpellName or "?"
 		else
-			spellname = _GetSpellInfo(extraSpellID)
+			spellname = _GetSpellInfo(extraSpellID) or extraSpellName or "?"
 		end
 
 		if channel == "RAID" then
@@ -273,11 +268,6 @@ function _detalhes:interrupt_announcer(token, time, who_serial, who_name, who_fl
 			else
 				channel = "SAY"
 			end
-
-			local _, instanceType = IsInInstance()
-			if instanceType == "pvp" then
-				channel = "BATTLEGROUND"
-			end
 		end
 
 		if custom ~= "" then
@@ -290,17 +280,13 @@ function _detalhes:interrupt_announcer(token, time, who_serial, who_name, who_fl
 			if next ~= "" then
 				msg = msg.." ".._cstr(Loc["STRING_OPTIONS_RT_INTERRUPT_NEXT"], next)
 			end
-			-- if channel == "SAY" then
 				_detalhes:SendMsgToChannel(msg, channel, _detalhes.announce_interrupts.whisper)
-			-- else
-				-- _detalhes:SendMsgToChannel(msg, channel, _detalhes.announce_interrupts.whisper)
-			-- end
 			
 		end
 	elseif channel == "PRINT" then
 		local custom = _detalhes.announce_interrupts.custom
 
-		local spellname = select(1,GetSpellInfo(extraSpellID))
+		local spellname = GetSpellInfo(extraSpellID) or extraSpellName or "?"
 
 		if custom ~= "" then
 			custom = custom:gsub("{spell}", spellname)
@@ -314,8 +300,7 @@ function _detalhes:interrupt_announcer(token, time, who_serial, who_name, who_fl
 			local class_color = "|cFFFF3333"
 
 			if class then
-				local coords = CLASS_ICON_TCOORDS[class]
-				class_color = "|TInterface\\AddOns\\Details\\images\\classes_small_alpha:12:12:0:0:128:128:" .. coords[1]*128 .. ":" .. coords[2]*128 .. ":" .. coords[3]*128 .. ":" .. coords[4]*128 .. "|t |c" .. RAID_CLASS_COLORS [class].colorStr
+				class_color = class_icon_prefix(class)
 			end
 
 			if second < 10 then
@@ -353,11 +338,6 @@ function _detalhes:cooldown_announcer(token, time, who_serial, who_name, who_fla
 				channel = "RAID"
 			elseif zone == "party" then
 				channel = "PARTY"
-			end
-
-			local _, instanceType = IsInInstance()
-			if instanceType == "pvp" then
-				channel = "BATTLEGROUND"
 			end
 		end
 
@@ -403,13 +383,11 @@ function _detalhes:cooldown_announcer(token, time, who_serial, who_name, who_fla
 		local class_color2 = "|cFFFFFFFF"
 
 		if class then
-			local coords = CLASS_ICON_TCOORDS[class]
-			class_color = "|TInterface\\AddOns\\Details\\images\\classes_small_alpha:12:12:0:0:128:128:" .. coords[1]*128 .. ":" .. coords[2]*128 .. ":" .. coords[3]*128 .. ":" .. coords[4]*128 .. "|t |c" .. RAID_CLASS_COLORS [class].colorStr
+			class_color = class_icon_prefix(class)
 		end
 
 		if class2 then
-			local coords = CLASS_ICON_TCOORDS[class2]
-			class_color2 = " -> |TInterface\\AddOns\\Details\\images\\classes_small_alpha:12:12:0:0:128:128:" .. coords[1]*128 .. ":" .. coords[2]*128 .. ":" .. coords[3]*128 .. ":" .. coords[4]*128 .. "|t |c" .. RAID_CLASS_COLORS [class2].colorStr
+			class_color2 = " -> " .. class_icon_prefix(class2)
 			alvo_name = _detalhes:GetOnlyName(alvo_name)
 		else
 			alvo_name = ""
@@ -446,33 +424,18 @@ function _detalhes:death_announcer(token, time, who_serial, who_name, who_flags,
 		elseif zone == "party" then
 			channel = "PARTY"
 		end
-
-		local _, instanceType = IsInInstance()
-		if instanceType == "pvp" then
-			channel = "BATTLEGROUND"
-		end
 	elseif where == 2 then
 		if zone ~= "raid" then
 			return
 		end
 
 		channel = "RAID"
-
-		local _, instanceType = IsInInstance()
-		if instanceType == "pvp" then
-			channel = "BATTLEGROUND"
-		end
 	elseif where == 3 then
 		if zone ~= "party" then
 			return
 		end
 
 		channel = "PARTY"
-
-		local _, instanceType = IsInInstance()
-		if instanceType == "pvp" then
-			channel = "BATTLEGROUND"
-		end
 	elseif where == 4 then --> observer
 		if zone ~= "raid" and zone ~= "party" then
 			return
@@ -503,8 +466,7 @@ function _detalhes:death_announcer(token, time, who_serial, who_name, who_flags,
 		local class_color = "|cFFFFFFFF"
 
 		if class then
-			local coords = CLASS_ICON_TCOORDS[class]
-			class_color = "|TInterface\\AddOns\\Details\\images\\classes_small_alpha:12:12:0:0:128:128:" .. coords[1]*128 .. ":" .. coords[2]*128 .. ":" .. coords[3]*128 .. ":" .. coords[4]*128 .. "|t |c" .. RAID_CLASS_COLORS [class].colorStr
+			class_color = class_icon_prefix(class)
 		end
 		msg = "Death: "..class_color..alvo_name.."|r ->"
 	else

@@ -9,7 +9,6 @@ local _
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> local pointers
 
-local _math_floor = math.floor --lua local
 local _math_max = math.max --lua local
 local _ipairs = ipairs --lua local
 local _pairs = pairs --lua local
@@ -21,7 +20,6 @@ local _GetCurrentMapAreaID = GetCurrentMapAreaID --wow api local
 local _GetInstanceDifficulty = GetInstanceDifficulty --wow api local
 local _UnitExists = UnitExists --wow api local
 local _UnitGUID = UnitGUID --wow api local
-local _UnitName = UnitName --wow api local
 local _GetTime = GetTime
 
 local _IsAltKeyDown = IsAltKeyDown
@@ -43,18 +41,15 @@ local UnitGroupRolesAssigned = DetailsFramework.UnitGroupRolesAssigned
 local modo_GROUP = _detalhes.modos.group
 local modo_ALL = _detalhes.modos.all
 local class_type_dano = _detalhes.atributos.dano
-local OBJECT_TYPE_PETS = 0x00003000
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> details api functions
 
 --> try to find the opponent of last fight, can be called during a fight as well
 function _detalhes:FindEnemy()
-	local ZoneName, InstanceType = _GetInstanceInfo()
-	local ZoneMapID = _GetCurrentMapAreaID()
-	local in_instance = IsInInstance() --> garrison returns party as instance type.
+	local _, InstanceType = _GetInstanceInfo()
 
-	if (InstanceType == "party" or InstanceType == "raid") and in_instance then
+	if InstanceType == "party" or InstanceType == "raid" then
 		if InstanceType == "party" then
 			if _detalhes:GetBossNames(_detalhes.zone_id) then
 				return Loc["STRING_SEGMENT_TRASH"]
@@ -93,39 +88,12 @@ end
 
 -- try get the current encounter name during the encounter
 
-local boss_found_not_registered = function(t, ZoneName, ZoneMapID, DifficultyID)
-	local boss_table = {
-		index = 0,
-		name = t[1],
-		encounter = t[1],
-		zone = ZoneName,
-		mapid = ZoneMapID,
-		diff = DifficultyID,
-		diff_string = select(4, GetInstanceInfo()),
-		ej_instance_id = t[5],
-		id = t[2],
-		bossimage = t[4],
-	}
-
-	_detalhes.tabela_vigente.is_boss = boss_table
-end
-
 local boss_found = function(index, name, zone, mapid, diff, encounterid)
-	local mapID = GetCurrentMapAreaID()
-	local ejid
-	if mapID then
-		ejid = DetailsFramework.EncounterJournal.EJ_GetInstanceForMap(mapID)
-	end
-
-	if not mapID then
-		--print("Details! exeption handled: zone has no map")
+	if not GetCurrentMapAreaID() then
 		return
 	end
 
-	if not ejid or ejid == 0 then
-		ejid = _detalhes:GetInstanceEJID()
-	end
-
+	local _, _, _, inst_diff_string = GetInstanceInfo()
 	local boss_table = {
 		index = index,
 		name = name,
@@ -133,71 +101,12 @@ local boss_found = function(index, name, zone, mapid, diff, encounterid)
 		zone = zone,
 		mapid = mapid,
 		diff = diff,
-		diff_string = select(4, GetInstanceInfo()),
-		ej_instance_id = ejid,
+		diff_string = inst_diff_string,
+		ej_instance_id = 0,
 		id = encounterid,
 	}
 
-	if not _detalhes:IsRaidRegistered(mapid) and _detalhes.zone_type == "raid" then
-		local boss_list = _detalhes:GetCurrentDungeonBossListFromEJ()
-		if boss_list then
-			local ActorsContainer = _detalhes.tabela_vigente[class_type_dano]._ActorTable
-			if ActorsContainer then
-				for index, Actor in _ipairs(ActorsContainer) do
-					if not Actor.grupo then
-						if boss_list[Actor.nome] then
-							Actor.boss = true
-							boss_table.bossimage = boss_list[Actor.nome][4]
-							break
-						end
-					end
-				end
-			end
-		end
-	end
-
 	_detalhes.tabela_vigente.is_boss = boss_table
-
-	if _detalhes.in_combat and not _detalhes.leaving_combat then
-		--> catch boss function if any
-		local bossFunction, bossFunctionType = _detalhes:GetBossFunction(ZoneMapID, BossIndex)
-		if bossFunction then
-			if _bit_band(bossFunctionType, 0x1) ~= 0 then --realtime
-				_detalhes.bossFunction = bossFunction
-				_detalhes.tabela_vigente.bossFunction = _detalhes:ScheduleTimer("bossFunction", 1)
-			end
-		end
-
-		if _detalhes.zone_type ~= "raid" then
-			local endType, endData = _detalhes:GetEncounterEnd(ZoneMapID, BossIndex)
-			if endType and endData then
-
-				if _detalhes.debug then
-					_detalhes:Msg("(debug) setting boss end type to:", endType)
-				end
-
-				_detalhes.encounter_end_table.type = endType
-				_detalhes.encounter_end_table.killed = {}
-				_detalhes.encounter_end_table.data = {}
-
-				if type(endData) == "table" then
-					if _detalhes.debug then
-						_detalhes:Msg("(debug) boss type is table:", endType)
-					end
-
-					if endType == 1 or endType == 2 then
-						for _, npcID in ipairs(endData) do
-							_detalhes.encounter_end_table.data[npcID] = false
-						end
-					end
-				else
-					if endType == 1 or endType == 2 then
-						_detalhes.encounter_end_table.data[endData] = false
-					end
-				end
-			end
-		end
-	end
 
 	--> we the boss was found during the combat table creation, we must postpone the event trigger
 	if not _detalhes.tabela_vigente.IsBeingCreated then
@@ -245,7 +154,7 @@ function _detalhes:ReadBossFrames()
 end
 
 --try to get the encounter name after the encounter(can be called during the combat as well)
-function _detalhes:FindBoss(noJournalSearch)
+function _detalhes:FindBoss()
 	if _detalhes.encounter_table.name then
 		local encounter_table = _detalhes.encounter_table
 		return boss_found(encounter_table.index, encounter_table.name, encounter_table.zone, encounter_table.mapid, encounter_table.diff, encounter_table.id)
@@ -276,28 +185,6 @@ function _detalhes:FindBoss(noJournalSearch)
 		end
 	end
 
-	noJournalSearch = true --> disabling the scan on encounter journal
-
-	if not noJournalSearch then
-		local in_instance = IsInInstance() --> garrison returns party as instance type.
-		if (InstanceType == "party" or InstanceType == "raid") and in_instance then
-			local boss_list = _detalhes:GetCurrentDungeonBossListFromEJ()
-			if boss_list then
-				local ActorsContainer = _detalhes.tabela_vigente[class_type_dano]._ActorTable
-				if ActorsContainer then
-					for index, Actor in _ipairs(ActorsContainer) do
-						if not Actor.grupo then
-							if boss_list[Actor.nome] then
-								Actor.boss = true
-								return boss_found_not_registered(boss_list[Actor.nome], ZoneName, ZoneMapID, DifficultyID)
-							end
-						end
-					end
-				end
-			end
-		end
-	end
-
 	return false
 end
 
@@ -310,7 +197,7 @@ function _detalhes:StartCombat(...)
 end
 
 local check_for_encounter_start = function()
-	if _detalhes._current_encounter_id then
+	if _detalhes.encounter_table.id then
 		return
 	end
 
@@ -320,20 +207,19 @@ local check_for_encounter_start = function()
 		return
 	end
 
-	local unit_id = ((GetNumRaidMembers() == 0) and "party") or "raid"
 	for i = 0, math.max(GetNumRaidMembers(), GetNumPartyMembers()) do
-		local unit_target
+		local unit_id, unit_target
 		if i == 0 then
 			unit_id = "player"
-			unit_target = (i == 0 and "target")
+			unit_target = "target"
 		else
-			unit_id = ((GetNumRaidMembers() == 0) and "party") or "raid"
-			unit_target = unit_id..i.."target"
+			unit_id = (((GetNumRaidMembers() == 0) and "party") or "raid") .. i
+			unit_target = unit_id .. "target"
 		end
 
 		local guid = UnitGUID(unit_target)
 		if guid and (bit.band(guid:sub(1, 5), 0x00F) == 3 or bit.band(guid:sub(1, 5), 0x00F) == 5) then
-			local encounterID = tonumber(guid:sub(9, 12), 16)
+			local encounterID = tonumber(guid:sub(8, 12), 16)
 			local bossindex = boss_ids[encounterID]
 			if bossindex and UnitAffectingCombat(unit_id) then
 				local _, _, _, _, maxPlayers = GetInstanceInfo()
@@ -385,7 +271,6 @@ function _detalhes:EntrarEmCombate(...)
 	_detalhes.tabela_vigente:seta_data(_detalhes._detalhes_props.DATA_TYPE_START) --seta na tabela do combate a data do inicio do combate -- setup time data
 	_detalhes.in_combat = true --sinaliza ao addon que h� um combate em andamento -- in combat flag up
 	_detalhes.tabela_vigente.combat_id = n_combate --> grava o n�mero deste combate na tabela atual -- setup combat id on new table
-	_detalhes.last_combat_pre_pot_used = nil
 
 	_detalhes:FlagCurrentCombat()
 
@@ -394,16 +279,18 @@ function _detalhes:EntrarEmCombate(...)
 
 	_detalhes:ClearCCPetsBlackList()
 
-	_table_wipe(_detalhes.encounter_end_table)
-
 	_table_wipe(_detalhes.pets_ignored)
 	_table_wipe(_detalhes.pets_no_owner)
 	_detalhes.container_pets:BuscarPets()
 
 	_table_wipe(_detalhes.cache_dead_npc)
+	if _detalhes.timeMachine.ligada then
+		_detalhes:ManutencaoTimeMachine()
+	end
 	_table_wipe(_detalhes.cache_damage_group)
 	_table_wipe(_detalhes.cache_healing_group)
 	_table_wipe(_detalhes.CachedGUIDToPull)
+	_detalhes.wipe_called = nil
 	_detalhes:UpdateParserGears()
 
 	--> get all buff already applied before the combat start
@@ -436,24 +323,12 @@ function _detalhes:EntrarEmCombate(...)
 		if _detalhes:IsInInstance() or _detalhes.debug then
 			if not _detalhes:CaptureIsAllEnabled() then
 				_detalhes:ScheduleSendCloudRequest()
-
---				if _detalhes.debug then
---					_detalhes:Msg("(debug) requesting a cloud server.")
---				end
 			end
-		else
---			if _detalhes.debug then
---				_detalhes:Msg("(debug) isn't inside a registred instance", _detalhes:IsInInstance())
---			end
 		end
-	else
---		if _detalhes.debug then
---			_detalhes:Msg("(debug) isn't in group or cloud is turned off", _detalhes.in_group, _detalhes.cloud_capture)
---		end
 	end
 
 	--> hide / alpha / switch in combat
-	for index, instancia in ipairs(_detalhes.tabela_instancias) do
+	for index, instancia in _ipairs(_detalhes.tabela_instancias) do
 		if instancia.ativa then
 			--instancia:SetCombatAlpha(nil, nil, true) --passado para o regen disable
 			instancia:CheckSwitchOnCombatStart(true)
@@ -479,28 +354,10 @@ function _detalhes:EntrarEmCombate(...)
 	_detalhes:StopTestBarUpdate()
 end
 
-function _detalhes:DelayedSyncAlert()
-	local lower_instance = _detalhes:GetLowerInstanceNumber()
-	if lower_instance then
-		lower_instance = _detalhes:GetInstance(lower_instance)
-		if lower_instance then
-			if not lower_instance:HaveInstanceAlert() then
-				lower_instance:InstanceAlert(Loc["STRING_EQUILIZING"], {[[Interface\COMMON\StreamCircle]], 22, 22, true}, 5, {function() end})
-			end
-		end
-	end
-end
-
 function _detalhes:ScheduleSyncPlayerActorData()
 	if (IsInGroup() or IsInRaid()) and (_detalhes.zone_type == "party" or _detalhes.zone_type == "raid") then
 		--> do not sync if in battleground or arena
 		_detalhes:SendCharacterData()
-	end
-end
-
-function _detalhes:EndCombat()
-	if _detalhes.in_combat then
-		_detalhes:SairDoCombate()
 	end
 end
 
@@ -517,24 +374,7 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 
 	_detalhes.last_closed_combat = _detalhes.tabela_vigente
 
---	if _detalhes.statistics then
---		for k, v in pairs(_detalhes.statistics) do
---			print(k, v)
---		end
---	end
-
-	_detalhes.leaving_combat = true
 	_detalhes.last_combat_time = _tempo
-
-	--deprecated(combat are now added immediatelly since there's no script run too long)
---	if _detalhes.schedule_remove_overall and not from_encounter_end and not InCombatLockdown() then
---		if _detalhes.debug then
---			_detalhes:Msg("(debug) found schedule overall data deletion.")
---		end
---
---		_detalhes.schedule_remove_overall = false
---		_detalhes.tabela_historico:resetar_overall()
---	end
 
 	_detalhes:CatchRaidBuffUptime("BUFF_UPTIME_OUT")
 	_detalhes:CatchRaidDebuffUptime("DEBUFF_UPTIME_OUT")
@@ -543,25 +383,6 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 	--> check if this isn't a boss and try to find a boss in the segment
 	if not _detalhes.tabela_vigente.is_boss then
 		_detalhes:FindBoss()
-
-		--> still didn't find the boss
-		if not _detalhes.tabela_vigente.is_boss then
-			local ZoneName = _GetInstanceInfo()
-			local ZoneMapID = _GetCurrentMapAreaID()
-			local DifficultyID = _GetInstanceDifficulty()
-			local findboss = _detalhes:GetRaidBossFindFunction(ZoneMapID)
-			if findboss then
-				local BossIndex = findboss()
-				if BossIndex then
-					boss_found(BossIndex, _detalhes:GetBossName(ZoneMapID, BossIndex), ZoneName, ZoneMapID, DifficultyID)
-				end
-			end
-		end
-	end
-
-	if _detalhes.tabela_vigente.bossFunction then
-		_detalhes:CancelTimer(_detalhes.tabela_vigente.bossFunction)
-		_detalhes.tabela_vigente.bossFunction = nil
 	end
 
 	--> finaliza a checagem se esta ou n�o no combate -- finish combat check
@@ -572,11 +393,6 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 
 	--> lock timers
 	_detalhes.tabela_vigente:TravarTempos()
-
-	--> get waste shields
---	if _detalhes.close_shields then
---		_detalhes:CloseShields(_detalhes.tabela_vigente)
---	end
 
 	--> salva hora, minuto, segundo do fim da luta
 	_detalhes.tabela_vigente:seta_data(_detalhes._detalhes_props.DATA_TYPE_END)
@@ -596,11 +412,6 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 			local DifficultyID = _GetInstanceDifficulty()
 			local ZoneMapID = _GetCurrentMapAreaID()
 
-			local ejid = DetailsFramework.EncounterJournal.EJ_GetInstanceForMap(ZoneMapID)
-			if not ejid or ejid == 0 then
-				ejid = _detalhes:GetInstanceEJID()
-			end
-
 			local _, boss_index = _detalhes:GetBossEncounterDetailsFromEncounterId(ZoneMapID, encounterID)
 
 			_detalhes.tabela_vigente.is_boss = {
@@ -611,7 +422,7 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 				mapid = ZoneMapID,
 				diff = DifficultyID,
 				diff_string = DifficultyName,
-				ej_instance_id = ejid or 0,
+				ej_instance_id = 0,
 				id = encounterID,
 			}
 		end
@@ -630,20 +441,10 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 			_detalhes.tabela_vigente.enemy = "["..ARENA.."] ".._detalhes.tabela_vigente.is_arena.name
 		end
 
-		local in_instance = IsInInstance() --> garrison returns party as instance type.
-		if (InstanceType == "party" or InstanceType == "raid") and in_instance then
-			if InstanceType == "party" then
-				--> tag the combat as trash clean up
-				_detalhes.tabela_vigente.is_trash = true
-			else
-				_detalhes.tabela_vigente.is_trash = true
-			end
-		else
-			if not in_instance then
-				if _detalhes.world_combat_is_trash then
-					_detalhes.tabela_vigente.is_temporary = true
-				end
-			end
+		if InstanceType == "party" or InstanceType == "raid" then
+			_detalhes.tabela_vigente.is_trash = true
+		elseif InstanceType == "none" and _detalhes.world_combat_is_trash then
+			_detalhes.tabela_vigente.is_temporary = true
 		end
 
 		if not _detalhes.tabela_vigente.enemy then
@@ -656,26 +457,13 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 			_detalhes.tabela_vigente.enemy = enemy
 		end
 
-		if _detalhes.debug then
---			_detalhes:Msg("(debug) forcing equalize actors behavior.")
---			_detalhes:EqualizeActorsSchedule(_detalhes.host_of)
-		end
-
 		--> verifica memoria
 		_detalhes:FlagActorsOnCommonFight() --fight_component
---		_detalhes:CheckMemoryAfterCombat() -- 7.2.5 is doing some weird errors even out of combat
 	else
 		--this segment is a boss fight
-		if not InCombatLockdown() and not UnitAffectingCombat("player") then
-
-		else
---			_detalhes.schedule_flag_boss_components = true
-		end
-
 		--calling here without checking for combat since the does not ran too long for scripts
 		_detalhes:FlagActorsOnBossFight()
 
-		local boss_id = _detalhes.encounter_table.id
 		if bossKilled then
 			_detalhes.tabela_vigente.is_boss.killed = true
 
@@ -706,10 +494,6 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 				_detalhes.last_encounter2 = _detalhes.last_encounter
 				_detalhes.last_encounter = _detalhes.tabela_vigente.is_boss.name
 
-				if _detalhes.pre_pot_used then
-					_detalhes.last_combat_pre_pot_used = table_deepcopy(_detalhes.pre_pot_used)
-				end
-
 				if _detalhes.pre_pot_used and _detalhes.announce_prepots.enabled then
 					_detalhes:Msg(_detalhes.pre_pot_used or "")
 					_detalhes.pre_pot_used = nil
@@ -717,53 +501,12 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 			end
 
 			if from_encounter_end then
-				if _detalhes.encounter_table.start then
+				if _detalhes.encounter_table.start and _detalhes.encounter_table.start < _detalhes.tabela_vigente:GetStartTime() then
 					_detalhes.tabela_vigente:SetStartTime(_detalhes.encounter_table.start)
 				end
 				_detalhes.tabela_vigente:SetEndTime(_detalhes.encounter_table["end"] or GetTime())
 			end
 
-			--> encounter boss function
-			local bossFunction, bossFunctionType = _detalhes:GetBossFunction(_detalhes.tabela_vigente.is_boss.mapid or 0, _detalhes.tabela_vigente.is_boss.index or 0)
-			if bossFunction then
-				if _bit_band(bossFunctionType, 0x2) ~= 0 then --end of combat
-					if not _detalhes.logoff_saving_data then
-						local successful, errortext = pcall(bossFunction, _detalhes.tabela_vigente)
-						if not successful then
-							_detalhes:Msg("error occurred on Encounter Boss Function:", errortext)
-						end
-					end
-				end
-			end
-
-			if _detalhes.tabela_vigente.instance_type == "raid" then
-				--> schedule captures off
-				_detalhes:CaptureSet(false, "damage", false, 15)
-				_detalhes:CaptureSet(false, "energy", false, 15)
-				_detalhes:CaptureSet(false, "aura", false, 15)
-				_detalhes:CaptureSet(false, "energy", false, 15)
-				_detalhes:CaptureSet(false, "spellcast", false, 15)
-
-				if _detalhes.debug then
-					_detalhes:Msg("(debug) freezing parser for 15 seconds.")
-				end
-			end
-
-			--> schedule sync
-			_detalhes:EqualizeActorsSchedule(_detalhes.host_of)
-			if _detalhes:GetEncounterEqualize(_detalhes.tabela_vigente.is_boss.mapid, _detalhes.tabela_vigente.is_boss.index) then
-				_detalhes:ScheduleTimer("DelayedSyncAlert", 3)
-			end
---		else
---			if _detalhes.debug then
---				_detalhes:EqualizeActorsSchedule(_detalhes.host_of)
---			end
---		end
-	end
-
-	if _detalhes.solo then
-		--> debuffs need a checkup, not well functional right now
-		_detalhes.CloseSoloDebuffs()
 	end
 
 	local tempo_do_combate = _detalhes.tabela_vigente:GetCombatTime()
@@ -773,9 +516,6 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 	local zoneName, zoneType = GetInstanceInfo()
 	if not _detalhes.tabela_vigente.discard_segment and(zoneType == "none" or tempo_do_combate >= _detalhes.minimum_combat_time or not _detalhes.tabela_historico.tabelas[1]) then
 		_detalhes.tabela_historico:adicionar(_detalhes.tabela_vigente) --move a tabela atual para dentro do hist�rico
-		--8.0.1 miss data isn't required at the moment, spells like akari's soul has been removed from the game
-		--_detalhes:CanSendMissData()
-
 		if _detalhes.tabela_vigente.is_boss then
 			if IsInRaid() then
 				local cleuID = _detalhes.tabela_vigente.is_boss.id
@@ -802,14 +542,14 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 					if _detalhes.tabela_vigente.is_boss.killed then
 						cleuIDData.kills = cleuIDData.kills + 1
 						cleuIDData.best_try = 0
-						tinsert(cleuIDData.try_history, {0, _detalhes.tabela_vigente:GetCombatTime()})
+						cleuIDData.try_history[#cleuIDData.try_history+1] = {0, _detalhes.tabela_vigente:GetCombatTime()}
 
 --						print("KILL", "best try", cleuIDData.best_try, "amt kills", cleuIDData.kills, "wipes", cleuIDData.wipes, "longest", cleuIDData.longest)
 					else
 						cleuIDData.wipes = cleuIDData.wipes + 1
 						if _detalhes.boss1_health_percent and _detalhes.boss1_health_percent < cleuIDData.best_try then
 							cleuIDData.best_try = _detalhes.boss1_health_percent
-							tinsert(cleuIDData.try_history, {_detalhes.boss1_health_percent, _detalhes.tabela_vigente:GetCombatTime()})
+							cleuIDData.try_history[#cleuIDData.try_history+1] = {_detalhes.boss1_health_percent, _detalhes.tabela_vigente:GetCombatTime()}
 						end
 
 --						print("WIPE", "best try", cleuIDData.best_try, "amt kills", cleuIDData.kills, "wipes", cleuIDData.wipes, "longest", cleuIDData.longest)
@@ -817,14 +557,6 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 				end
 			end
 			--
-		end
-
-		--the combat is valid, see if the user is sharing data with somebody
-		if _detalhes.shareData then
-			local zipData = Details:CompressData(_detalhes.tabela_vigente, "comm")
-			if zipData then
-				-- print("has zip data")
-			end
 		end
 	else
 		invalid_combat = _detalhes.tabela_vigente
@@ -856,25 +588,8 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 			_detalhes.tabela_vigente:SetEndTime(_GetTime())
 		end
 
-		_detalhes.tabela_vigente.resincked = true
-
 		--> tabela foi descartada, precisa atualizar os baseframes // precisa atualizer todos ou apenas o overall?
 		_detalhes:InstanciaCallFunction(_detalhes.AtualizarJanela)
-
-		if _detalhes.solo then
-			local esta_instancia = _detalhes.tabela_instancias[_detalhes.solo]
-			if _detalhes.SoloTables.CombatID == _detalhes:NumeroCombate() then --> significa que o solo mode validou o combate, como matar um bixo muito low level com uma s� porrada
-				if _detalhes.SoloTables.CombatIDLast and _detalhes.SoloTables.CombatIDLast ~= 0 then --> volta os dados da luta anterior
-					_detalhes.SoloTables.CombatID = _detalhes.SoloTables.CombatIDLast
-				else
-					if _detalhes.RefreshSolo then
-						_detalhes:RefreshSolo()
-					end
-
-					_detalhes.SoloTables.CombatID = nil
-				end
-			end
-		end
 
 		_detalhes:NumeroCombate(-1)
 	end
@@ -887,7 +602,6 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 	end
 
 	_detalhes.in_combat = false
-	_detalhes.leaving_combat = false
 
 	_detalhes:OnCombatPhaseChanged()
 	_table_wipe(_detalhes.tabela_vigente.PhaseData.damage_section)
@@ -899,7 +613,7 @@ function _detalhes:SairDoCombate(bossKilled, from_encounter_end)
 	_detalhes:UpdateParserGears()
 
 	--> hide / alpha in combat
-	for index, instancia in ipairs(_detalhes.tabela_instancias) do
+	for index, instancia in _ipairs(_detalhes.tabela_instancias) do
 		if instancia.ativa then
 			--instancia:SetCombatAlpha(nil, nil, true) --passado para o regen enabled
 			if instancia.auto_switch_to_old then
@@ -935,8 +649,8 @@ end
 
 -- TEMP
 function _detalhes:GetPlayersInArena()
-	local aliados = GetNumGroupMembers() -- LE_PARTY_CATEGORY_HOME
-	for i = 1, aliados-1 do
+	local aliados = GetNumPartyMembers()
+	for i = 1, aliados do
 		local role = UnitGroupRolesAssigned("party"..i)
 		if role ~= "NONE" then
 			local name = GetUnitName("party"..i, true)
@@ -951,66 +665,27 @@ function _detalhes:GetPlayersInArena()
 	end
 
 	if _detalhes.debug then
-		_detalhes:Msg("(debug) Found", oponentes, "enemies and", aliados, "allies")
+		_detalhes:Msg("(debug) Found", aliados, "allies")
 	end
 end
 
-local string_arena_enemyteam_damage = [[
-	local combat = _detalhes:GetCombat("current")
+local arena_total_script = [[
 	local total = 0
-
-	for _, actor in combat[1]:ListActors() do
-		if actor.arena_enemy then
+	for _, actor in _detalhes:GetCombat("current")[%d]:ListActors() do
+		if actor.%s then
 			total = total + actor.total
 		end
 	end
-
 	return total
 ]]
-
-local string_arena_myteam_damage = [[
-	local combat = _detalhes:GetCombat("current")
-	local total = 0
-
-	for _, actor in combat[1]:ListActors() do
-		if actor.arena_ally then
-			total = total + actor.total
-		end
-	end
-
-	return total
-]]
-
-local string_arena_enemyteam_heal = [[
-	local combat = _detalhes:GetCombat("current")
-	local total = 0
-
-	for _, actor in combat[2]:ListActors() do
-		if actor.arena_enemy then
-			total = total + actor.total
-		end
-	end
-
-	return total
-]]
-
-local string_arena_myteam_heal = [[
-	local combat = _detalhes:GetCombat("current")
-	local total = 0
-
-	for _, actor in combat[2]:ListActors() do
-		if actor.arena_ally then
-			total = total + actor.total
-		end
-	end
-
-	return total
-]]
+local string_arena_enemyteam_damage = arena_total_script:format(1, "arena_enemy")
+local string_arena_myteam_damage = arena_total_script:format(1, "arena_ally")
+local string_arena_enemyteam_heal = arena_total_script:format(2, "arena_enemy")
+local string_arena_myteam_heal = arena_total_script:format(2, "arena_ally")
 
 function _detalhes:CreateArenaSegment()
 	_detalhes:GetPlayersInArena()
 
-	_detalhes.arena_begun = true
 	_detalhes.start_arena = nil
 
 	if _detalhes.in_combat then
@@ -1054,8 +729,6 @@ function _detalhes:EnteredInArena()
 		_detalhes:Msg("(debug) the player EnteredInArena().")
 	end
 
-	_detalhes.arena_begun = false
-
 	_detalhes:GetPlayersInArena()
 end
 
@@ -1065,7 +738,6 @@ function _detalhes:LeftArena()
 	end
 
 	_detalhes.is_in_arena = false
-	_detalhes.arena_begun = false
 
 	if _detalhes.start_arena then
 		_detalhes:CancelTimer(_detalhes.start_arena, true)
@@ -1078,311 +750,6 @@ function _detalhes:LeftArena()
 	_detalhes:TimeDataUnregister("Enemy Team Healing")
 
 	_detalhes:SendEvent("COMBAT_ARENA_END")
-end
-
--- TEMP
-local validSpells = {
-	[220893] = {class = "ROGUE", spec = 261, maxPercent = 0.075, container = 1, commID = "MISSDATA_ROGUE_SOULRIP"},
-	--[11366] = {class = "MAGE", spec = 63, maxPercent = 0.9, container = 1, commID = "MISSDATA_ROGUE_SOULRIP"},
-}
-function _detalhes:CanSendMissData()
-	if(not IsInRaid() and not IsInGroup()) then
-		return
-	end
-	local _, playerClass = UnitClass("player")
-	local specIndex = DetailsFramework.GetSpecialization()
-	local playerSpecID
-	if(specIndex) then
-		playerSpecID = DetailsFramework.GetSpecializationInfo(specIndex)
-	end
-
-	if(playerSpecID and playerClass) then
-		for spellID, t in pairs(validSpells) do
-			if(playerClass == t.class and playerSpecID == t.spec) then
-				_detalhes:SendMissData(spellID, t.container, _detalhes.network.ids[t.commID])
-			end
-		end
-	end
-	return false
-end
-
-function _detalhes:SendMissData(spellID, containerType, commID)
-	local combat = _detalhes.tabela_vigente
-	if combat then
-		local damageActor = combat(containerType, _detalhes.playername)
-		if damageActor then
-			local spell = damageActor.spells:GetSpell(spellID)
-			if spell then
-				local data = {
-					[1] = containerType,
-					[2] = spellID,
-					[3] = spell.total,
-					[4] = spell.counter
-				}
-
-				if _detalhes.debug then
-					_detalhes:Msg("(debug) sending miss data packet:", spellID, containerType, commID)
-				end
-
-				_detalhes:SendRaidOrPartyData(commID, data)
-			end
-		end
-	end
-end
-
-function _detalhes.HandleMissData(playerName, data)
-	local combat = _detalhes.tabela_vigente
-
-	if _detalhes.debug then
-		_detalhes:Msg("(debug) miss data received from:", playerName, "spellID:", data[2], data[3], data[4])
-	end
-
-	if combat then
-		local containerType = data[1]
-		if type(containerType) ~= "number" or containerType < 1 or containerType > 4 then
-			return
-		end
-
-		local damageActor = combat(containerType, playerName)
-		if damageActor then
-			local spellID = data[2] --a spellID has been passed?
-			if not spellID or type(spellID) ~= "number" then
-				return
-			end
-
-			local validateSpell = validSpells[spellID]
-			if not validateSpell then --is a valid spell?
-				return
-			end
-
-			--does the target player fit in the spell requirement on OUR end?
-			local class, spec, maxPercent = validateSpell.class, validateSpell.spec, validateSpell.maxPercent
-			if class ~= damageActor.classe or spec ~= damageActor.spec then
-				return
-			end
-
-			local total, counter = data[3], data[4]
-			if type(total) ~= "number" or type(counter) ~= "number" then
-				return
-			end
-
-			if total > (damageActor.total * maxPercent) then
-				return
-			end
-
-			local spellObject = damageActor.spells:PegaHabilidade(spellID, true)
-			if spellObject then
-				if spellObject.total < total and total > 0 and damageActor.nome ~= _detalhes.playername then
-					local difference = total - spellObject.total
-					if difference > 0 then
-						spellObject.total = total
-						spellObject.counter = counter
-						damageActor.total = damageActor.total + difference
-
-						combat[containerType].need_refresh = true
-
-						if _detalhes.debug then
-							_detalhes:Msg("(debug) miss data successful added from:", playerName, data[2], "difference:", difference)
-						end
-					end
-				end
-			end
-		end
-	end
-end
-
-function _detalhes:MakeEqualizeOnActor(player, realm, receivedActor)
-	if true then --> disabled for testing
-		return
-	end
-
-	local combat = _detalhes:GetCombat("current")
-	local damage, heal, energy, misc = _detalhes:GetAllActors("current", player)
-
-	if not damage and not heal and not energy and not misc then
-		--> try adding server name
-		damage, heal, energy, misc = _detalhes:GetAllActors("current", player.."-"..realm)
-
-		if not damage and not heal and not energy and not misc then
-			--> not found any actor object, so we need to create
-			local actorName
-
-			if realm ~= GetRealmName() then
-				actorName = player.."-"..realm
-			else
-				actorName = player
-			end
-
-			local guid = _detalhes:FindGUIDFromName(player)
-
-			-- 0x512 normal party
-			-- 0x514 normal raid
-
-			if guid then
-				damage = combat[1]:PegarCombatente(guid, actorName, 0x514, true)
-				heal = combat[2]:PegarCombatente(guid, actorName, 0x514, true)
-				energy = combat[3]:PegarCombatente(guid, actorName, 0x514, true)
-				misc = combat[4]:PegarCombatente(guid, actorName, 0x514, true)
-
-				if _detalhes.debug then
-					_detalhes:Msg("(debug) equalize received actor:", actorName, damage, heal)
-				end
-			else
-				if _detalhes.debug then
-					_detalhes:Msg("(debug) equalize couldn't get guid for player ",player)
-				end
-			end
-		end
-	end
-
-	combat[1].need_refresh = true
-	combat[2].need_refresh = true
-	combat[3].need_refresh = true
-	combat[4].need_refresh = true
-
-	if damage then
-		if damage.total < receivedActor[1][1] then
-			if _detalhes.debug then
-				_detalhes:Msg(player.." damage before: "..damage.total.." damage received: "..receivedActor[1][1])
-			end
-
-			damage.total = receivedActor[1][1]
-		end
-
-		if damage.damage_taken < receivedActor[1][2] then
-			damage.damage_taken = receivedActor[1][2]
-		end
-
-		if damage.friendlyfire_total < receivedActor[1][3] then
-			damage.friendlyfire_total = receivedActor[1][3]
-		end
-	end
-
-	if heal then
-		if heal.total < receivedActor[2][1] then
-			heal.total = receivedActor[2][1]
-		end
-
-		if heal.totalover < receivedActor[2][2] then
-			heal.totalover = receivedActor[2][2]
-		end
-
-		if heal.healing_taken < receivedActor[2][3] then
-			heal.healing_taken = receivedActor[2][3]
-		end
-	end
-
-	if energy then
-		if energy.mana and(receivedActor[3][1] > 0 and energy.mana < receivedActor[3][1]) then
-			energy.mana = receivedActor[3][1]
-		end
-
-		if energy.e_rage and(receivedActor[3][2] > 0 and energy.e_rage < receivedActor[3][2]) then
-			energy.e_rage = receivedActor[3][2]
-		end
-
-		if energy.e_energy and(receivedActor[3][3] > 0 and energy.e_energy < receivedActor[3][3]) then
-			energy.e_energy = receivedActor[3][3]
-		end
-
-		if energy.runepower and(receivedActor[3][4] > 0 and energy.runepower < receivedActor[3][4]) then
-			energy.runepower = receivedActor[3][4]
-		end
-	end
-
-	if misc then
-		if misc.interrupt and(receivedActor[4][1] > 0 and misc.interrupt < receivedActor[4][1]) then
-			misc.interrupt = receivedActor[4][1]
-		end
-
-		if misc.dispell and(receivedActor[4][2] > 0 and misc.dispell < receivedActor[4][2]) then
-			misc.dispell = receivedActor[4][2]
-		end
-	end
-end
-
-function _detalhes:EqualizePets()
-	--> check for pets without owner
-	for _, actor in _ipairs(_detalhes.tabela_vigente[1]._ActorTable) do
-		--> have flag and the flag tell us he is a pet
-		if actor.flag_original and bit.band(actor.flag_original, OBJECT_TYPE_PETS) ~= 0 then
-			--> do not have owner and he isn't on owner container
-			if not actor.owner and not _detalhes.tabela_pets.pets[actor.serial] then
-				_detalhes:SendPetOwnerRequest(actor.serial, actor.nome)
-			end
-		end
-	end
-end
-
-function _detalhes:EqualizeActorsSchedule(host_of)
-	--> store pets sent through 'needpetowner'
-	_detalhes.sent_pets = _detalhes.sent_pets or {n = time()}
-
-	if _detalhes.sent_pets.n + 20 < time() then
-		_table_wipe(_detalhes.sent_pets)
-		_detalhes.sent_pets.n = time()
-	end
-
-	--> pet equilize disabled on details 1.4.0
---	_detalhes:ScheduleTimer("EqualizePets", 1 + math.random())
-
-	--> do not equilize if there is any disabled capture
---	if _detalhes:CaptureIsAllEnabled() then
-		_detalhes:ScheduleTimer("EqualizeActors", 2 + math.random() + math.random() , host_of)
---	end
-end
-
-function _detalhes:EqualizeActors(host_of)
-	--> Disabling the sync. Since WoD combatlog are sent between player on phased zones during encounters.
-	if not host_of or true then --> full disabled for testing
-		return
-	end
-
-	if _detalhes.debug then
-		_detalhes:Msg("(debug) sending equilize actor data")
-	end
-
-	local damage, heal, energy, misc
-
-	if host_of then
-		damage, heal, energy, misc = _detalhes:GetAllActors("current", host_of)
-	else
-		damage, heal, energy, misc = _detalhes:GetAllActors("current", _detalhes.playername)
-	end
-
-	if damage then
-		damage = {damage.total or 0, damage.damage_taken or 0, damage.friendlyfire_total or 0}
-	else
-		damage = {0, 0, 0}
-	end
-
-	if heal then
-		heal = {heal.total or 0, heal.totalover or 0, heal.healing_taken or 0}
-	else
-		heal = {0, 0, 0}
-	end
-
-	if energy then
-		energy = {energy.mana or 0, energy.e_rage or 0, energy.e_energy or 0, energy.runepower or 0}
-	else
-		energy = {0, 0, 0, 0}
-	end
-
-	if misc then
-		misc = {misc.interrupt or 0, misc.dispell or 0}
-	else
-		misc = {0, 0}
-	end
-
-	local data = {damage, heal, energy, misc}
-
-	--> envia os dados do proprio host pra ele antes
-	if host_of then
-		_detalhes:SendRaidDataAs(_detalhes.network.ids.CLOUD_EQUALIZE, host_of, nil, data)
-		_detalhes:EqualizeActors()
-	else
-		_detalhes:SendRaidData(_detalhes.network.ids.CLOUD_EQUALIZE, data)
-	end
 end
 
 function _detalhes:FlagActorsOnPvPCombat()
@@ -1418,41 +785,21 @@ function _detalhes:FlagActorsOnCommonFight()
 	local energy_container = _detalhes.tabela_vigente[3]
 	local misc_container = _detalhes.tabela_vigente[4]
 
-	local mythicDungeonRun = _detalhes.tabela_vigente.is_mythic_dungeon_segment
+	local flag_names = function(container, names)
+		for name in _pairs(names) do
+			local target_object = container._ActorTable[container._NameIndexTable[name]]
+			if target_object then
+				target_object.fight_component = true
+				fight_component(energy_container, misc_container, name)
+			end
+		end
+	end
 
 	for class_type, container in _ipairs({damage_container, healing_container}) do
 		for _, actor in _ipairs(container._ActorTable) do
-			if mythicDungeonRun then
-				actor.fight_component = true
-			end
-
 			if actor.grupo then
-				if class_type == 1 or class_type == 2 then
-					for target_name, amount in _pairs(actor.targets) do
-						local target_object = container._ActorTable[container._NameIndexTable[target_name]]
-						if target_object then
-							target_object.fight_component = true
-							fight_component(energy_container, misc_container, target_name)
-						end
-					end
-					if class_type == 1 then
-						for damager_actor, _ in _pairs(actor.damage_from) do
-							local target_object = container._ActorTable[container._NameIndexTable[damager_actor]]
-							if target_object then
-								target_object.fight_component = true
-								fight_component(energy_container, misc_container, damager_actor)
-							end
-						end
-					elseif class_type == 2 then
-						for healer_actor, _ in _pairs(actor.healing_from) do
-							local target_object = container._ActorTable[container._NameIndexTable[healer_actor]]
-							if target_object then
-								target_object.fight_component = true
-								fight_component(energy_container, misc_container, healer_actor)
-							end
-						end
-					end
-				end
+				flag_names(container, actor.targets)
+				flag_names(container, class_type == 1 and actor.damage_from or actor.healing_from)
 			end
 		end
 	end
@@ -1492,7 +839,7 @@ function _detalhes:TrocaSegmentoAtual(instancia, is_encounter)
 		if not is_encounter then
 			if instancia.is_interacting then
 				if not instancia.last_interaction or instancia.last_interaction < _tempo then
-					instancia.last_interaction = _tempo or time()
+					instancia.last_interaction = _tempo
 				end
 			end
 
@@ -1564,7 +911,6 @@ local avatarPoint = {"bottomleft", "topleft", -3, -4}
 local backgroundPoint = {{"bottomleft", "topleft", 0, -3}, {"bottomright", "topright", 0, -3}}
 local textPoint = {"left", "right", -11, -5}
 local avatarTexCoord = {0, 1, 0, 1}
-local backgroundColor = {0, 0, 0, 0.6}
 local avatarTextColor = {1, 1, 1, 1}
 
 function _detalhes:AddTooltipReportLineText()
@@ -1647,9 +993,7 @@ function _detalhes:BuildInstanceBarTooltip(frame)
 	end
 end
 
-local SetPortraitTexture = SetPortraitTexture
 local UnitIsConnected = UnitIsConnected
-local UnitIsUnit = UnitIsUnit
 local UnitIsVisible = UnitIsVisible
 
 
@@ -1677,8 +1021,6 @@ local tableModelList = {
 	["dracthyrdragonfemale3.m2"] = true,
 	["skeleton_hd.m2"] = true,
 	["taurenmale_hd.m2"] = true,
-	["gnomemale_hd.m2"] = true,
-	["gnomefemale_hd.m2"] = true,
 }
 local str
 local pattern = "[^\\]*%.m2$"
@@ -1692,84 +1034,47 @@ local function UpdateModelFrame(frame,unit)
 	local element = frame.model
 	element:SetSize(x,y)
 	-- frame.model:SetAllPoints(frame)
-	element:ClearAllPoints()
-	element:SetPoint("CENTER", frame, "TOP",0,y/2)
+	element:ClearAndSetPoint("CENTER", frame, "TOP",0,y/2)
 	local isAvailable
 	if unit then
 		isAvailable = UnitIsConnected(unit) and UnitIsVisible(unit)
 	end
-	-- element:SetCamera(0)
-	if unit and (element:IsObjectType('Model')) then
-		if (not isAvailable) then
-			GameCooltipFrame1.model:Show()
-			-- element:ClearModel()
-			element:SetModelScale(4.25)
-			element:SetCamera(0)
-			element:SetPosition(0, 0, -1.5)
-			element:SetModel([[Interface\Buttons\TalkToMeQuestionMark.m2]])
-		else
-			GameCooltipFrame1.model:Show()
-			element:ClearModel()
-			element:SetUnit(unit)
-			element:SetModelScale(4.25)
-			element:SetCamera(0)
-			element:SetPosition(0, 0, 0)
-			if element:IsObjectType("Model") then
-				str = element:GetModel()
-				if type(str) ~= "string" then return end
-				str = string.lower(str)
-				str = string.match(str,pattern)
-				if str and tableModelList[str] then
-					element:SetCamera(1)
-				end
-			end
+	element:SetCamera(0)
+	if unit and isAvailable and element:IsObjectType("Model") then
+		GameCooltipFrame1.model:Show()
+		element:ClearModel()
+		element:SetUnit(unit)
+		element:SetModelScale(1)
+		element:SetPosition(0, 0, 0)
+		str = element:GetModel()
+		if type(str) ~= "string" then return end
+		str = string.lower(str)
+		str = string.match(str,pattern)
+		if str and tableModelList[str] then
+			element:SetCamera(1)
 		end
-
 	else
 		GameCooltipFrame1.model:Show()
 		element:SetModelScale(4.25)
-		element:SetCamera(0)
 		element:SetPosition(0, 0, -1.5)
 		element:SetModel([[Interface\Buttons\TalkToMeQuestionMark.m2]])
 	end
 end
 
+local model_search_units = {{"raid", 40}, {"party", 4}}
 local function FindModelByName(who)
-	local isfind = false
-	-- local unit
-	-- if UnitExists("raid2") then
-		for i = 1,40 do
-			local unit = "raid"..i
-			if UnitExists(unit) then
-				if UnitName(unit) == who then
-					UpdateModelFrame(GameCooltipFrame1,unit)
-					-- GameCooltipFrame1.model:Hide()
-					isfind = true
-					break
-				end
-			end
-		end
-	-- end
-	if not isfind then
-		for i = 1,4 do
-			local unit = "party"..i
-			if UnitExists(unit) then
-				if UnitName(unit) == who then
-					UpdateModelFrame(GameCooltipFrame1,unit)
-					-- GameCooltipFrame1.model:Hide()
-					isfind = true
-					break
-				end
+	for _, group in _ipairs(model_search_units) do
+		for i = 1, group[2] do
+			local unit = group[1]..i
+			if UnitExists(unit) and UnitName(unit) == who then
+				return UpdateModelFrame(GameCooltipFrame1, unit)
 			end
 		end
 	end
-	if UnitName("player") == who and not isfind then
-		isfind = true
-		UpdateModelFrame(GameCooltipFrame1, "player")
+	if UnitName("player") == who then
+		return UpdateModelFrame(GameCooltipFrame1, "player")
 	end
-	if not isfind then
-		UpdateModelFrame(GameCooltipFrame1, nil)
-	end
+	UpdateModelFrame(GameCooltipFrame1, nil)
 end
 function _detalhes:MontaTooltip(frame, qual_barra, keydown)
 	-- print("asdas")
@@ -1822,6 +1127,11 @@ function _detalhes:MontaTooltip(frame, qual_barra, keydown)
 end
 
 function _detalhes.gump:UpdateTooltip(qual_barra, esta_barra, instancia)
+	local now = _GetTime()
+	if esta_barra.tooltip_actor == esta_barra.minha_tabela and esta_barra.tooltip_time and now - esta_barra.tooltip_time < 0.1 then
+		return
+	end
+	esta_barra.tooltip_actor, esta_barra.tooltip_time = esta_barra.minha_tabela, now
 	if _IsShiftKeyDown() then
 		return instancia:MontaTooltip(esta_barra, qual_barra, "shift")
 	elseif _IsControlKeyDown() then
@@ -1866,6 +1176,7 @@ function _detalhes:EsconderBarrasNaoUsadas(instancia, showing)
 end
 
 --> call update functions
+local custom_closed_seen = setmetatable({}, {__mode = "k"})
 function _detalhes:AtualizarALL(forcar)
 	local tabela_do_combate = self.showing
 
@@ -1878,6 +1189,12 @@ function _detalhes:AtualizarALL(forcar)
 	end
 
 	local need_refresh = tabela_do_combate[self.atributo].need_refresh
+	if self.atributo == 5 then
+		if not need_refresh then
+			need_refresh = _detalhes.in_combat or custom_closed_seen[self] ~= _detalhes.last_closed_combat or tabela_do_combate[1].need_refresh or tabela_do_combate[2].need_refresh or tabela_do_combate[3].need_refresh or tabela_do_combate[4].need_refresh
+		end
+		custom_closed_seen[self] = _detalhes.last_closed_combat
+	end
 	if not need_refresh and not forcar then
 		return --> n�o precisa de refresh
 --	else
@@ -1912,6 +1229,8 @@ function _detalhes:AtualizaGumpPrincipal(instancia, forcar)
 	end
 
 	if instancia == -1 then
+		local info_combat = info.ativo and info.instancia and info.instancia.showing
+		local info_changed = info_combat and info.atributo and info.atributo <= 4 and info_combat[info.atributo].need_refresh
 		--> update
 		for index, esta_instancia in _ipairs(_detalhes.tabela_instancias) do
 			if esta_instancia.ativa then
@@ -1925,8 +1244,12 @@ function _detalhes:AtualizaGumpPrincipal(instancia, forcar)
 		for index, esta_instancia in _ipairs(_detalhes.tabela_instancias) do
 			if esta_instancia.ativa and esta_instancia.showing then
 				if esta_instancia.modo == modo_GROUP or esta_instancia.modo == modo_ALL then
-					if esta_instancia.atributo <= 4 then
-						esta_instancia.showing[esta_instancia.atributo].need_refresh = false
+					local showing = esta_instancia.showing
+					for container_index = 1, 5 do
+						local container = showing[container_index]
+						if container then
+							container.need_refresh = false
+						end
 					end
 				end
 			end
@@ -1934,7 +1257,12 @@ function _detalhes:AtualizaGumpPrincipal(instancia, forcar)
 
 		if not forcar then --atualizar o gump de detalhes tamb�m se ele estiver aberto
 			if info.ativo then
-				return info.jogador:MontaInfo()
+				if info.selectedTab ~= "Summary" then
+					info.summary_actor = nil
+				elseif info_changed or info.summary_actor ~= info.jogador or info.summary_combat ~= info_combat or info.summary_sub ~= info.sub_atributo or info.summary_closed ~= _detalhes.last_closed_combat or (_detalhes.in_combat and info_combat == _detalhes.tabela_vigente) then
+					info.summary_actor, info.summary_combat, info.summary_sub, info.summary_closed = info.jogador, info_combat, info.sub_atributo, _detalhes.last_closed_combat
+					return info.jogador:MontaInfo()
+				end
 			end
 		end
 

@@ -2,8 +2,11 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	local _detalhes = 		_G._detalhes
-	local Loc = LibStub ("AceLocale-3.0"):GetLocale ( "Details" )
 	local _
+
+	local type = type
+	local pairs = pairs
+	local ipairs = ipairs
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> On Details! Load:
@@ -14,21 +17,15 @@ function _detalhes:ApplyBasicKeys()
 	--> we are not in debug mode
 		self.debug = false
 
-	--> connected to realm channel
-		self.is_connected = false
-
 	--> who is
 		self.playername = UnitName ("player")
-		self.playerserial = UnitGUID ("player")
 
 	--> player faction and enemy faction
 		self.faction = UnitFactionGroup ("player")
 		if (self.faction == PLAYER_FACTION_GROUP[0]) then --> player is horde
 			self.faction_against = PLAYER_FACTION_GROUP[1] --> ally
-			self.faction_id = 0
 		elseif (self.faction == PLAYER_FACTION_GROUP[1]) then --> player is alliance
 			self.faction_against = PLAYER_FACTION_GROUP[0] --> horde
-			self.faction_id = 1
 		end
 
 		self.zone_type = nil
@@ -40,15 +37,7 @@ function _detalhes:ApplyBasicKeys()
 		self.combat_id = 0
 
 	--> instances (windows)
-		self.solo = self.solo or nil
-		self.raid = self.raid or nil
 		self.opened_windows = 0
-
-		self.default_texture = [[Interface\AddOns\Details\images\bar4]]
-		self.default_texture_name = "Details D'ictum"
-
-		self.class_coords_version = 1
-		self.class_colors_version = 1
 
 		self.school_colors = {
 			[1] = {1.00, 1.00, 0.00},
@@ -272,16 +261,6 @@ function _detalhes:LoadConfig()
 		--> count data
 			_detalhes:CountDataOnLoad()
 
-		--> solo e raid plugin
-			if (_detalhes_database.SoloTablesSaved) then
-				if (_detalhes_database.SoloTablesSaved.Mode) then
-					_detalhes.SoloTables.Mode = _detalhes_database.SoloTablesSaved.Mode
-					_detalhes.SoloTables.LastSelected = _detalhes_database.SoloTablesSaved.LastSelected
-				else
-					_detalhes.SoloTables.Mode = 1
-				end
-			end
-
 		--> switch tables
 			_detalhes.switch.slots = _detalhes_global.switchSaved.slots
 			_detalhes.switch.table = _detalhes_global.switchSaved.table
@@ -296,10 +275,6 @@ function _detalhes:LoadConfig()
 
 		--> last boss
 			_detalhes.last_encounter = _detalhes_database.last_encounter
-
-		--> buffs
-			_detalhes.savedbuffs = _detalhes_database.savedbuffs
-			_detalhes.Buffs:BuildTables()
 
 		--> initialize parser
 			_detalhes.capture_current = {}
@@ -324,12 +299,6 @@ function _detalhes:LoadConfig()
 
 		local unitname = UnitName ("player")
 
-		--> fix for old versions
-		if (type (_detalhes.always_use_profile) == "string") then
-			_detalhes.always_use_profile_name = _detalhes.always_use_profile
-			_detalhes.always_use_profile = true
-		end
-
 		--> check for "always use this profile"
 			if (_detalhes.always_use_profile and not _detalhes.always_use_profile_exception [unitname]) then
 				local profile_name = _detalhes.always_use_profile_name
@@ -337,11 +306,6 @@ function _detalhes:LoadConfig()
 					_detalhes_database.active_profile = profile_name
 				end
 			end
-
-		--> old version
-		--	if (_detalhes.always_use_profile and type (_detalhes.always_use_profile) == "string") then
-		--		_detalhes_database.active_profile = _detalhes.always_use_profile
-		--	end
 
 		--> character first run
 			if (_detalhes_database.active_profile == "") then
@@ -355,59 +319,10 @@ function _detalhes:LoadConfig()
 		--> load profile and active instances
 			local current_profile_name = _detalhes:GetCurrentProfileName()
 		--> check if exists, if not, create one
-			local profile = _detalhes:GetProfile (current_profile_name, true)
+			_detalhes:GetProfile (current_profile_name, true)
 
 		--> instances
-			_detalhes.tabela_instancias = _detalhes_database.tabela_instancias or {}
-
-			--> fix for version 1.21.0
-			if (#_detalhes.tabela_instancias > 0) then --> only happens once after the character logon
-				--if (current_profile_name:find (UnitName ("player"))) then
-					for index, saved_skin in ipairs (profile.instances) do
-						local instance = _detalhes.tabela_instancias [index]
-						if (instance) then
-							saved_skin.__was_opened = instance.ativa
-							saved_skin.__pos = table_deepcopy (instance.posicao)
-							saved_skin.__locked = instance.isLocked
-							saved_skin.__snap = table_deepcopy (instance.snap)
-							saved_skin.__snapH = instance.horizontalSnap
-							saved_skin.__snapV = instance.verticalSnap
-
-							for key, value in pairs (instance) do
-								if (_detalhes.instance_defaults [key] ~= nil) then
-									if (type (value) == "table") then
-										saved_skin [key] = table_deepcopy (value)
-									else
-										saved_skin [key] = value
-									end
-								end
-							end
-						end
-					end
-
-					for index, instance in _detalhes:ListInstances() do
-						_detalhes.local_instances_config [index] = {
-							pos = table_deepcopy (instance.posicao),
-							is_open = instance.ativa,
-							attribute = instance.atributo,
-							sub_attribute = instance.sub_atributo,
-							mode = instance.modo,
-							segment = instance.segmento,
-							snap = table_deepcopy (instance.snap),
-							horizontalSnap = instance.horizontalSnap,
-							verticalSnap = instance.verticalSnap,
-							sub_atributo_last = instance.sub_atributo_last,
-							isLocked = instance.isLocked
-						}
-
-						if (_detalhes.local_instances_config [index].isLocked == nil) then
-							_detalhes.local_instances_config [index].isLocked = false
-						end
-					end
-				--end
-
-				_detalhes.tabela_instancias = {}
-			end
+			_detalhes.tabela_instancias = {}
 			--_detalhes:ReativarInstancias()
 
 		--> apply the profile
@@ -433,17 +348,6 @@ function _detalhes:CountDataOnLoad()
 	--> tutorial
 		self.tutorial = self.tutorial or {}
 
-		self.tutorial.logons = self.tutorial.logons or 0
-		self.tutorial.logons = self.tutorial.logons + 1
-
 		self.tutorial.unlock_button = self.tutorial.unlock_button or 0
-		self.tutorial.version_announce = self.tutorial.version_announce or 0
-		self.tutorial.main_help_button = self.tutorial.main_help_button or 0
-		self.tutorial.alert_frames = self.tutorial.alert_frames or {false, false, false, false, false, false}
-
-		self.tutorial.main_help_button = self.tutorial.main_help_button + 1
-
-		self.character_data = self.character_data or {logons = 0}
-		self.character_data.logons = self.character_data.logons + 1
 
 end

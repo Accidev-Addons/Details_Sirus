@@ -5,18 +5,11 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> local pointers
 
-	local _setmetatable = setmetatable --lua local
-	local _ipairs = ipairs --lua local
-	local _UnitAura = UnitAura --api local
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> constants
 
-	local alvo_da_habilidade	=	_detalhes.alvo_da_habilidade
 	local habilidade_misc		=	_detalhes.habilidade_misc
-	local container_combatentes	=	_detalhes.container_combatentes
-	local container_misc_target	= 	_detalhes.container_type.CONTAINER_MISCTARGET_CLASS
-	local container_playernpc	=	_detalhes.container_type.CONTAINER_PLAYERNPC
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> internals
@@ -51,17 +44,6 @@
 	end
 
 	function habilidade_misc:Add (serial, nome, flag, who_nome, token, spellID, spellName)
-		-- print(serial, nome, flag, who_nome, token, spellID, spellName,54)
-		-- print(serial,"serial")
-		-- print(nome,"nome")
-		-- print(flag,"flag")
-		-- print(who_nome,"who_nome")
-		-- print(token,"token")
-		-- print(spellID,"spellID")
-		-- print(spellName,"spellName")
-
-		--print (self.id, GetSpellInfo (self.id))
-
 		if (spellID == "BUFF_OR_DEBUFF") then
 
 			if (spellName == "COOLDOWN") then

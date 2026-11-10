@@ -6,9 +6,7 @@ end
 
 Loc ["STRING_PLUGIN_NAME"] = "Угроза"
 
-Loc ["STRING_SLASH_ANIMATE"] = "анимация"
 Loc ["STRING_SLASH_SPEED"] = "скорость"
-Loc ["STRING_SLASH_AMOUNT"] = "сумма"
 
 Loc ["STRING_COMMAND_LIST"] = "Доступные команды:"
 Loc ["STRING_SLASH_SPEED_DESC"] = "Частота обновления окна, доступны значения от 0,1 до 3,0"

@@ -1,14 +1,11 @@
 ## Interface: 30300
-## Title: Details!: Tiny Threat (plugin)
+## Title: |cFF9B59B6D|cFFAA77CCe|cFFBB99DDt|cFFAA77CCa|cFF9B59B6i|cFFAA77CCl|cFFBB99DDs|cFFAA77CC!|cFFDDBBEE Tiny Threat|r
 ## Notes: Threat meter plugin, show threat for group members in the window. Select it from the Plugin menu in the Orange Cogwheel.
 ## Notes-ruRU: Плагин показывает угрозу для членов группы/рейда в окне. Выберите его в меню «Плагин».
+## Author: Accidev
 ## DefaultState: Disabled
 ## RequiredDeps: Details
 ## OptionalDeps: Ace3
-## X-Sirus-Update: https://github.com/fxpw/Details_Sirus/tree/master/Details_TinyThreat
-#@no-lib-strip@
-embeds.xml
-#@end-no-lib-strip@
 
 enUS.lua
 ruRU.lua

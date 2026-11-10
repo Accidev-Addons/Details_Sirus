@@ -12,10 +12,8 @@
 	local _UnitClass = UnitClass --api local
 	local _IsInInstance = IsInInstance --api local
 	local _UnitGUID = UnitGUID --api local
-	local strsplit = strsplit --api local
 
 	local _setmetatable = setmetatable --lua local
-	local _getmetatable = getmetatable --lua local
 	local _bit_band = bit.band --lua local
 	local _table_sort = table.sort --lua local
 	local _ipairs = ipairs --lua local
@@ -27,58 +25,25 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> constants
 
-	local combatente =			_detalhes.combatente
 	local container_combatentes =	_detalhes.container_combatentes
-	local alvo_da_habilidade = 	_detalhes.alvo_da_habilidade
 	local atributo_damage =		_detalhes.atributo_damage
 	local atributo_heal =			_detalhes.atributo_heal
 	local atributo_energy =		_detalhes.atributo_energy
 	local atributo_misc =			_detalhes.atributo_misc
 
-	local container_playernpc = 	_detalhes.container_type.CONTAINER_PLAYERNPC
 	local container_damage =		_detalhes.container_type.CONTAINER_DAMAGE_CLASS
 	local container_heal = 		_detalhes.container_type.CONTAINER_HEAL_CLASS
-	local container_heal_target = 	_detalhes.container_type.CONTAINER_HEALTARGET_CLASS
-	local container_friendlyfire =	_detalhes.container_type.CONTAINER_FRIENDLYFIRE
-	local container_damage_target = _detalhes.container_type.CONTAINER_DAMAGETARGET_CLASS
 	local container_energy = 		_detalhes.container_type.CONTAINER_ENERGY_CLASS
-	local container_energy_target =	_detalhes.container_type.CONTAINER_ENERGYTARGET_CLASS
 	local container_misc = 		_detalhes.container_type.CONTAINER_MISC_CLASS
-	local container_misc_target = 	_detalhes.container_type.CONTAINER_MISCTARGET_CLASS
-	local container_enemydebufftarget_target = _detalhes.container_type.CONTAINER_ENEMYDEBUFFTARGET_CLASS
 
 	local container_pets = {}
 
 	--> flags
 	local REACTION_HOSTILE	=	0x00000040
 	local IS_GROUP_OBJECT 	= 	0x00000007
-	local REACTION_FRIENDLY	=	0x00000010
-	local OBJECT_TYPE_MASK =	0x0000FC00
-	local OBJECT_TYPE_OBJECT =	0x00004000
 	local OBJECT_TYPE_PETGUARDIAN =	0x00003000
-	local OBJECT_TYPE_GUARDIAN =	0x00002000
-	local OBJECT_TYPE_PET =		0x00001000
-	local OBJECT_TYPE_NPC =		0x00000800
 	local OBJECT_TYPE_PLAYER =	0x00000400
-	local OBJECT_TYPE_PETS = 	OBJECT_TYPE_PET + OBJECT_TYPE_GUARDIAN
 
-	local KirinTor = GetFactionInfoByID (1090) or "1"
-	local Valarjar = GetFactionInfoByID (1948) or "1"
-	local HighmountainTribe = GetFactionInfoByID (1828) or "1"
-	local CourtofFarondis = GetFactionInfoByID (1900) or "1"
-	local Dreamweavers = GetFactionInfoByID (1883) or "1"
-	local TheNightfallen = GetFactionInfoByID (1859) or "1"
-	local TheWardens = GetFactionInfoByID (1894) or "1"
-
-	local IsFactionNpc = {
-		[KirinTor] = true,
-		[Valarjar] = true,
-		[HighmountainTribe] = true,
-		[CourtofFarondis] = true,
-		[Dreamweavers] = true,
-		[TheNightfallen] = true,
-		[TheWardens] = true,
-	}
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> api functions
@@ -147,8 +112,6 @@
 
 			tipo = tipo_do_container,
 
-			combatId = combat_id,
-
 			_ActorTable = {},
 			_NameIndexTable = {}
 		}
@@ -159,7 +122,7 @@
 	end
 
 	--> try to get the actor class from name
-	local function get_actor_class (novo_objeto, nome, flag, serial)
+	local function get_actor_class (novo_objeto, nome, flag, serial, self)
 		--> get spec
 		if (_detalhes.track_specs) then
 			local have_cached = _detalhes.cached_specs [serial]
@@ -207,8 +170,7 @@
 	end
 
 	--> read the actor flag
-	local read_actor_flag = function (novo_objeto, dono_do_pet, serial, flag, nome, container_type)
-		if nome == nil then nome = UNKNOWN return end
+	local read_actor_flag = function (novo_objeto, dono_do_pet, serial, flag, nome)
 		if (flag) then
 
 			--> � um player
@@ -219,26 +181,14 @@
 				end
 				if (not novo_objeto.displayName) then
 					if (_detalhes.remove_realm_from_name) then
-						
+
 						novo_objeto.displayName = nome:gsub (("%-.*"), "")
 					else
 						novo_objeto.displayName = nome
 					end
-					--[=[
-
-					if (_IsInInstance() and _detalhes.remove_realm_from_name) then
-						novo_objeto.displayName = nome:gsub (("%-.*"), "")
-
-					elseif (_detalhes.remove_realm_from_name) then
-						novo_objeto.displayName = nome:gsub (("%-.*"), "%*") --nome = nil
-
-					else
-						novo_objeto.displayName = nome
-					end
-					--]=]
 				end
 
-				if (_detalhes.all_players_are_group or _detalhes.immersion_enabled) then
+				if (_detalhes.all_players_are_group) then
 					novo_objeto.grupo = true
 				end
 
@@ -247,15 +197,6 @@
 				else
 					if (_detalhes.pvp_as_group and (_detalhes.tabela_vigente and _detalhes.tabela_vigente.is_pvp) and _detalhes.is_in_battleground) then
 						novo_objeto.grupo = true
-					end
-				end
-
-				--> pvp duel
-				if (_detalhes.duel_candidates [serial]) then
-					--> check if is recent
-					if (_detalhes.duel_candidates [serial]+20 > GetTime()) then
-						novo_objeto.grupo = true
-						novo_objeto.enemy = true
 					end
 				end
 
@@ -283,38 +224,6 @@
 								novo_objeto.role = role
 							end
 						end
-					else
-					--[[
-						local oponentes = GetNumArenaOpponentSpecs()
-						local found = false
-						for i = 1, oponentes do
-							local name = GetUnitName ("arena" .. i, true)
-							if (name == nome) then
-								local spec = GetArenaOpponentSpec (i)
-								if (spec) then
-									local id, name, description, icon, role, class = DetailsFramework.GetSpecializationInfoByID (spec) --thanks pas06
-									novo_objeto.role = role
-									novo_objeto.classe = class
-									novo_objeto.enemy = true
-									novo_objeto.arena_enemy = true
-									found = true
-								end
-							end
-						end
-
-						local role = UnitGroupRolesAssigned (nome)
-						if (role ~= "NONE") then
-							novo_objeto.role = role
-							found = true
-						end
-
-						if (not found and nome == _detalhes.playername) then
-							local role = UnitGroupRolesAssigned ("player")
-							if (role ~= "NONE") then
-								novo_objeto.role = role
-							end
-						end
-						]]
 					end
 
 					novo_objeto.grupo = true
@@ -331,23 +240,10 @@
 					novo_objeto.displayName = nome
 				end
 
-				--local pet_npc_template = _detalhes:GetNpcIdFromGuid (serial)
-				--if (pet_npc_template == 86933) then --viviane
-				--	novo_objeto.grupo = true
-				--end
-
 			else
 				--> anything else that isn't a player or a pet
 				novo_objeto.displayName = nome
 
-				--[=[
-				--Chromie - From 'The Deaths of Chromie'
-				if (serial and type (serial) == "string") then
-					if (serial:match ("^Creature%-0%-%d+%-%d+%-%d+%-122663%-%w+$")) then
-						novo_objeto.grupo = true
-					end
-				end
-				--]=]
 			end
 
 			--> check if is hostile
@@ -377,8 +273,6 @@
 
 	local pet_blacklist = {}
 	local pet_tooltip_frame = _G.DetailsPetOwnerFinder
-	local pet_text_object = _G ["DetailsPetOwnerFinderTextLeft2"] --not in use
-	local follower_text_object = _G ["DetailsPetOwnerFinderTextLeft3"] --not in use
 
 	local find_pet_found_owner = function (ownerName, serial, nome, flag, self)
 		local ownerGuid = _UnitGUID (ownerName)
@@ -474,15 +368,10 @@
 		-- print(nome)
 		--[[statistics]]-- _detalhes.statistics.container_calls = _detalhes.statistics.container_calls + 1
 
-		--if (flag and nome:find ("Kastfall") and bit.band (flag, 0x2000) ~= 0) then
-			--print ("PET:", nome, _detalhes.tabela_pets.pets [serial], container_pets [serial])
-		--else
-			--print (nome, flag)
-		--end
-
 		--> verifica se � um pet, se for confere se tem o nome do dono, se n�o tiver, precisa por
 		local dono_do_pet
 		serial = serial or "ns"
+		nome = nome or UNKNOWN
 
 		if (container_pets [serial]) then --> � um pet reconhecido
 			--[[statistics]]-- _detalhes.statistics.container_pet_calls = _detalhes.statistics.container_pet_calls + 1
@@ -536,9 +425,9 @@
 
 			if (self.tipo == container_damage) then --> CONTAINER DAMAGE
 
-				local shouldScanOnce = get_actor_class (novo_objeto, nome, flag, serial)
+				get_actor_class (novo_objeto, nome, flag, serial, self)
 
-				read_actor_flag (novo_objeto, dono_do_pet, serial, flag, nome, "damage")
+				read_actor_flag (novo_objeto, dono_do_pet, serial, flag, nome)
 
 				if (dono_do_pet) then
 					AddUnique (dono_do_pet.pets, nome)
@@ -559,20 +448,12 @@
 					if (self.shadow) then --> n�o executar 2x
 						_detalhes:ScheduleTimer ("GuessClass", 1, {novo_objeto, self, 1})
 					end
-
-				elseif (shouldScanOnce) then
-
-
-				end
-
-				if (novo_objeto.isTank) then
-					novo_objeto.avoidance = _detalhes:CreateActorAvoidanceTable()
 				end
 
 			elseif (self.tipo == container_heal) then --> CONTAINER HEALING
 
-				local shouldScanOnce = get_actor_class (novo_objeto, nome, flag, serial)
-				read_actor_flag (novo_objeto, dono_do_pet, serial, flag, nome, "heal")
+				get_actor_class (novo_objeto, nome, flag, serial, self)
+				read_actor_flag (novo_objeto, dono_do_pet, serial, flag, nome)
 
 				if (dono_do_pet) then
 					AddUnique (dono_do_pet.pets, nome)
@@ -598,8 +479,8 @@
 
 			elseif (self.tipo == container_energy) then --> CONTAINER ENERGY
 
-				local shouldScanOnce = get_actor_class (novo_objeto, nome, flag, serial)
-				read_actor_flag (novo_objeto, dono_do_pet, serial, flag, nome, "energy")
+				get_actor_class (novo_objeto, nome, flag, serial, self)
+				read_actor_flag (novo_objeto, dono_do_pet, serial, flag, nome)
 
 				if (dono_do_pet) then
 					AddUnique (dono_do_pet.pets, nome)
@@ -618,8 +499,8 @@
 
 			elseif (self.tipo == container_misc) then --> CONTAINER MISC
 
-				local shouldScanOnce = get_actor_class (novo_objeto, nome, flag, serial)
-				read_actor_flag (novo_objeto, dono_do_pet, serial, flag, nome, "misc")
+				get_actor_class (novo_objeto, nome, flag, serial, self)
+				read_actor_flag (novo_objeto, dono_do_pet, serial, flag, nome)
 
 				if (dono_do_pet) then
 					AddUnique (dono_do_pet.pets, nome)
@@ -636,33 +517,10 @@
 					end
 				end
 
-			elseif (self.tipo == container_damage_target) then --> CONTAINER ALVO DO DAMAGE
-
-			elseif (self.tipo == container_energy_target) then --> CONTAINER ALVOS DO ENERGY
-
-				novo_objeto.mana = 0
-				novo_objeto.e_rage = 0
-				novo_objeto.e_energy = 0
-				novo_objeto.runepower = 0
-
-			elseif (self.tipo == container_enemydebufftarget_target) then
-
-				novo_objeto.uptime = 0
-				novo_objeto.actived = false
-				novo_objeto.activedamt = 0
-
-			elseif (self.tipo == container_misc_target) then --> CONTAINER ALVOS DO MISC
-
-
-			elseif (self.tipo == container_friendlyfire) then --> CONTAINER FRIENDLY FIRE
-
-				local shouldScanOnce = get_actor_class (novo_objeto, nome, serial)
-
 			end
 
 			------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 			-- grava o objeto no mapa do container
-			if nome == nil then nome  = UNKNOWN end
 			local size = #self._ActorTable+1
 			-- print(size,665)
 			self._ActorTable [size] = novo_objeto --> grava na tabela de indexes
@@ -693,18 +551,6 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> core
 
-	--_detalhes:AddToNpcIdCache (novo_objeto)
-	function _detalhes:AddToNpcIdCache (actor)
-		if (flag and serial) then
-			if (_bit_band (flag, REACTION_HOSTILE) ~= 0 and _bit_band (flag, OBJECT_TYPE_NPC) ~= 0 and _bit_band (flag, OBJECT_TYPE_PETGUARDIAN) == 0) then
-				local npc_id = _detalhes:GetNpcIdFromGuid (serial)
-				if (npc_id) then
-					_detalhes.cache_npc_ids [npc_id] = nome
-				end
-			end
-		end
-	end
-
 	function _detalhes:UpdateContainerCombatentes()
 		container_pets = _detalhes.tabela_pets.pets
 		_detalhes:UpdatePetsOnParser()
@@ -713,43 +559,42 @@
 		table.wipe (pet_blacklist)
 	end
 
+	function container_combatentes:GetShadowOf (actor, set_time)
+		local shadow = self._ActorTable [self._NameIndexTable [actor.nome]]
+		if (not shadow) then
+			shadow = self:PegarCombatente (actor.serial, actor.nome, actor.flag_original, true)
+			shadow.classe = actor.classe
+			shadow.spec = actor.spec
+			shadow.grupo = actor.grupo
+			shadow.pvp = actor.pvp
+			shadow.boss = actor.boss
+			shadow.boss_fight_component = actor.boss_fight_component
+			shadow.fight_component = actor.fight_component
+			if (set_time) then
+				shadow.start_time = time() - 3
+				shadow.end_time = time()
+			end
+		end
+		return shadow
+	end
+
 	function container_combatentes:FuncaoDeCriacao (tipo)
-		if (tipo == container_damage_target) then
-			return alvo_da_habilidade.NovaTabela
-
-		elseif (tipo == container_damage) then
+		if (tipo == container_damage) then
 			return atributo_damage.NovaTabela
-
-		elseif (tipo == container_heal_target) then
-			return alvo_da_habilidade.NovaTabela
 
 		elseif (tipo == container_heal) then
 			return atributo_heal.NovaTabela
 
-		elseif (tipo == container_enemydebufftarget_target) then
-			return alvo_da_habilidade.NovaTabela
-
 		elseif (tipo == container_energy) then
 			return atributo_energy.NovaTabela
 
-		elseif (tipo == container_energy_target) then
-			return alvo_da_habilidade.NovaTabela
-
 		elseif (tipo == container_misc) then
 			return atributo_misc.NovaTabela
-
-		elseif (tipo == container_misc_target) then
-			return alvo_da_habilidade.NovaTabela
 
 		end
 	end
 
 	--> chama a fun��o para ser executada em todos os atores
-	function container_combatentes:ActorCallFunction (funcao, ...)
-		for index, actor in _ipairs (self._ActorTable) do
-			funcao (nil, actor, ...)
-		end
-	end
 
 	local bykey
 	local sort = function (t1, t2)
@@ -771,11 +616,7 @@
 		local mapa = self._NameIndexTable
 		local conteudo = self._ActorTable
 		for i = 1, #conteudo do
-			if mapa [conteudo[i].nome] then
-				mapa [conteudo[i].nome] = i
-			else
-				mapa [conteudo[i].nome] = {}
-			end
+			mapa [conteudo[i].nome] = i
 		end
 	end
 

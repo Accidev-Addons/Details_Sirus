@@ -1,36 +1,25 @@
 ## Interface: 30300
-## Title: Details! Damage Meter
+## Title: |cFF9B59B6D|cFFAA77CCe|cFFBB99DDt|cFFAA77CCa|cFF9B59B6i|cFFAA77CCl|cFFBB99DDs|cFFAA77CC!|cFFDDBBEE Damage Meter|r
 ## Notes: Essential tool to impress that chick in your raid.
 ## Notes-ruRU: Незаменимый инструмент, чтобы произвести впечатление на девчонку в вашем рейде.
-## Version: 1.061
+## Author: Accidev
+## Version: 1.062
 ## SavedVariables: _detalhes_global
 ## SavedVariablesPerCharacter: _detalhes_database
-## OptionalDeps: Ace3, LibSharedMedia-3.0, LibWindow-1.1, LibDBIcon-1.0, NickTag-1.0, LibDataBroker-1.1, LibItemUpgradeInfo-1.0, LibGroupInSpecT-1.1, LibCompress, LibGraph-2.0
-## X-Sirus-Update: https://github.com/fxpw/Details_Sirus/tree/master/Details
+## OptionalDeps: Ace3, LibSharedMedia-3.0, LibWindow-1.1, LibDBIcon-1.0, NickTag-1.0, LibDataBroker-1.1, LibGroupInSpecT-1.1, LibCompress, LibGraph-2.0
 
 compat.lua
-compat.xml
 
 #@no-lib-strip@
 Libs\libs.xml
 #@end-no-lib-strip@
 
 locales\Details-enUS.lua
-locales\Details-deDE.lua
-locales\Details-esES.lua
-locales\Details-esMX.lua
-locales\Details-frFR.lua
-locales\Details-itIT.lua
-locales\Details-koKR.lua
-locales\Details-ptBR.lua
 locales\Details-ruRU.lua
-locales\Details-zhCN.lua
-locales\Details-zhTW.lua
 
 boot.lua
 indent.lua
 core\util.lua
-API.lua
 
 functions\profiles.lua
 functions\hooks.lua
@@ -39,7 +28,6 @@ functions\boss.lua
 functions\spells.lua
 functions\events.lua
 functions\classes.lua
-functions\buff.lua
 functions\link.lua
 windows\wa.lua
 functions\spellcache.lua
@@ -48,14 +36,10 @@ functions\savedata.lua
 functions\slash.lua
 functions\playerclass.lua
 functions\timedata.lua
-functions\report.lua
-functions\rowanimation.lua
 functions\raidinfo.lua
-functions\pack.lua
 
 core\timemachine.lua
 
-gumps\anime.lua
 gumps\janela_copy.lua
 gumps\janela_options.lua
 gumps\janela_info.lua
@@ -63,7 +47,6 @@ gumps\janela_report.lua
 gumps\janela_principal.lua
 gumps\janela_custom.lua
 gumps\janela_welcome.lua
-gumps\janela_news.lua
 gumps\fw_mods.lua
 gumps\switch.lua
 gumps\toolbar_button.xml
@@ -80,11 +63,9 @@ classes\classe_others.lua
 classes\classe_others_habilidade.lua
 classes\classe_instancia_include.lua
 classes\classe_instancia.lua
-classes\classe_target.lua
 
 classes\classe_custom.lua
 classes\custom_damage_done.lua
-classes\custom_healing_done.lua
 
 core\control.lua
 
@@ -97,7 +78,6 @@ core\plugins.lua
 core\plugins_toolbar.lua
 core\plugins_statusbar.lua
 core\plugins_raid.lua
-core\plugins_solo.lua
 core\gears.lua
 core\windows.lua
 core\meta.lua

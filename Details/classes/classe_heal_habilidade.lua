@@ -6,11 +6,7 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> constants
 
-	local alvo_da_habilidade	=	_detalhes.alvo_da_habilidade
 	local habilidade_cura		=	_detalhes.habilidade_cura
-	local container_combatentes =	_detalhes.container_combatentes
-	local container_heal_target	=	_detalhes.container_type.CONTAINER_HEALTARGET_CLASS
-	local container_playernpc	=	_detalhes.container_type.CONTAINER_PLAYERNPC
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> internals
@@ -27,7 +23,6 @@
 			totalabsorb = 0,
 			absorbed = 0,
 			overheal = 0,
-			totaldenied = 0,
 
 			--> normal hits
 			n_min = 0,
@@ -55,59 +50,41 @@
 		amount = amount or 0
 		self.targets [nome] = (self.targets [nome] or 0) + amount
 
-		if (absorbed == "SPELL_HEAL_ABSORBED") then
-			self.counter = self.counter + 1
-			self.totaldenied = self.totaldenied + amount
+		self.total = self.total + amount
+		self.counter = self.counter + 1
 
-			local healerName = critical
+		if (absorbed and absorbed > 0) then
+			self.absorbed = self.absorbed + absorbed
+		end
 
-			--create the denied table spells, on the fly
-			if (not self.heal_denied) then
-				self.heal_denied = {}
-				self.heal_denied_healers = {}
+		if (overhealing and overhealing > 0) then
+			self.overheal = self.overheal + overhealing
+			self.targets_overheal [nome] = (self.targets_overheal [nome] or 0) + overhealing
+		end
+
+		if (is_shield) then
+			self.totalabsorb = self.totalabsorb + amount
+			self.targets_absorbs [nome] = (self.targets_absorbs [nome] or 0) + amount
+		end
+
+		if (critical) then
+			self.c_curado = self.c_curado+amount --> amount � o total de dano
+			self.c_amt = self.c_amt+1 --> amount � o total de dano
+			if (amount > self.c_max) then
+				self.c_max = amount
 			end
-
-			self.heal_denied [extraSpellID] = (self.heal_denied [extraSpellID] or 0) + amount
-			self.heal_denied_healers [healerName] = (self.heal_denied_healers [healerName] or 0) + amount
+			if (self.c_min > amount or self.c_min == 0) then
+				self.c_min = amount
+			end
 		else
-
-			self.total = self.total + amount
-			self.counter = self.counter + 1
-
-			if (absorbed and absorbed > 0) then
-				self.absorbed = self.absorbed + absorbed
+			self.n_curado = self.n_curado+amount
+			self.n_amt = self.n_amt+1
+			if (amount > self.n_max) then
+				self.n_max = amount
 			end
-
-			if (overhealing and overhealing > 0) then
-				self.overheal = self.overheal + overhealing
-				self.targets_overheal [nome] = (self.targets_overheal [nome] or 0) + overhealing
+			if (self.n_min > amount or self.n_min == 0) then
+				self.n_min = amount
 			end
-
-			if (is_shield) then
-				self.totalabsorb = self.totalabsorb + amount
-				self.targets_absorbs [nome] = (self.targets_absorbs [nome] or 0) + amount
-			end
-
-			if (critical) then
-				self.c_curado = self.c_curado+amount --> amount � o total de dano
-				self.c_amt = self.c_amt+1 --> amount � o total de dano
-				if (amount > self.c_max) then
-					self.c_max = amount
-				end
-				if (self.c_min > amount or self.c_min == 0) then
-					self.c_min = amount
-				end
-			else
-				self.n_curado = self.n_curado+amount
-				self.n_amt = self.n_amt+1
-				if (amount > self.n_max) then
-					self.n_max = amount
-				end
-				if (self.n_min > amount or self.n_min == 0) then
-					self.n_min = amount
-				end
-			end
-
 		end
 
 	end

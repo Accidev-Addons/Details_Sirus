@@ -29,12 +29,6 @@ do
 		onentercolor = {1, 1, 1, .5},
 		backdropbordercolor = {.70, .70, .70, 1},
 	}
-	local PhaseButtonTemplateSelected = {
-		backdrop = {edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tileSize = 64, tile = true},
-		backdropcolor = {.7, .7, .7, .5},
-		onentercolor = {1, 1, 1, .5},
-		backdropbordercolor = {.9, .7, 0, 1},
-	}
 
 	local set_backdrop = function (frame)
 		frame:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tileSize = 64, tile = true})
@@ -47,6 +41,19 @@ do
 	local BackdropDefault = {bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tileSize = 64, tile = true}
 
 _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
+
+	local send_phase_report = function (title, actors)
+		local result = {title}
+		for i = 1, #actors do
+			tinsert (result, EncounterDetails:GetOnlyName (actors [i][1]) .. ": " .. _detalhes:ToK (_math_floor (actors [i][2])))
+		end
+		EncounterDetails:SendReportWindow (function (IsCurrent, IsReverse, AmtLines)
+			for i = #result, AmtLines + 2, -1 do
+				tremove (result, i)
+			end
+			EncounterDetails:SendReportLines (result)
+		end, nil, nil, true)
+	end
 
 	--> options panel
 
@@ -146,17 +153,6 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 				name = "Emote Segments Amount",
 				usedecimals = true,
 			},
-			{
-				type = "range",
-				get = function() return EncounterDetails.db.window_scale end,
-				set = function (self, fixedparam, value) EncounterDetails.db.window_scale = value; EncounterDetails:RefreshScale() end,
-				min = 0.65,
-				max = 1.50,
-				step = 0.1,
-				desc = "Set the window size",
-				name = "Window Scale",
-				usedecimals = true,
-			},
 
 		}
 
@@ -169,13 +165,6 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 			build_options_panel()
 		end
 		EncounterDetailsOptionsWindow:Show()
-	end
-
-	function EncounterDetails:RefreshScale()
-		local scale = EncounterDetails.db.window_scale
-		if (EncounterDetails.Frame) then
-			EncounterDetails.Frame:SetScale (scale)
-		end
 	end
 
 	function EncounterDetails:CreateRowTexture (row)
@@ -258,8 +247,11 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 		elseif (amt <= barras_total-1 and container.slider.ativo) then
 			container.window.slider:Update (true)
 			container:SetHeight (140)
-			container.window.scroll_ativo = false
 			container.window.ultimo = 0
+		end
+
+		for i = amt + 1, #container.barras do
+			container.barras [i]:Hide()
 		end
 	end
 
@@ -294,7 +286,7 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 		g:ResetData()
 
 		local combat = EncounterDetails:GetCombat (segment)
-		local graphicData = combat:GetTimeData ("Raid Damage Done")
+		local graphicData = combat and combat:GetTimeData ("Raid Damage Done")
 
 		if (not graphicData or not combat.start_time or not combat.end_time) then
 			EncounterDetails:Msg ("This segment doesn't have chart data.")
@@ -335,16 +327,6 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 			local combat = EncounterDetails:GetCombat (i)
 			if (combat) then --the combat exists
 				local elapsed_time = combat:GetCombatTime()
-
-				if (EncounterDetails.debugmode and not combat.is_boss) then
-					combat.is_boss = {
-						index = 1,
-						name = _detalhes:GetBossName (1098, 1),
-						zone = "Throne of Thunder",
-						mapid = 1098,
-						encounter = "Jin'Rohk the Breaker"
-					}
-				end
 
 				if (elapsed_time > 12 and combat.is_boss and combat.is_boss.index == lastBoss) then --is the same boss
 
@@ -399,7 +381,6 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 
 		local _data = {}
 		local dps_max = graphicData.max_value
-		local amount = #graphicData
 
 		local scaleW = 1/670
 
@@ -837,42 +818,11 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 			local phase_on_click = function (self, button)
 				if (button == "LeftButton") then
 
-					local result = {}
-					local reportFunc = function (IsCurrent, IsReverse, AmtLines)
-						AmtLines = AmtLines + 1
-						if (#result > AmtLines) then
-							for i = #result, AmtLines+1, -1 do
-								tremove (result, i)
-							end
-						end
-						EncounterDetails:SendReportLines (result)
-					end
-
-					--need to build here because the mouse will leave the block to click in the send button
-					tinsert (result, "Details!: Damage for Phase " .. self.phase .. " of " .. (g.combat and g.combat.is_boss and g.combat.is_boss.name or "Unknown") .. ":")
-					for i = 1, #self.damage_actors do
-						tinsert (result, EncounterDetails:GetOnlyName (self.damage_actors[i][1]) .. ": " .. _detalhes:ToK (_math_floor (self.damage_actors [i][2])))
-					end
-					EncounterDetails:SendReportWindow (reportFunc, nil, nil, true)
+					send_phase_report ("Details!: Damage for Phase " .. self.phase .. " of " .. (g.combat and g.combat.is_boss and g.combat.is_boss.name or "Unknown") .. ":", self.damage_actors)
 
 				elseif (button == "RightButton") then
 
-					local result = {}
-					local reportFunc = function (IsCurrent, IsReverse, AmtLines)
-						AmtLines = AmtLines + 1
-						if (#result > AmtLines) then
-							for i = #result, AmtLines+1, -1 do
-								tremove (result, i)
-							end
-						end
-						EncounterDetails:SendReportLines (result)
-					end
-
-					tinsert (result, "Details!: Healing for Phase " .. self.phase .. " of " .. (g.combat and g.combat.is_boss and g.combat.is_boss.name or "Unknown") .. ":")
-					for i = 1, #self.heal_actors do
-						tinsert (result, EncounterDetails:GetOnlyName (self.heal_actors[i][1]) .. ": " .. _detalhes:ToK (_math_floor (self.heal_actors [i][2])))
-					end
-					EncounterDetails:SendReportWindow (reportFunc, nil, nil, true)
+					send_phase_report ("Details!: Healing for Phase " .. self.phase .. " of " .. (g.combat and g.combat.is_boss and g.combat.is_boss.name or "Unknown") .. ":", self.heal_actors)
 
 				end
 			end
@@ -929,7 +879,7 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 				self.NeedsUpdate=true
 			end
 
-			function g:AddDataSeriesOnFirstIndex (points, color, n2)
+			function g:AddDataSeriesOnFirstIndex (points, color)
 				local data
 				--Make sure there is data points
 				if not points then
@@ -937,10 +887,7 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 				end
 
 				data=points
-				if n2==nil then
-					n2=false
-				end
-				if n2 or (table.getn(points)==2 and table.getn(points[1])~=2) then
+				if (table.getn(points)==2 and table.getn(points[1])~=2) then
 					data={}
 					for k,v in ipairs(points[1]) do
 						tinsert(data,{v,points[2][k]})
@@ -1043,13 +990,7 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 	BossFrame.bg1:SetAllPoints()
 
 	--title bar
-		local titlebar = CreateFrame ("frame", nil, BossFrame)
-		titlebar:SetPoint ("topleft", BossFrame, "topleft", 2, -3)
-		titlebar:SetPoint ("topright", BossFrame, "topright", -2, -3)
-		titlebar:SetHeight (20)
-		titlebar:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-		titlebar:SetBackdropColor (.5, .5, .5, 1)
-		titlebar:SetBackdropBorderColor (0, 0, 0, 1)
+		local titlebar = _detalhes:CreateWindowTitleBar (BossFrame)
 
 		local name_bg_texture = BossFrame:CreateTexture (nil, "background")
 		name_bg_texture:SetTexture ([[Interface\PetBattles\_PetBattleHorizTile]], true)
@@ -1138,18 +1079,6 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 
 	BossFrame.ShowType = "main"
 
-	--> revisar
-	BossFrame.Reset = function()
-		BossFrame.switch (nil, nil, "main")
-		if (_G.DetailsRaidDpsGraph) then
-			_G.DetailsRaidDpsGraph:ResetData()
-		end
-		if (BossFrame.aberta) then
-			_detalhes:FecharEncounterWindows()
-		end
-		BossFrame.linhas = nil
-	end
-
 	local scrollframe
 	local emote_segment = 1
 	local searching
@@ -1188,9 +1117,7 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 	end
 
 	BossFrame.switch = function (to, _, to2)
-		if (type (to) == "string") then
-			to = to
-		elseif (type (to2) == "string") then
+		if (type (to) ~= "string" and type (to2) == "string") then
 			to = to2
 		end
 
@@ -1227,11 +1154,6 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 
 		elseif (to == "spellsauras") then
 
-			_detalhes:SetTutorialCVar ("ENCOUNTER_BREAKDOWN_SPELLAURAS", true)
-			if (EncounterDetails.Frame.buttonSwitchSpellsAuras.AntsFrame) then
-				EncounterDetails.Frame.buttonSwitchSpellsAuras.AntsFrame:Hide()
-			end
-
 			hide_Summary()
 
 			BossFrame.raidbackground:Show()
@@ -1267,11 +1189,6 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 			BossFrame.buttonSwitchSpellsAuras:SetTemplate (DetailsFrameWork:GetTemplate ("button", "DETAILS_PLUGIN_BUTTONSELECTED_TEMPLATE"))
 
 		elseif (to == "emotes") then
-
-			_detalhes:SetTutorialCVar ("ENCOUNTER_BREAKDOWN_EMOTES", true)
-			if (EncounterDetails.Frame.buttonSwitchBossEmotes.AntsFrame) then
-				EncounterDetails.Frame.buttonSwitchBossEmotes.AntsFrame:Hide()
-			end
 
 			--hide boss frames
 			for _, frame in _ipairs (BossFrame.Widgets) do
@@ -1312,11 +1229,6 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 
 		elseif (to == "phases") then
 
-			_detalhes:SetTutorialCVar ("ENCOUNTER_BREAKDOWN_PHASES", true)
-			if (EncounterDetails.Frame.buttonSwitchPhases.AntsFrame) then
-				EncounterDetails.Frame.buttonSwitchPhases.AntsFrame:Hide()
-			end
-
 			hide_Summary()
 			hide_Graph()
 			hide_Emote()
@@ -1329,11 +1241,6 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 			BossFrame.buttonSwitchPhases:SetTemplate (DetailsFrameWork:GetTemplate ("button", "DETAILS_PLUGIN_BUTTONSELECTED_TEMPLATE"))
 
 		elseif (to == "graph") then
-
-			_detalhes:SetTutorialCVar ("ENCOUNTER_BREAKDOWN_CHART", true)
-			if (EncounterDetails.Frame.buttonSwitchGraphic.AntsFrame) then
-				EncounterDetails.Frame.buttonSwitchGraphic.AntsFrame:Hide()
-			end
 
 			EncounterDetails:BuildDpsGraphic()
 			if (not _G.DetailsRaidDpsGraph) then
@@ -1477,11 +1384,11 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 		--print (EncounterDetails.charsaved, EncounterDetails.charsaved.emotes, EncounterDetails.charsaved.emotes [1], #EncounterDetails.charsaved.emotes)
 		local emote_pool = EncounterDetails.charsaved.emotes [emote_segment]
 
-		if (searching) then
+		if (searching and emote_pool) then
 			local i = 0
 			local lower = string.lower
 			for index, data in ipairs (emote_pool) do
-				if (lower (data [2]):find (lower(searching))) then
+				if (lower (data [2]):find (lower(searching), 1, true)) then
 					i = i + 1
 					emote_search_table [i] = data
 				end
@@ -2049,7 +1956,6 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 	bar_div:Hide()
 
 	local npc_id = DetailsFrameWork:CreateLabel (BossFrame, "NpcID:", 11, nil, "GameFontHighlightSmall")
-	BossFrame.aura_npc_id = npc_id
 	npc_id:SetPoint ("topleft", BossFrame, "topleft", 10, -130)
 	npc_id:Hide()
 	local npc_id2 = DetailsFrameWork:CreateLabel (BossFrame, "", 11, nil, "GameFontHighlightSmall")
@@ -2069,12 +1975,12 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 
 	local on_select_dbm_bar = function (_, _, value)
 		local timer_id, spellname, spellicon, encounterid, spellid = unpack (value)
-		EncounterDetails:OpenAuraPanel (timer_id, spellname, spellicon, DETAILS_WA_TRIGGER_DBM_TIMER, DETAILS_WA_AURATYPE_TEXT, {dbm_timer_id = timer_id, spellid = spellid, text = "Next " .. spellname .. " In", text_size = 72, icon = spellicon})
+		EncounterDetails:OpenAuraPanel (timer_id, spellname, spellicon, encounterid, DETAILS_WA_TRIGGER_DBM_TIMER, DETAILS_WA_AURATYPE_TEXT, {dbm_timer_id = timer_id, spellid = spellid, text = "Next " .. spellname .. " In", text_size = 72, icon = spellicon})
 	end
 
 	local on_select_bw_bar = function (_, _, value)
 		local timer_id, spellname, spellicon, encounterid = unpack (value)
-		EncounterDetails:OpenAuraPanel (timer_id, spellname, spellicon, DETAILS_WA_TRIGGER_BW_TIMER, DETAILS_WA_AURATYPE_TEXT, {bw_timer_id = timer_id, text = "Next " .. spellname .. " In", text_size = 72, icon = spellicon})
+		EncounterDetails:OpenAuraPanel (timer_id, spellname, spellicon, encounterid, DETAILS_WA_TRIGGER_BW_TIMER, DETAILS_WA_AURATYPE_TEXT, {bw_timer_id = timer_id, text = "Next " .. spellname .. " In", text_size = 72, icon = spellicon})
 	end
 
 	local already_added = {}
@@ -2087,9 +1993,7 @@ _detalhes.EncounterDetailsTempWindow = function (EncounterDetails)
 
 			for timer_id, timer_table in pairs (db.encounter_timers_dbm) do
 				if (timer_table.id == encounter_id) then
-					local spellId = timer_table [7]
 					local spellIcon = timer_table [5]
-					local spellName
 
 					local spell = timer_id
 					spell = tonumber (spell)
@@ -2268,24 +2172,8 @@ local DamageLabel = _detalhes.gump:CreateLabel (PhaseFrame, "Damage Done")
 local HealLabel = _detalhes.gump:CreateLabel (PhaseFrame, "Healing Done")
 local PhaseTimersLabel = _detalhes.gump:CreateLabel (PhaseFrame, "Time Spent on Each Phase")
 
-local report_damage = function (IsCurrent, IsReverse, AmtLines)
-	local result = {}
-	local reportFunc = function (IsCurrent, IsReverse, AmtLines)
-		AmtLines = AmtLines + 1
-		if (#result > AmtLines) then
-			for i = #result, AmtLines+1, -1 do
-				tremove (result, i)
-			end
-		end
-		EncounterDetails:SendReportLines (result)
-	end
-
-	tinsert (result, "Details!: Damage for Phase " .. PhaseFrame.LastPhaseSelected .. " of " .. (PhaseFrame.CurrentSegment and PhaseFrame.CurrentSegment.is_boss and PhaseFrame.CurrentSegment.is_boss.name or "Unknown") .. ":")
-	for i = 1, #PhaseFrame.DamageTable do
-		tinsert (result, EncounterDetails:GetOnlyName (PhaseFrame.DamageTable[i][1]) .. ": " .. _detalhes:ToK (_math_floor (PhaseFrame.DamageTable [i][2])))
-	end
-
-	EncounterDetails:SendReportWindow (reportFunc, nil, nil, true)
+local report_damage = function()
+	send_phase_report ("Details!: Damage for Phase " .. PhaseFrame.LastPhaseSelected .. " of " .. (PhaseFrame.CurrentSegment and PhaseFrame.CurrentSegment.is_boss and PhaseFrame.CurrentSegment.is_boss.name or "Unknown") .. ":", PhaseFrame.DamageTable)
 end
 
 local Report_DamageButton = _detalhes.gump:CreateButton (PhaseFrame, report_damage, 16, 16, "report")
@@ -2294,23 +2182,7 @@ Report_DamageButton.textcolor = "gray"
 Report_DamageButton.textsize = 9
 
 local report_healing = function()
-	local result = {}
-	local reportFunc = function (IsCurrent, IsReverse, AmtLines)
-		AmtLines = AmtLines + 1
-		if (#result > AmtLines) then
-			for i = #result, AmtLines+1, -1 do
-				tremove (result, i)
-			end
-		end
-		EncounterDetails:SendReportLines (result)
-	end
-
-	tinsert (result, "Details!: Healing for Phase " .. PhaseFrame.LastPhaseSelected .. " of " .. (PhaseFrame.CurrentSegment and PhaseFrame.CurrentSegment.is_boss and PhaseFrame.CurrentSegment.is_boss.name or "Unknown") .. ":")
-	for i = 1, #PhaseFrame.HealingTable do
-		tinsert (result, EncounterDetails:GetOnlyName (PhaseFrame.HealingTable[i][1]) .. ": " .. _detalhes:ToK (_math_floor (PhaseFrame.HealingTable [i][2])))
-	end
-
-	EncounterDetails:SendReportWindow (reportFunc, nil, nil, true)
+	send_phase_report ("Details!: Healing for Phase " .. PhaseFrame.LastPhaseSelected .. " of " .. (PhaseFrame.CurrentSegment and PhaseFrame.CurrentSegment.is_boss and PhaseFrame.CurrentSegment.is_boss.name or "Unknown") .. ":", PhaseFrame.HealingTable)
 end
 local Report_HealingButton = _detalhes.gump:CreateButton (PhaseFrame, report_healing, 16, 16, "report")
 Report_HealingButton:SetPoint ("left", HealLabel, "left", ScrollWidth-44, 0)
@@ -2561,7 +2433,6 @@ end
 --executa quando passar o mouse sobre uma bnarra de phase
 function PhaseFrame:UpdateSegmentCompareBars (phase)
 	--segmento atual (numero)
-	local segmentNumber = EncounterDetails._segment
 	local segmentTable = PhaseFrame.CurrentSegment
 	local bossID = segmentTable:GetBossInfo() and segmentTable:GetBossInfo().id
 
@@ -2570,6 +2441,9 @@ function PhaseFrame:UpdateSegmentCompareBars (phase)
 		if (segment:GetBossInfo() and segment:GetBossInfo().id == bossID) then
 
 			local bar = PhaseFrame.PhasesSegmentCompare [index]
+			if (not bar) then
+				break
+			end
 			local timers = PhaseFrame:GetPhaseTimers (segment)
 
 			if (timers [phase]) then
@@ -3005,7 +2879,7 @@ end
 		--print ("2 =", arg2, "3 =", arg3, "4 =",  arg4, "5 =",  arg5, "6 =",  arg6, "7 =",  arg7, "8 =",  arg8, "9 =",  arg9)
 		if (combat and EncounterDetails:IsInCombat() and EncounterDetails:GetZoneType() == "raid") then
 			local arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9 = ...
-			tinsert (EncounterDetails.current_whisper_table, {combat:GetCombatTime(), arg3, arg4, emote_table [arg2]})
+			EncounterDetails.current_whisper_table[#EncounterDetails.current_whisper_table+1] = {combat:GetCombatTime(), arg3, arg4, emote_table [arg2]}
 		end
 	end)
 

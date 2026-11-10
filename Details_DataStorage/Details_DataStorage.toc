@@ -1,11 +1,11 @@
 ## Interface: 30300
-## Title: Details!: Storage
+## Title: |cFF9B59B6D|cFFAA77CCe|cFFBB99DDt|cFFAA77CCa|cFF9B59B6i|cFFAA77CCl|cFFBB99DDs|cFFAA77CC!|cFFDDBBEE Storage|r
 ## Notes: Stores information for Details! Damage Meter
 ## Notes-ruRU: Хранит информацию для Details.
+## Author: Accidev
 ## DefaultState: Enabled
 ## LoadOnDemand: 1
 ## Dependencies: Details
 ## SavedVariables: DetailsDataStorage
-## X-Sirus-Update: https://github.com/fxpw/Details_Sirus/tree/master/Details_DataStorage
 
 Details_DataStorage.lua

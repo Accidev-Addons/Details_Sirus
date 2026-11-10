@@ -18,6 +18,7 @@ function SlashCmdList.DETAILS (msg, editbox)
 	command = string.lower (command)
 
 	if (command == Loc ["STRING_SLASH_WIPE"] or command == "wipe") then
+		_detalhes:CallWipe (true)
 
 	elseif (command == "api") then
 		_detalhes.OpenAPI()
@@ -154,18 +155,8 @@ function SlashCmdList.DETAILS (msg, editbox)
 
 		end
 
-	elseif (command == Loc ["STRING_SLASH_WORLDBOSS"] or command == "worldboss") then
-
-		local questIds = {{"Tarlna the Ageless", 81535}, {"Drov the Ruiner ", 87437}, {"Rukhmar", 87493}}
-		for _, _table in pairs (questIds) do
-			print (format ("%s: \124cff%s\124r", _table [1], IsQuestFlaggedCompleted (_table [2]) and "ff0000"..Loc ["STRING_KILLED"] or "00ff00"..Loc ["STRING_ALIVE"]))
-		end
-
-	elseif (command == Loc ["STRING_SLASH_CHANGES"] or command == Loc ["STRING_SLASH_CHANGES_ALIAS1"] or command == Loc ["STRING_SLASH_CHANGES_ALIAS2"] or command == "news" or command == "updates") then
-		_detalhes:OpenNewsWindow()
-
 	elseif (command == "discord") then
-		_detalhes:CopyPaste ("https://discord.gg/addonsforsirus")
+		_detalhes:CopyPaste ("https://discord.gg/wRPF8CCpNV")
 
 
 	elseif (command == "debugwindow") then
@@ -200,9 +191,6 @@ function SlashCmdList.DETAILS (msg, editbox)
 	elseif (command == "spells") then
 		Details.OpenForge()
 		DetailsForgePanel.SelectModule (_, _, 2)
-
-	elseif (command == "feedback") then
-		_detalhes.OpenFeedbackWindow()
 
 	elseif (command == "profile") then
 		if (rest and rest ~= "") then
@@ -246,61 +234,12 @@ function SlashCmdList.DETAILS (msg, editbox)
 			print ("|cFF00FF00No error occured!|r")
 		end
 
-	elseif (msg == "tr") then
-
-		local f = CreateFrame ("Frame", nil, UIParent)
-		f:SetSize (300, 300)
-		f:SetPoint ("CENTER")
-
---		/run TTT:SetTexture ("Interface\\1024.tga")
-		local texture = f:CreateTexture ("TTT", "background")
-		texture:SetAllPoints()
-		texture:SetTexture ("Interface\\1023.tga")
-
-		local A = DetailsFramework:CreateAnimationHub (texture)
-
-		local b = DetailsFramework:CreateAnimation (A, "ROTATION", 1, 40, 360)
---		b:SetTarget (texture) -- TEMP
-		A:Play()
-
-		C_Timer:NewTicker (1, function()
-			texture:SetTexCoord (math.random(), math.random(), math.random(), math.random(), math.random(), math.random(), math.random(), math.random())
-		end)
-
-
-	elseif (msg == "realmsync") then
-
-		_detalhes.realm_sync = not _detalhes.realm_sync
-		_detalhes:Msg ("Realm Sync: ", _detalhes.realm_sync and "Enabled" or "Disabled")
-
-		if (not _detalhes.realm_sync) then
-			LeaveChannelByName ("Details")
-		else
-			_detalhes:CheckChatOnLeaveGroup()
-		end
-
 	elseif (msg == "load") then
 
 		print (DetailsDataStorage)
 
 		local loaded, reason = LoadAddOn ("Details_DataStorage")
 		print (loaded, reason, DetailsDataStorage)
-
-
-	elseif (msg == "owner2") then
-
-		local tip = CreateFrame('GameTooltip', 'GuardianOwnerTooltip', nil, 'GameTooltipTemplate')
-		function GetGuardianOwner(guid)
-			tip:SetOwner(WorldFrame, 'ANCHOR_NONE')
-			tip:SetHyperlink('unit:' .. guid or '')
-			local text = GuardianOwnerTooltipTextLeft2
-			--return strmatch(text and text:GetText() or '', "^([^%s']+)'")
-			return text:GetText()
-		end
-
-		print (GetGuardianOwner(UnitGUID ("target")))
-
-	elseif (msg == "chat") then
 
 
 	elseif (msg == "chaticon") then
@@ -377,24 +316,10 @@ function SlashCmdList.DETAILS (msg, editbox)
 
 		_detalhes:InstanciaCallFunction (_detalhes.gump.Fade, "in", nil, "barras")
 		_detalhes:InstanciaCallFunction (_detalhes.AtualizaSegmentos) -- atualiza o instancia.showing para as novas tabelas criadas
-		_detalhes:InstanciaCallFunction (_detalhes.AtualizaSoloMode_AfertReset) -- verifica se precisa zerar as tabela da janela solo mode
 		_detalhes:InstanciaCallFunction (_detalhes.ResetaGump) --_detalhes:ResetaGump ("de todas as instancias")
 		_detalhes:AtualizaGumpPrincipal (-1, true) --atualiza todas as instancias
 
 
-
-	elseif (msg == "pets") then
-		local f = _detalhes:CreateListPanel()
-
-		local i = 1
-		for k, v in pairs (_detalhes.tabela_pets.pets) do
-			if (v[6] == "Guardian of Ancient Kings") then
-				_detalhes.ListPanel:add ( k.. ": " ..  v[1] .. " | " .. v[2] .. " | " .. v[3] .. " | " .. v[6], i)
-				i = i + 1
-			end
-		end
-
-		f:Show()
 
 	elseif (msg == "savepets") then
 
@@ -411,37 +336,7 @@ function SlashCmdList.DETAILS (msg, editbox)
 		print ("moving...")
 
 		local instance = _detalhes.tabela_instancias [1]
-		instance.baseframe:ClearAllPoints()
-		--instance.baseframe:SetPoint ("CENTER", UIParent, "CENTER", 300, 100)
-		instance.baseframe:SetPoint ("LEFT", DetailsWelcomeWindow, "RIGHT", 10, 0)
-
-	elseif (msg == "model") then
-		local frame = CreateFrame ("PlayerModel");
-		frame:SetPoint("CENTER",UIParent,"CENTER");
-		frame:SetHeight(600);
-		frame:SetWidth(300);
-		frame:SetDisplayInfo (49585);
-
-	elseif (msg == "ej2") then
-
-		--[[ get the EJ_ raid id
-		local wantRaids = true -- set false to get 5-man list
-		for i=1,1000 do
-		    instanceID,name,description,bgImage,buttonImage,loreImage, dungeonAreaMapID, link = DetailsFramework.EncounterJournal.EJ_GetInstanceByIndex(i,wantRaids)
-		    if not instanceID then break end
-		    DEFAULT_CHAT_FRAME:AddMessage(      instanceID.." "..name ,1,0.7,0.5)
-		end
-		--]]
-
-		local iid=362
-
-		for i=1, 100 do
-		    local name, description, encounterID, rootSectionID, link = DetailsFramework.EncounterJournal.EJ_GetEncounterInfoByIndex (i, iid)
-
-		    if not encounterID then break end
-		    local msg = encounterID .. " , " ..  name .. ", ".. rootSectionID.. ", "..link
-		    DEFAULT_CHAT_FRAME:AddMessage(msg, 1,0.7,0.5)
-		end
+		instance.baseframe:ClearAndSetPoint ("LEFT", DetailsWelcomeWindow, "RIGHT", 10, 0)
 
 	elseif (msg == "time") then
 		print ("GetTime()", GetTime())
@@ -467,27 +362,6 @@ function SlashCmdList.DETAILS (msg, editbox)
 		end
 		print (nome, realm)
 
-	elseif (msg == "raid") then
-
-		local player, realm = "Ditador", "Azralon"
-
-		local actorName
-		if (realm ~= GetRealmName()) then
-			actorName = player.."-"..realm
-		else
-			actorName = player
-		end
-
-		print (actorName)
-
-		local guid = _detalhes:FindGUIDFromName ("Ditador")
-		print (guid)
-
-		for i = 1, GetNumGroupMembers()-1, 1 do
-			local name, realm = UnitName ("party"..i)
-			print (name, " -- ", realm)
-		end
-
 	elseif (msg == "cacheparser") then
 		_detalhes:PrintParserCacheIndexes()
 	elseif (msg == "parsercache") then
@@ -500,52 +374,6 @@ function SlashCmdList.DETAILS (msg, editbox)
 		for k, v in pairs (_detalhes.capture_current) do
 			print ("current -",k,":",v)
 		end
-
-	elseif (msg == "slider") then
-
-		local f = CreateFrame ("Frame", "TESTEDESCROLL", UIParent)
-		f:SetPoint ("CENTER", UIParent, "CENTER", 200, -2)
-		f:SetWidth (300)
-		f:SetHeight (150)
-		f:SetBackdrop ({bgFile = "Interface\\AddOns\\Details\\images\\background", tile = true, tileSize = 16, insets = {left = 0, right = 0, top = 0, bottom = 0}})
-		f:SetBackdropColor (0, 0, 0, 1)
-		f:EnableMouseWheel (true)
-
-		local rows = {}
-		for i = 1, 7 do
-			local row = CreateFrame ("Frame", nil, UIParent)
-			row:SetPoint ("TOPLEFT", f, "TOPLEFT", 10, -(i-1)*21)
-			row:SetWidth (200)
-			row:SetHeight (20)
-			row:SetBackdrop ({bgFile = "Interface\\AddOns\\Details\\images\\background", tile = true, tileSize = 16, insets = {left = 0, right = 0, top = 0, bottom = 0}})
-			local t = row:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-			t:SetPoint ("LEFT", row, "LEFT")
-			row.text = t
-			rows [#rows+1] = row
-		end
-
-		local data = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}
-
-
-
-	elseif (msg == "bcollor") then
-
-		--local instancia = _detalhes.tabela_instancias [1]
-		_detalhes.ResetButton.Middle:SetVertexColor (1, 1, 0, 1)
-
-		--print (_detalhes.ResetButton:GetHighlightTexture())
-
-		local t = _detalhes.ResetButton:GetHighlightTexture()
-		t:SetVertexColor (0, 1, 0, 1)
-		--print (t:GetObjectType())
-		--_detalhes.ResetButton:SetHighlightTexture (t)
-		_detalhes.ResetButton:SetNormalTexture (t)
-
-		print ("backdrop", _detalhes.ResetButton:GetBackdrop())
-
-		_detalhes.ResetButton:SetBackdropColor (0, 0, 1, 1)
-
-		--vardump (_detalhes.ResetButton)
 
 	elseif (command == "mini") then
 		local instance = _detalhes.tabela_instancias [1]
@@ -645,14 +473,6 @@ function SlashCmdList.DETAILS (msg, editbox)
 		test_plugin:SendPluginCommMessage ("PTAA", nil, "teste 1", "teste 2", "teste3")
 
 
-	elseif (msg == "teste") then
-
-		local a, b = _detalhes:GetEncounterEnd (1098, 3)
-		print (a, unpack (b))
-
-	elseif (msg == "yesno") then
-		--_detalhes:Show()
-
 	elseif (msg == "imageedit") then
 
 		local callback = function (width, height, overlayColor, alpha, texCoords)
@@ -661,15 +481,7 @@ function SlashCmdList.DETAILS (msg, editbox)
 			print ("crop: ", unpack (texCoords))
 		end
 
-		_detalhes.gump:ImageEditor (callback, "Interface\\TALENTFRAME\\bg-paladin-holy", nil, {1, 1, 1, 1}) -- {0.25, 0.25, 0.25, 0.25}
-
-	elseif (msg == "chat") then
-
-		local name, fontSize, r, g, b, a, shown, locked = FCF_GetChatWindowInfo (1);
-		print (name,"|",fontSize,"|", r,"|", g,"|", b,"|", a,"|", shown,"|", locked)
-
-		--local fontFile, unused, fontFlags = self:GetFont();
-		--self:SetFont(fontFile, fontSize, fontFlags);
+		_detalhes.gump:ImageEditor (callback, "Interface\\TALENTFRAME\\PaladinHoly-TopLeft", nil, {1, 1, 1, 1}) -- {0.25, 0.25, 0.25, 0.25}
 
 	elseif (msg == "error") then
 		a = nil + 1
@@ -714,18 +526,6 @@ function SlashCmdList.DETAILS (msg, editbox)
 		print ("bgcolor:",f:GetBackdropColor())
 		print ("bordercolor",f:GetBackdropBorderColor())
 
-	elseif (command == "myguid") then --> localize-me
-
-		local g = UnitGUID ("player")
-		print (type (g))
-		print (g)
-		print (string.len (g))
-		local serial = g:sub (12, 18)
-		serial = tonumber ("0x"..serial)
-		print (serial)
-
-		--tonumber((UnitGUID("target")):sub(-12, -9), 16))
-
 	elseif (command == "callfunction") then
 
 		_detalhes:InstanceCall (_detalhes.SetCombatAlpha, nil, nil, true)
@@ -758,7 +558,6 @@ function SlashCmdList.DETAILS (msg, editbox)
 			_detalhes.id_frame.texto:SetWidth(120)
 			_detalhes.id_frame.texto:SetJustifyH("CENTER")
 			_detalhes.id_frame.texto:EnableMouse(true)
-			_detalhes.id_frame.texto:SetBackdrop(ManualBackdrop)
 			_detalhes.id_frame.texto:SetBackdropColor(0, 0, 0, 0.5)
 			_detalhes.id_frame.texto:SetBackdropBorderColor(0.3, 0.3, 0.30, 0.80)
 			_detalhes.id_frame.texto:SetText ("") --localize-me
@@ -788,42 +587,10 @@ function SlashCmdList.DETAILS (msg, editbox)
 			end
 
 		else
-			print (pass_guid.. " -> " .. tonumber (pass_guid:sub(6, 10), 16))
-			_detalhes.id_frame.texto:SetText (""..tonumber (pass_guid:sub(6, 10), 16))
+			print (pass_guid.. " -> " .. _detalhes:GetNpcIdFromGuid (pass_guid))
+			_detalhes.id_frame.texto:SetText ("" .. _detalhes:GetNpcIdFromGuid (pass_guid))
 			_detalhes.id_frame.texto:HighlightText()
 		end
-
-	--> debug
-
-	elseif (msg == "auras") then
-		if (IsInRaid()) then
-			for raidIndex = 1, GetNumGroupMembers() do
-				for buffIndex = 1, 41 do
-					local name, _, _, _, _, _, _, unitCaster, _, _, spellid  = UnitAura ("raid"..raidIndex, buffIndex, nil, "HELPFUL")
-					print (name, unitCaster, "==", "raid"..raidIndex)
-					if (name and unitCaster == "raid"..raidIndex) then
-
-						local playerName, realmName = UnitName ("raid"..raidIndex)
-						if (realmName and realmName ~= "") then
-							playerName = playerName .. "-" .. realmName
-						end
-
-						_detalhes.parser:add_buff_uptime (nil, GetTime(), UnitGUID ("raid"..raidIndex), playerName, 0x00000417, UnitGUID ("raid"..raidIndex), playerName, spellid, name, in_or_out)
-
-					else
-						--break
-					end
-				end
-			end
-		end
-
-	elseif (command == "profile") then
-
-		local profile = rest:match("^(%S*)%s*(.-)$")
-
-		print ("Force apply profile: ", profile)
-
-		_detalhes:ApplyProfile (profile, false)
 
 	elseif (msg == "users" or msg == "version" or msg == "versioncheck") then
 		_detalhes.users = {{UnitName("player"), GetRealmName(), (_detalhes.userversion or "") .. " (" .. _detalhes.APIVersion .. ")"}}
@@ -914,7 +681,7 @@ function SlashCmdList.DETAILS (msg, editbox)
 
 	elseif (msg == "buffs") then
 		for i = 1, 40 do
-			local name, texture, count, debuffType, duration, expirationTime, caster, canStealOrPurge, nameplateShowPersonal, spellid = UnitBuff ("player", i)
+			local name, _, _, _, _, _, _, _, _, _, spellid = UnitBuff ("player", i)
 			if (not name) then
 				return
 			end
@@ -922,12 +689,10 @@ function SlashCmdList.DETAILS (msg, editbox)
 		end
 
 	elseif (msg == "id") then
-		local one, two = rest:match("^(%S*)%s*(.-)$")
-		if (one ~= "") then
-			print("NPC ID:", one:sub(-12, -9), 16)
-			print("NPC ID:", tonumber((one):sub(-12, -9), 16))
-		else
-			print("NPC ID:", tonumber((UnitGUID("target")):sub(-12, -9), 16) )
+		local one = rest:match("^(%S*)")
+		local guid = (one ~= "" and one) or UnitGUID("target")
+		if (guid) then
+			print("NPC ID:", _detalhes:GetNpcIdFromGuid(guid))
 		end
 
 	--> debug
@@ -952,7 +717,6 @@ function SlashCmdList.DETAILS (msg, editbox)
 				return
 			end
 
-			local current_combat = _detalhes.tabela_vigente
 
 			if (not _detalhes.DebugWindow) then
 				_detalhes.DebugWindow = _detalhes.gump:CreateSimplePanel (UIParent, 800, 600, "Details! Debug", "DetailsDebugPanel")
@@ -1057,29 +821,6 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 	elseif (msg == "gs") then
 		_detalhes:teste_grayscale()
 
-	elseif (msg == "bwload") then
-		if not BigWigs then LoadAddOn("BigWigs_Core") end
-		BigWigs:Enable()
-
-		LoadAddOn ("BigWigs_Highmaul")
-
-		local mod = BigWigs:GetBossModule("Imperator Mar'gok")
-		mod:Enable()
-
-	elseif (msg == "bwsend") then
-		local mod = BigWigs:GetBossModule("Imperator Mar'gok")
-		mod:Message("stages", "Neutral", "Long", "Phase 2", false)
-
-	elseif (msg == "bwregister") then
-
-		local addon = {}
-		BigWigs.RegisterMessage(addon, "BigWigs_Message")
-		function addon:BigWigs_Message(event, module, key, text)
-		  if module.journalId  == 1197 and text:match("^Phase %d$") then -- 1197 = Margok
-		   print ("Phase Changed!", event, module, key, text)
-		  end
-		end
-
 	elseif (msg == "pos") then
 		local x, y = GetPlayerMapPosition ("player")
 
@@ -1105,89 +846,8 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 			print ("outline:",flags)
 		end
 
-	elseif (msg == "sell") then
-
-		--sell gray
-		local c, i, n, v = 0
-		for b = 0, 4 do
-			for s = 1, GetContainerNumSlots(b) do
-				i = {GetContainerItemInfo (b, s)}
-				n = i[7]
-				if n and string.find(n,"9d9d9d") then
-					v = {GetItemInfo(n)}
-					q = i[2]
-					c = c+v[11]*q
-					UseContainerItem (b, s)
-					print (n, q)
-				end
-			end
-		end
-		print(GetCoinText(c))
-
-		--sell green equip
-		local c, i, n, v = 0
-		for b = 0, 4 do
-			for s = 1, GetContainerNumSlots(b) do
-				local texture, itemCount, locked, quality, readable, lootable, itemLink = GetContainerItemInfo (b, s)
-				if (quality == 2) then --a green item
-					local itemName, itemLink, itemRarity, itemLevel, _, itemType, itemSubType = GetItemInfo (itemLink)
-					if (itemType == "Armor" or itemType == "Weapon") then --a weapon or armor
-						if (itemLevel < 460) then
-							print ("Selling", itemName, itemType)
-							UseContainerItem (b, s)
-						end
-					end
-				end
-			end
-		end
-
 	elseif (msg == "forge") then
 		_detalhes:OpenForge()
-
-	elseif (msg == "parser") then
-
-		_detalhes:OnParserEvent (
-			"COMBAT_LOG_EVENT_UNFILTERED", --evento =
-			1548754114, --time =
-			"SPELL_DAMAGE", --token =
-			"0000000000000000", --who_serial =
-			nil, --who_name =
-			0x514, --who_flags =
-			"Player-3676-06F3C3FA", --alvo_serial =
-			"Icybluefur-Area52", --alvo_name =
-			0x514, --alvo_flags =
-			157247, --spellid =
-			"Reverberations", --spellname =
-			0x1, --spelltype =
-			4846, --amount =
-			-1, --overkill =
-			1 --school =
-		)
-
-	elseif (msg == "ejloot") then
-		DetailsFramework.EncounterJournal.EJ_SelectInstance (669) -- hellfire citadel
-		DetailsFramework.EncounterJournal.EJ_SetDifficulty (16)
-
-		local r = {}
-		local total = 0
-
-		for i = 1, 100 do
-			local name, description, encounterID, rootSectionID, link = DetailsFramework.EncounterJournal.EJ_GetEncounterInfoByIndex (i, 669)
-			if (name) then
-				DetailsFramework.EncounterJournal.EJ_SelectEncounter (encounterID)
-				print (name, encounterID, DetailsFramework.EncounterJournal.EJ_GetNumLoot())
-
-				for o = 1, DetailsFramework.EncounterJournal.EJ_GetNumLoot() do
-					local name, icon, slot, armorType, itemID, link, encounterID = DetailsFramework.EncounterJournal.EJ_GetLootInfoByIndex (o)
-					r[slot] = r[slot] or {}
-					tinsert (r[slot], {itemID, encounterID})
-					total = total + 1
-				end
-			end
-		end
-
-		print ("total loot", total)
-		_detalhes_global.ALOOT  = r
 
 	elseif (msg == "ilvl" or msg == "itemlevel" or msg == "ilevel") then
 
@@ -1201,8 +861,6 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 			["INVTYPE_RANGEDRIGHT"] = true,
 		}
 
-		local ItemUpgradeInfo = LibStub ("LibItemUpgradeInfo-1.0")
-
 		_detalhes:Msg ("======== Item Level Debug ========")
 
 		for equip_id = 1, 17 do
@@ -1211,14 +869,8 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 				if (item) then
 					local _, _, itemRarity, iLevel, _, _, _, _, equipSlot = GetItemInfo (item)
 					if (iLevel) then
-						if (ItemUpgradeInfo) then
-							local ilvl = ItemUpgradeInfo:GetUpgradedItemLevel (item)
-							item_level = item_level + (ilvl or iLevel)
-							print (ilvl, item)
-						else
-							item_level = item_level + iLevel
-							print (iLevel, item)
-						end
+						item_level = item_level + iLevel
+						print (iLevel, item)
 
 						--> 16 = main hand 17 = off hand
 						-->  if using a two-hand, ignore the off hand slot
@@ -1241,10 +893,6 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 
 		_detalhes.ilevel:CalcItemLevel ("player", UnitGUID("player"), true)
 
-	elseif (msg == "score") then
-
-		_detalhes:OpenRaidHistoryWindow ("Hellfire Citadel", 1800, 2, "DAMAGER", "Rock Lobster", 2, "Keyspell")
-
 	elseif (msg == "bar") then
 		local bar = _G.DetailsTestBar
 		if (not bar) then
@@ -1265,104 +913,6 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 		--C_Timer:After (5, function() bar:CancelTimerBar() end)
 
 
-	elseif (msg == "q") then
-
-		local myframe = TestFrame
-		if (not myframe) then
-			myframe = TestFrame or CreateFrame ("Frame", "TestFrame", UIParent)
-			myframe:SetPoint ("CENTER", UIParent, "CENTER")
-			myframe:SetSize (300, 300)
-			myframe.texture = myframe:CreateTexture (nil, "overlay")
-			myframe.texture:SetAllPoints()
-			myframe.texture:SetTexture ([[Interface\AddOns\WorldQuestTracker\media\icon_flag_common]])
-		else
-			if (myframe.texture:IsShown()) then
-				myframe.texture:Hide()
-			else
-				print (myframe.texture:GetTexture())
-				myframe.texture:Show()
-				print (myframe.texture:GetTexture())
-			end
-		end
-
-
-
-		if (true) then
-			return
-		end
-
-		local y = -50
-		local allspecs = {}
-
-		for a, b in pairs (_detalhes.class_specs_coords) do
-			tinsert (allspecs, a)
-		end
-
-		for i = 1, 10 do
-
-			local a = CreateFrame ("statusbar", nil, UIParent)
-			a:SetPoint ("TOPLEFT", UIParent, "TOPLEFT", i*32, y)
-			a:SetSize (32, 32)
-			a:SetMinMaxValues (0, 1)
-
-			local texture = a:CreateTexture (nil, "overlay")
-			texture:SetSize (32, 32)
-			texture:SetPoint ("TOPLEFT")
-
-			if (i%10 == 0) then
-				y = y - 32
-			end
-
---	/run for o=1,10 do local f=CreateFrame("Frame");f:SetPoint("CENTER");f:SetSize(300,300); local t=f:CreateTexture(nil,"overlay");t:SetAllPoints();f:SetScript("OnUpdate",function() t:SetTexture("Interface\\1024")end);end;
---	https://www.dropbox.com/s/ulyeqa2z0ummlu7/1024.tga?dl=0
-
-			local time = 0
-			a:SetScript ("OnUpdate", function (self, deltaTime)
-				time = time + deltaTime
-
-				--texture:SetSize (math.random (50, 300), math.random (50, 300))
-				--local spec = allspecs [math.random (#allspecs)]
-				texture:SetTexture ([[Interface\AddOns\Details\images\options_window]])
-				--texture:SetTexture ([[Interface\Store\Store-Splash]])
-				--texture:SetTexture ([[Interface\AddOns\Details\images\options_window]])
-				--texture:SetTexture ([[Interface\CHARACTERFRAME\Button_BloodPresence_DeathKnight]])
-				--texture:SetTexCoord (unpack (_detalhes.class_specs_coords [spec]))
-
-				--a:SetAlpha (abs (math.sin (time)))
-				--a:SetValue (abs (math.sin (time)))
-			end)
-		end
-
-	elseif (msg == "alert") then
-		--local instancia = _detalhes.tabela_instancias [1]
-		local f = function (a, b, c, d, e, f, g) print (a, b, c, d, e, f, g) end
-		--instancia:InstanceAlert (Loc ["STRING_PLEASE_WAIT"], {[[Interface\COMMON\StreamCircle]], 22, 22, true}, 5, {f, 1, 2, 3, 4, 5})
-
-		local lower_instance = _detalhes:GetLowerInstanceNumber()
-		if (lower_instance) then
-			local instance = _detalhes:GetInstance (lower_instance)
-			if (instance) then
-				local func = {_detalhes.OpenRaidHistoryWindow, _detalhes, "Hellfire Citadel", 1800, 15, "DAMAGER", "Rock Lobster", 2, "Keyspell"}
-				instance:InstanceAlert ("Boss Defeated, Open History! ", {[[Interface\AddOns\Details\images\icons]], 16, 16, false, 434/512, 466/512, 243/512, 273/512}, 40, func, true)
-			end
-		end
-
-	elseif (msg == "teste1") then	-- /de teste1
-		_detalhes:OpenRaidHistoryWindow (1530, 1886, 15, "damage", "Rock Lobster", 2, "Keyspell") --, _role, _guild, _player_base, _player_name)
-
-	elseif (msg == "qq") then
-		local my_role = "DAMAGER"
-		local raid_name = "Tomb of Sargeras"
-		local guildName = "Rock Lobster"
-		local func = {_detalhes.OpenRaidHistoryWindow, _detalhes, raid_name, 2050, 15, my_role, guildName} --, 2, UnitName ("player")
-		--local icon = {[[Interface\AddOns\Details\images\icons]], 16, 16, false, 434/512, 466/512, 243/512, 273/512}
-		local icon = {[[Interface\PvPRankBadges\PvPRank08]], 16, 16, false, 0, 1, 0, 1}
-
-		local lower_instance = _detalhes:GetLowerInstanceNumber()
-		local instance = _detalhes:GetInstance (lower_instance)
-
-		instance:InstanceAlert ("Boss Defeated! Show Ranking", icon, 10, func, true)
-
 	elseif (msg == "scroll" or msg == "scrolldamage" or msg == "scrolling") then
 		Details:ScrollDamage()
 
@@ -1380,23 +930,6 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 	elseif (msg == "senditemlevel") then
 		_detalhes:SendCharacterData()
 		print ("Item level dispatched.")
-
-	elseif (msg == "talents") then
-		local talents = {}
-		for i = 1, 7 do
-			for o = 1, 3 do
-				local talentID, name, texture, selected, available = GetTalentInfo (i, o, 1)
-				if (selected) then
-					tinsert (talents, talentID)
-					break
-				end
-			end
-		end
-
-		print ("talentID", "name", "texture", "selected", "available", "spellID", "unknown", "row", "column", "unknown", "unknown")
-		for i = 1, #talents do
-			print (GetTalentInfoByID (talents [i]))
-		end
 
 	elseif (msg == "merge") then
 
@@ -1463,79 +996,8 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 
 		_detalhes:InstanciaCallFunction (_detalhes.gump.Fade, "in", nil, "barras")
 		_detalhes:InstanciaCallFunction (_detalhes.AtualizaSegmentos)
-		_detalhes:InstanciaCallFunction (_detalhes.AtualizaSoloMode_AfertReset)
 		_detalhes:InstanciaCallFunction (_detalhes.ResetaGump)
 		_detalhes:AtualizaGumpPrincipal (-1, true)
-
-	elseif (msg == "ej") then
-
-		local result = {}
-		local spellIDs = {}
-
-		--uldir
-		DetailsFramework.EncounterJournal.EJ_SelectInstance (1031)
-
-		-- pega o root section id do boss
-		local name, description, encounterID, rootSectionID, link = DetailsFramework.EncounterJournal.EJ_GetEncounterInfo (2168) --taloc (primeiro boss de Uldir)
-
-		--overview
-		local sectionInfo = C_EncounterJournal.GetSectionInfo (rootSectionID)
-		local nextID = {sectionInfo.siblingSectionID}
-
-		while (nextID [1]) do
-			--> get the deepest section in the hierarchy
-			local ID = tremove (nextID)
-			local sectionInfo = C_EncounterJournal.GetSectionInfo (ID)
-
-			if (sectionInfo) then
-				tinsert (result, sectionInfo)
-
-				if (sectionInfo.spellID and type (sectionInfo.spellID) == "number" and sectionInfo.spellID ~= 0) then
-					tinsert (spellIDs, sectionInfo.spellID)
-				end
-
-				local nextChild, nextSibling = sectionInfo.firstChildSectionID, sectionInfo.siblingSectionID
-				if (nextSibling) then
-					tinsert (nextID, nextSibling)
-				end
-				if (nextChild) then
-					tinsert (nextID, nextChild)
-				end
-			else
-				break
-			end
-		end
-
-		Details:DumpTable (result)
-
-	elseif (msg == "record") then
-
-
-			_detalhes.ScheduleLoadStorage()
-			_detalhes.TellDamageRecord = C_Timer:NewTicker (0.6, _detalhes.PrintEncounterRecord, 1)
-			_detalhes.TellDamageRecord.Boss = 2032
-			_detalhes.TellDamageRecord.Diff = 16
-
-	elseif (msg == "recordtest") then
-
-		local f = DetailsRecordFrameAnimation
-		if (not f) then
-			f = CreateFrame ("Frame", "DetailsRecordFrameAnimation", UIParent)
-
-			--estrela no inicio dando um giro
-			--Interface\Cooldown\star4
-			--efeito de batida?
-			--Interface\Artifacts\ArtifactAnim2
-			local animationHub = DetailsFramework:CreateAnimationHub (f, function() f:Show() end)
-
-			DetailsFramework:CreateAnimation (animationHub, "Scale", 1, .10, .9, .9, 1.1, 1.1)
-			DetailsFramework:CreateAnimation (animationHub, "Scale", 2, .10, 1.2, 1.2, 1, 1)
-		end
-
-	--BFA BETA
-	elseif (msg == "update") then
-		_detalhes:CopyPaste ([[https://www.wowinterface.com/downloads/info23056-DetailsDamageMeter8.07.3.5.html]])
-
 
 	elseif (msg == "share") then
 
@@ -1569,11 +1031,6 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 					elseif (type (value) == "table") then
 						t1 [key] = t1 [key] or {}
 
-						--print (key, value)
-						--local d = C_Timer:NewTicker (1, f.copy, 1)
-						--d.t1 = t1 [key]
-						--d.t2 = t2 [key]
-						--d.Timer = true
 
 						keys [key] = true
 
@@ -1597,13 +1054,9 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 		Details:Dump ({zipData})
 	else
 
-		--if (_detalhes.opened_windows < 1) then
-		--	_detalhes:CriarInstancia()
-		--end
-
 		if (command) then
 			--> check if the line passed is a parameters in the default profile
-			if (_detalhes.default_profile [command]) then
+			if (_detalhes.default_profile [command] ~= nil) then
 				if (rest and (rest ~= "" and rest ~= " ")) then
 					local whichType = type (_detalhes.default_profile [command])
 
@@ -1654,23 +1107,18 @@ Damage Update Status: @INSTANCEDAMAGESTATUS
 		end
 
 		print (" ")
-		--local v = _detalhes.game_version .. "." .. (_detalhes.build_counter >= _detalhes.alpha_build_counter and _detalhes.build_counter or _detalhes.alpha_build_counter)
-		--print (Loc ["STRING_DETAILS1"] .. "" .. v .. " [|cFFFFFF00CORE: " .. _detalhes.realversion .. "|r] " ..  Loc ["STRING_COMMAND_LIST"] .. ":")
-
 		print ("|cffffaeae/details|r |cffffff33" .. Loc ["STRING_SLASH_NEW"] .. "|r: " .. Loc ["STRING_SLASH_NEW_DESC"])
 		print ("|cffffaeae/details|r |cffffff33" .. Loc ["STRING_SLASH_SHOW"] .. " " .. Loc ["STRING_SLASH_HIDE"] .. " " .. Loc ["STRING_SLASH_TOGGLE"] .. "|r|cfffcffb0 <" .. Loc ["STRING_WINDOW_NUMBER"] .. ">|r: " .. Loc ["STRING_SLASH_SHOWHIDETOGGLE_DESC"])
 		print ("|cffffaeae/details|r |cffffff33" .. Loc ["STRING_SLASH_ENABLE"] .. " " .. Loc ["STRING_SLASH_DISABLE"] .. "|r: " .. Loc ["STRING_SLASH_CAPTURE_DESC"])
 		print ("|cffffaeae/details|r |cffffff33" .. Loc ["STRING_SLASH_RESET"] .. "|r: " .. Loc ["STRING_SLASH_RESET_DESC"])
 		print ("|cffffaeae/details|r |cffffff33" .. Loc ["STRING_SLASH_OPTIONS"] .. "|r|cfffcffb0 <" .. Loc ["STRING_WINDOW_NUMBER"] .. ">|r: " .. Loc ["STRING_SLASH_OPTIONS_DESC"])
 		print ("|cffffaeae/details|r |cffffff33" .. "API" .. "|r: " .. Loc ["STRING_SLASH_API_DESC"])
-		print ("|cffffaeae/details|r |cffffff33" .. Loc ["STRING_SLASH_CHANGES"] .. "|r: " .. Loc ["STRING_SLASH_CHANGES_DESC"])
 		print ("|cffffaeae/details|r |cffffff33" .. Loc ["STRING_SLASH_WIPECONFIG"] .. "|r: " .. Loc ["STRING_SLASH_WIPECONFIG_DESC"])
 
 		--print ("|cffffaeae/details " .. Loc ["STRING_SLASH_WORLDBOSS"] .. "|r: " .. Loc ["STRING_SLASH_WORLDBOSS_DESC"])
 		print (" ")
 
-		local v = _detalhes.game_version .. "." .. (_detalhes.build_counter >= _detalhes.alpha_build_counter and _detalhes.build_counter or _detalhes.alpha_build_counter)
-		print (Loc ["STRING_DETAILS1"] .. "|cFFFFFF00DETAILS! VERSION|r: |cFFFFAA00R" .. (_detalhes.build_counter >= _detalhes.alpha_build_counter and _detalhes.build_counter or _detalhes.alpha_build_counter))
+		print (Loc ["STRING_DETAILS1"] .. "|cFFFFFF00DETAILS! VERSION|r: |cFFFFAA00" .. _detalhes.userversion)
 		print (Loc ["STRING_DETAILS1"] .. "|cFFFFFF00GAME VERSION|r: |cFFFFAA00" .. _detalhes.game_version)
 
 	end
@@ -1702,7 +1150,7 @@ function Details.RefreshUserList (ignoreIfHidden)
 			end
 
 			if (not foundPlayer) then
-				tinsert (newList, {playerName, "--", "--"})
+				newList[#newList+1] = {playerName, "--", "--"}
 			end
 		end
 	end
@@ -1717,8 +1165,7 @@ function Details:UpdateUserPanel (usersTable)
 		DetailsUserPanel:SetSize (707, 505)
 		DetailsUserPanel:SetTitle ("Details! Version Check")
 		DetailsUserPanel.Data = {}
-		DetailsUserPanel:ClearAllPoints()
-		DetailsUserPanel:SetPoint ("LEFT", UIParent, "LEFT", 10, 0)
+		DetailsUserPanel:ClearAndSetPoint ("LEFT", UIParent, "LEFT", 10, 0)
 		DetailsUserPanel:Hide()
 
 		Details.UserPanel = DetailsUserPanel

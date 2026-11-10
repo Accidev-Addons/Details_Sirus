@@ -37,6 +37,15 @@ local LDB = LibStub("LibDataBroker-1.1", true)
 local LDBIcon = LDB and LibStub("LibDBIcon-1.0", true)
 
 local tinsert = tinsert
+local pairs = pairs
+local ipairs = ipairs
+local type = type
+local tonumber = tonumber
+local unpack = unpack
+local string_format = string.format
+local math_floor = math.floor
+local table_wipe = table.wipe
+local table_sort = table.sort
 
 local g = _detalhes.gump
 local _
@@ -47,7 +56,28 @@ _detalhes.preset_version = preset_version
 local button_color_rgb = {1, 0.93, 0.74}
 
 local font_select_icon, font_select_texcoord = [[Interface\AddOns\Details\images\icons]], {472/512, 513/512, 186/512, 230/512}
-local texture_select_icon, texture_select_texcoord = [[Interface\AddOns\Details\images\icons]], {472/512, 513/512, 186/512, 230/512}
+
+local for_window_group = function (instance, func)
+	func (instance)
+	if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
+		for _, this_instance in ipairs (instance:GetInstanceGroup()) do
+			if (this_instance ~= instance) then
+				func (this_instance)
+			end
+		end
+	end
+end
+
+local font_menu_builder = function (onclick, desc)
+	return function()
+		local fonts = {}
+		for name, fontPath in pairs (SharedMedia:HashTable ("font")) do
+			fonts [#fonts+1] = {value = name, label = name, icon = font_select_icon, texcoord = font_select_texcoord, onclick = onclick, font = fontPath, descfont = name, desc = desc}
+		end
+		table_sort (fonts, function (t1, t2) return t1.label < t2.label end)
+		return fonts
+	end
+end
 
 local dropdown_height = 18
 
@@ -55,19 +85,8 @@ local SLIDER_WIDTH = 130
 local SLIDER_HEIGHT = 18
 local TEXTENTRY_HEIGHT = 18
 local DROPDOWN_WIDTH = 160
-local COLOR_BUTTON_WIDTH = 160
 
 local CONST_BUTTON_TEMPLATE = g:GetTemplate("button", "DETAILS_PLUGIN_BUTTON_TEMPLATE")
-
-_detalhes.options_window_background = [[Interface\AddOns\Details\images\options_window]]
-
-function _detalhes:SetOptionsWindowTexture(texture)
-	_detalhes.options_window_background = texture
-
-	if _G.DetailsOptionsWindowBackground then
-		_G.DetailsOptionsWindowBackground:SetTexture (texture)
-	end
-end
 
 function _detalhes:InitializeOptionsWindow()
 	local DetailsOptionsWindow = g:NewPanel(UIParent, nil, "DetailsOptionsWindow", nil, 897, 592)
@@ -107,7 +126,6 @@ function _detalhes:OpenOptionsWindow (instance, no_reopen, section)
 	GameCooltip:Close()
 	local window = _G.DetailsOptionsWindow
 
-	local editing_instance = instance
 
 	if (_G.DetailsOptionsWindow) then
 		_G.DetailsOptionsWindow.instance = instance
@@ -167,7 +185,15 @@ function _detalhes:OpenOptionsWindow (instance, no_reopen, section)
 		window.using_skin = 1
 
 		local scaleBar = Details.gump:CreateScaleBar (DetailsOptionsWindow, Details.options_window)
-		DetailsOptionsWindow:SetScale (Details.options_window.scale)
+		scaleBar.OnValueChanged = function (_, _, value)
+			Details.options_window.scale = value
+			if (not scaleBar.IsValueChanging) then
+				DetailsPluginContainerWindow.SetWindowScale (value)
+			end
+		end
+		scaleBar:SetHook ("OnMouseUp", function()
+			DetailsPluginContainerWindow.SetWindowScale (Details.options_window.scale)
+		end)
 
 		DetailsOptionsWindow.instance = instance
 		DetailsOptionsWindow.loading_settings = true
@@ -188,32 +214,7 @@ function _detalhes:OpenOptionsWindow (instance, no_reopen, section)
 
 		--x 9 897 y 9 592
 
-		--local background = g:NewImage (window, _detalhes.options_window_background, 897, 592, nil, nil, "background", "$parentBackground")
-		--background:SetPoint (0, 0)
-		--background:SetDrawLayer ("border")
-		--background:SetTexCoord (0, 0.8759765625, 0, 0.578125)
 
-		--local sub_background = window:CreateTexture ("DetailsOptionsWindowBackgroundWallpaper", "background")
-		--sub_background:SetTexture ([[Interface\FrameGeneral\UI-Background-Marble]], true)
-		--sub_background:SetTexture ([[Interface\DialogFrame\UI-DialogBox-Background-Dark]])
-		--sub_background:SetPoint ("topleft", window.widget, "topleft", 192, -80)
-		--sub_background:SetPoint ("bottomright", window.widget, "bottomright", -30, 27)
-		--sub_background:SetVertTile (true)
-		--sub_background:SetHorizTile (true)
-		--sub_background:SetAlpha (0.81)
-		--sub_background:SetAlpha (0.85)
-		--sub_background:Hide()
-
-		--local menu_background = window:CreateTexture ("DetailsOptionsWindowBackgroundMenu", "background")
-		--menu_background:SetTexture ([[Interface\AddOns\Details\images\options_window]], true)
-		--menu_background:SetTexture ([[Interface\DialogFrame\UI-DialogBox-Background-Dark]])
-		--menu_background:SetPoint ("topleft", window.widget, "topleft", 29, -78)
-		--menu_background:SetSize (164, 488)
-		--menu_background:SetTexCoord (327/1024, 488/1024, 627/1024, 663/1024)
-		--menu_background:SetAlpha (0.81)
-		--menu_background:SetAlpha (0.85)
-		--menu_background:SetVertTile (true)
-		--menu_background:Hide()
 
 		local bigdog = g:NewImage (window, [[Interface\MainMenuBar\UI-MainMenuBar-EndCap-Human]], 180*0.9, 200*0.9, nil, {1, 0, 0, 1}, "backgroundBigDog", "$parentBackgroundBigDog")
 		bigdog:SetPoint ("bottomright", window, "bottomright", -8, 31)
@@ -291,16 +292,6 @@ function _detalhes:OpenOptionsWindow (instance, no_reopen, section)
 		local desc_background = g:NewImage (window, [[Interface\AddOns\Details\images\options_window]], 253, 198, "artwork", {0.3193359375, 0.56640625, 0.685546875, 0.87890625}, "descBackgroundImage", "$parentDescBackgroundImage") -- 327 702 580 900
 		desc_background:SetPoint ("topleft", info_text, "topleft", 0, 0)
 
--- as it stands in the plugin panel, these buttons aren't required anymore
-		--> forge and history buttons
---		local forge_button = g:NewButton (window, _, "$parentForgeButton", "ForgeButton", 90, 20, function() _detalhes:OpenForge(); window:Hide() end, nil, nil, nil, "Open Forge", 1) --, g:GetTemplate ("dropdown", "OPTIONS_DROPDOWN_TEMPLATE")
---		forge_button:SetIcon ([[Interface\AddOns\Details\images\icons]], nil, nil, nil, {396/512, 428/512, 243/512, 273/512}, nil, nil, 2)
---		forge_button:SetPoint ("topleft", 80, -61)
-
---		local history_button = g:NewButton (window, _, "$parentHistoryButton", "HistoryButton", 90, 20, function() _detalhes:OpenRaidHistoryWindow(); window:Hide() end, nil, nil, nil, "Guild Rank", 1) --, g:GetTemplate ("dropdown", "OPTIONS_DROPDOWN_TEMPLATE")
---		history_button:SetIcon ([[Interface\AddOns\Details\images\icons]], nil, nil, nil, {434/512, 466/512, 243/512, 273/512}, nil, nil, 2)
---		history_button:SetPoint ("topleft", 180, -61)
-
 		--> select instance dropbox
 		local onSelectInstance = function (_, _, instance)
 
@@ -338,16 +329,7 @@ function _detalhes:OpenOptionsWindow (instance, no_reopen, section)
 				else
 					local modo = _this_instance.modo
 
-					if (modo == 1) then --alone
-						atributo = _detalhes.SoloTables.Mode or 1
-						local SoloInfo = _detalhes.SoloTables.Menu [atributo]
-						if (SoloInfo) then
-							InstanceList [#InstanceList+1] = {value = index, label = "#".. index .. " " .. SoloInfo [1], onclick = onSelectInstance, icon = SoloInfo [2]}
-						else
-							InstanceList [#InstanceList+1] = {value = index, label = "#".. index .. " unknown", onclick = onSelectInstance, icon = ""}
-						end
-
-					elseif (modo == 4) then --raid
+					if (modo == 4) then --raid
 						local plugin_name = _this_instance.current_raid_plugin or _this_instance.last_raid_plugin
 						if (plugin_name) then
 							local plugin_object = _detalhes:GetPlugin (plugin_name)
@@ -388,9 +370,8 @@ function _detalhes:OpenOptionsWindow (instance, no_reopen, section)
 
 		--
 		local group_editing = CreateFrame ("CheckButton", "DetailsOptionsWindowGroupEditing", window.widget, "ChatConfigCheckButtonTemplate")
-		group_editing:ClearAllPoints()
 		DetailsOptionsWindowGroupEditingText:ClearAllPoints()
-		group_editing:SetPoint ("right", DetailsOptionsWindowGroupEditingText, "left", -1, 0)
+		group_editing:ClearAndSetPoint ("right", DetailsOptionsWindowGroupEditingText, "left", -1, 0)
 		DetailsOptionsWindowGroupEditingText:SetText (Loc["Editing Group"])
 		DetailsOptionsWindowGroupEditingText:SetPoint ("right", instances_string.widget, "left", -20, 0)
 		DetailsOptionsWindowGroupEditingText:SetTextColor (1, 0.8, 0)
@@ -462,20 +443,15 @@ function _detalhes:OpenOptionsWindow (instance, no_reopen, section)
 		local hide_3d_world = CreateFrame ("CheckButton", "DetailsOptionsWindowDisable3D", window.widget, "ChatConfigCheckButtonTemplate")
 		hide_3d_world:SetPoint ("bottomleft", window.widget, "bottomleft", 28, 7)
 		DetailsOptionsWindowDisable3DText:SetText (Loc ["STRING_OPTIONS_INTERFACEDIT"])
-		DetailsOptionsWindowDisable3DText:ClearAllPoints()
-		DetailsOptionsWindowDisable3DText:SetPoint ("left", hide_3d_world, "right", -2, 1)
+		DetailsOptionsWindowDisable3DText:ClearAndSetPoint ("left", hide_3d_world, "right", -2, 1)
 		DetailsOptionsWindowDisable3DText:SetTextColor (1, 0.8, 0)
 		hide_3d_world.tooltip = "Goodbye Cruel World :("
 		hide_3d_world:SetHitRectInsets (0, -105, 0, 0)
 
 		hide_3d_world:SetScript ("OnClick", function()
-			if (hide_3d_world:GetChecked()) then
-				f:Show()
-				window.Disable3DColorPick:Show()
-			else
-				f:Hide()
-				window.Disable3DColorPick:Hide()
-			end
+			local checked = hide_3d_world:GetChecked()
+			f:SetShown(checked)
+			window.Disable3DColorPick:SetShown(checked)
 		end)
 
 		local last_change = GetTime()
@@ -512,49 +488,6 @@ function _detalhes:OpenOptionsWindow (instance, no_reopen, section)
 		local fillbars_image = g:NewImage (window, [[Interface\Buttons\UI-RADIOBUTTON]], 8, 9, "artwork", {20/64, 27/64, 4/16, 11/16})
 		fillbars_image:SetPoint ("right", fillbars, "left", -1, 0)
 
-	--> change log
-
-		local changelog = g:NewButton (window, _, "$parentOpenChangeLogButton", nil, 110, 14, _detalhes.OpenNewsWindow, "change_log", nil, nil, Loc ["STRING_OPTIONS_CHANGELOG"], 1)
-		changelog:SetPoint ("left", fillbars, "right", 10, 0)
-		changelog:SetTemplate (CONST_BUTTON_TEMPLATE)
-
-		local changelog_image = g:NewImage (window, [[Interface\Buttons\UI-RADIOBUTTON]], 8, 9, "artwork", {20/64, 27/64, 4/16, 11/16})
-		changelog_image:SetPoint ("right", changelog, "left", -1, 0)
-
-	--> send feedback
-
-		local feedback_button = g:NewButton (window, _, "$parentOpenFeedbackButton", nil, 80, 14, _detalhes.OpenFeedbackWindow, nil, nil, nil, Loc ["STRING_OPTIONS_SENDFEEDBACK"], 1)
-		feedback_button:SetPoint ("left", changelog, "right", 10, 0)
-		feedback_button:SetTemplate (CONST_BUTTON_TEMPLATE)
-
-		local feedback_image = g:NewImage (window, [[Interface\Buttons\UI-RADIOBUTTON]], 8, 9, "artwork", {20/64, 27/64, 4/16, 11/16})
-		feedback_image:SetPoint ("right", feedback_button, "left", -1, 0)
-
-		feedback_button:Hide()
-
-	--> translate
---[[
-		local translate_button = g:NewButton (window, _, "$parentOpenTranslateButton", nil, 140, 14, _detalhes.OpenTranslateWindow, nil, nil, nil, Loc ["STRING_TRANSLATE_LANGUAGE"], 1)
-		translate_button:SetPoint ("left", feedback_button, "right", 10, 0)
-		translate_button.textalign = "left"
-		translate_button:SetHook ("OnEnter", function()
-			translate_button:SetTextColor (1, 1, 0)
-		end)
-		translate_button:SetHook ("OnLeave", function()
-			translate_button:SetTextColor (0.9999, 0.8196, 0, 1)
-		end)
-
-		local feedback_image = g:NewImage (window, "Interface\\Buttons\\UI-RADIOBUTTON", 8, 9, "artwork", {20/64, 27/64, 4/16, 11/16})
-		feedback_image:SetPoint ("right", translate_button, "left", -1, 0)
---]]
-
-	--> right click to close
-		--local right_click_close = window:CreateRightClickLabel ("short", 14, 14, "Close")
-		--right_click_close:SetPoint ("left", fillbars, "right", 90, 0)
-		--_detalhes:SetFontColor (right_click_close.widget, {1, 0.82, 0, 1})
-		--_detalhes:SetFontFace (right_click_close.widget, [[Fonts\FRIZQT__.TTF]])
-		--_detalhes:SetFontOutline (right_click_close.widget, true)
-		--_detalhes:SetFontSize (right_click_close.widget, 12)
 
 	--> left panel buttons
 
@@ -669,11 +602,11 @@ local menus2 = {
 	}
 	window.is_window_settings = is_window_settings
 
-		--~new
-		local newIcon = g:CreateImage (window, [[Interface\AddOns\Details\images\icons2]], 62*0.6, 40*0.6, "overlay", {443/512, 505/512, 306/512, 346/512})
-		--newIcon:SetPoint ("topleft", window.widget, "topleft", 135, -351)
 
-		local select_options = function (options_type, true_index)
+		local select_options = function (options_type, true_index, param1, param2)
+			if (type (options_type) == "table") then
+				options_type, true_index = param1, param2
+			end
 
 			window.current_selected = options_type
 
@@ -738,19 +671,11 @@ local menus2 = {
 			g:NewLabel (menu_frame, _, "$parentgeneral_settings_text", "GeneralSettingsLabel", Loc ["STRING_OPTIONS_GENERAL"], "GameFontNormal", 12)
 			menu_frame.GeneralSettingsLabel:SetPoint ("topleft", g_settings, "topleft", menuTitleAnchorX, -10)
 
-		--	local g_settings_texture = g:NewImage (menu_frame, [[Interface\AddOns\Details\images\options_window]], 160, 33, nil, nil, "GeneralSettingsTexture", "$parentGeneralSettingsTexture")
-		--	g_settings_texture:SetTexCoord (0, 0.15625, 0.685546875, 0.7177734375)
-		--	g_settings_texture:SetPoint ("topleft", g_settings, "topleft", 0, 0)
-
 		--apparance
 			local g_appearance = g:NewButton (menu_frame, _, "$parentAppearanceButton", "g_appearance", 150, 33, function() end, 0x2)
 
 			g:NewLabel (menu_frame, _, "$parentappearance_settings_text", "AppearanceSettingsLabel", Loc ["STRING_OPTIONS_APPEARANCE"], "GameFontNormal", 12)
 			menu_frame.AppearanceSettingsLabel:SetPoint ("topleft", g_appearance, "topleft", menuTitleAnchorX, -11)
-
-		--	local g_appearance_texture = g:NewImage (menu_frame, [[Interface\AddOns\Details\images\options_window]], 160, 33, nil, nil, "AppearanceSettingsTexture", "$parentAppearanceSettingsTexture")
-		--	g_appearance_texture:SetTexCoord (0, 0.15625, 0.71875, 0.7509765625)
-		--	g_appearance_texture:SetPoint ("topleft", g_appearance, "topleft", 0, 0)
 
 		--advanced
 			local g_advanced = g:NewButton (menu_frame, _, "$parentAdvancedButton", "g_advanced", 150, 33, function() end, 0x4)
@@ -758,16 +683,11 @@ local menus2 = {
 			g:NewLabel (menu_frame, _, "$parentadvanced_settings_text", "AdvancedSettingsLabel", Loc ["STRING_OPTIONS_ADVANCED"], "GameFontNormal", 12)
 			menu_frame.AdvancedSettingsLabel:SetPoint ("topleft", g_advanced, "topleft", menuTitleAnchorX, -11)
 
-		--	local g_advanced_texture = g:NewImage (menu_frame, [[Interface\AddOns\Details\images\options_window]], 160, 33, nil, nil, "AdvancedSettingsTexture", "$parentAdvancedSettingsTexture")
-		--	g_advanced_texture:SetTexCoord (0, 0.15625, 0.8173828125, 0.849609375)
-		--	g_advanced_texture:SetPoint ("topleft", g_advanced, "topleft", 0, 0)
-
 
 
 		--> create menus
 		local anchors = {g_settings, g_appearance, g_advanced} --g_performance
 		local y = 0
-		local sub_menu_index = 1
 
 		local textcolor = {.8, .8, .8, 1}
 		local last_pressed
@@ -781,18 +701,6 @@ local menus2 = {
 		selected_texture:SetVertexColor (1, 1, 1, 0.8)
 		selected_texture:SetBlendMode ("ADD")
 
-		local is_appearance = {
-			[3] = true,
-			[4] = true,
-			[5] = true,
-			[8] = true,
-			[14] = true,
-			[7] = true,
-			[6] = true,
-			[17] = true,
-			[9] = true,
-			[18] = true,
-		}
 		local button_onenter = function (self, capsule)
 			self.MyObject.my_bg_texture:SetVertexColor (1, 1, 1, 1)
 			self.MyObject.textcolor = "yellow"
@@ -818,17 +726,6 @@ local menus2 = {
 			return true
 		end
 
-		--[=[
-		--> gradient
-		local blackdiv = window:CreateTexture (nil, "artwork")
-		blackdiv:SetTexture ([[Interface\ACHIEVEMENTFRAME\UI-Achievement-HorizontalShadow]])
-		blackdiv:SetVertexColor (0, 0, 0)
-		blackdiv:SetAlpha (0.7)
-		blackdiv:SetPoint ("topleft", window.frame, "topleft", 0, 0)
-		blackdiv:SetPoint ("bottomleft", window.frame, "bottomleft", 0, 0)
-		blackdiv:SetWidth (200)
-		--]=]
-
 		--move buttons creation to loading process
 		function window:create_left_menu()
 			for index, menulist in ipairs (menus) do
@@ -853,8 +750,7 @@ local menus2 = {
 					button.textcolor = textcolor
 					button.textsize = 11
 					button.my_bg_texture = texture
-					button.menu_index = menus_settings [true_index]
-					tinsert (all_buttons, button)
+					all_buttons[#all_buttons+1] = button
 					y = y - 16
 
 					button:SetHook ("OnEnter", button_onenter)
@@ -998,26 +894,10 @@ local menus2 = {
 			return container_window
 		end
 
-		table.insert (window.options [1], window:create_box_no_scroll (1))
-		table.insert (window.options [2], window:create_box_no_scroll (2))
-		table.insert (window.options [3], window:create_box_no_scroll (3))
-		table.insert (window.options [4], window:create_box_no_scroll (4))
-		table.insert (window.options [5], window:create_box_no_scroll (5))
-		table.insert (window.options [6], window:create_box_no_scroll (6))
-		table.insert (window.options [7], window:create_box_no_scroll (7))
-		table.insert (window.options [8], window:create_box_no_scroll (8))
-		table.insert (window.options [9], window:create_box_no_scroll (9))
-		table.insert (window.options [10], window:create_box_no_scroll (10))
-		table.insert (window.options [11], window:create_box_no_scroll (11))
-		table.insert (window.options [12], window:create_box (12))
-		table.insert (window.options [13], window:create_box_no_scroll (13))
-		table.insert (window.options [14], window:create_box_no_scroll (14))
-		table.insert (window.options [15], window:create_box_no_scroll (15))
-		table.insert (window.options [16], window:create_box_no_scroll (16))
-		table.insert (window.options [17], window:create_box_no_scroll (17))
-		table.insert (window.options [18], window:create_box_no_scroll (18))
-		table.insert (window.options [19], window:create_box_no_scroll (19))
-		table.insert (window.options [20], window:create_box_no_scroll (20))
+		for i = 1, 20 do
+			local box = (i == 12) and window:create_box (i) or window:create_box_no_scroll (i)
+			window.options[i][#window.options[i]+1] = box
+		end
 
 		function window:hide_all_options()
 			for _, frame in ipairs (window.options) do
@@ -1027,111 +907,10 @@ local menus2 = {
 			end
 		end
 
-		function window:hide_options (options)
-			for _, widget in ipairs (window.options [options]) do
-				widget:Hide()
-			end
-		end
-
 		function window:un_hide_options (options)
 			for _, widget in ipairs (window.options [options]) do
 				widget:Show()
 			end
-		end
-
-		--local yellow_point = window:CreateTexture (nil, "overlay")
-		--yellow_point:SetSize (16, 16)
-		--yellow_point:SetTexture ([[Interface\QUESTFRAME\UI-Quest-BulletPoint]])
-
-		local background_on_enter = function (self)
-			if (self.background_frame) then
-				self = self.background_frame
-			end
-
-			if (self.parent and self.parent.info) then
-				info_text.active = true
-				info_text.text = self.parent.info
-			end
-
-			self.label:SetTextColor (1, .8, 0)
-
-			--self:SetBackdrop ({edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", tile = true, tileSize = 16, edgeSize = 8,
-			--insets = {left = 1, right = 1, top = 0, bottom = 1},})
-
-			--yellow_point:Show()
-			--yellow_point:SetPoint ("right", self, "left", 5, -1)
-		end
-		local background_on_leave = function (self)
-			if (self.background_frame) then
-				self = self.background_frame
-			end
-			--self:SetBackdropColor (0, 0, 0, 0)
-			if (info_text.active) then
-				info_text.active = false
-				--info_text.text = ""
-			end
-
-			self.label:SetTextColor (1, 1, 1)
-
-			--self:SetBackdrop (nil)
-
-			--yellow_point:ClearAllPoints()
-			--yellow_point:Hide()
-		end
-
-		local background_on_mouse_down = function (self)
-			if (not window.widget.isMoving) then
-				window.widget:StartMoving()
-				window.widget.isMoving = true
-			end
-		end
-
-		local background_on_mouse_up = function (self, button)
-			if (window.widget.isMoving) then
-				window.widget:StopMovingOrSizing()
-				window.widget.isMoving = false
-			end
-			if (button == "RightButton")then
-				DetailsOptionsWindow:Hide()
-			end
-		end
-
-		function window:create_line_background (frameX, label, parent)
-			local f = CreateFrame ("Button", nil, frameX)
-			f:SetPoint ("left", label.widget or label, "left", -2, 0)
-			f:SetSize (260, 16)
-			f:SetScript ("OnEnter", background_on_enter)
-			f:SetScript ("OnLeave", background_on_leave)
-			--f:SetScript ("OnMouseDown", background_on_mouse_down)
-			--f:SetScript ("OnMouseUp", background_on_mouse_up)
-			f:SetBackdrop({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16, insets = {left = 0, right = 0, top = 0, bottom = 0}})
-			f:SetBackdropColor (0, 0, 0, 0)
-			f.parent = parent
-			f.label = label
-			if (parent.widget) then
-				parent.widget.background_frame = f
-			else
-				parent.background_frame = f
-			end
-
-			if (label:GetObjectType() == "FontString") then
-				local t = frameX:CreateTexture (nil, "artwork")
-				t:SetPoint ("left", label.widget or label, "left")
-				t:SetSize (label:GetStringWidth(), 12)
-				t:SetTexture ([[Interface\ACHIEVEMENTFRAME\UI-Achievement-HorizontalShadow]])
-				t:SetDesaturated (true)
-				t:SetAlpha (.5)
-			end
-
-			return f
-		end
-
-		function window:CreateLineBackground (frame, widget_name, label_name, desc_loc)
-			frame [widget_name].info = desc_loc
-			local f = window:create_line_background (frame, frame [label_name], frame [widget_name])
-			frame [widget_name]:SetHook ("OnEnter", background_on_enter)
-			frame [widget_name]:SetHook ("OnLeave", background_on_leave)
-			return f
 		end
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1194,8 +973,6 @@ local menus2 = {
 			f.is_button2 = is_button2
 			f:SetScript ("OnEnter", background_on_enter2)
 			f:SetScript ("OnLeave", background_on_leave2)
-			--f:SetScript ("OnMouseDown", background_on_mouse_down)
-			--f:SetScript ("OnMouseUp", background_on_mouse_up)
 			f:SetBackdrop({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16, insets = {left = 0, right = 0, top = 0, bottom = 0}})
 			f:SetBackdropColor (0, 0, 0, 0)
 			f.parent = parent
@@ -1280,7 +1057,7 @@ local menus2 = {
 		function window:arrange_menu (frame, t, x, y_start)
 			local y = y_start
 
-			--table.sort (t, function (a, b) return a[2] < b[2] end)
+			--table_sort (t, function (a, b) return a[2] < b[2] end)
 
 			for index, _table in ipairs (t) do
 				local widget = _table [1]
@@ -1306,18 +1083,11 @@ local menus2 = {
 			local window_widget = window.widget
 
 			--> title bar
-			local titlebar = CreateFrame ("frame", window:GetName() .. "OptionsTitleBar", window_widget)
-			titlebar:SetPoint ("topleft", window_widget, "topleft", 2, -3)
-			titlebar:SetPoint ("topright", window_widget, "topright", -2, -3)
-			titlebar:SetHeight (20)
-			titlebar:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-			titlebar:SetBackdropColor (.5, .5, .5, 1)
-			titlebar:SetBackdropBorderColor (0, 0, 0, 1)
+			local titlebar = _detalhes:CreateWindowTitleBar (window_widget, window:GetName() .. "OptionsTitleBar")
 
 			--> move the title text to titlebar
-			title:ClearAllPoints()
 			title:SetParent (titlebar)
-			title:SetPoint ("center", titlebar, "center")
+			title:ClearAndSetPoint ("center", titlebar, "center")
 			--title:SetPoint ("top", titlebar, "top", 0, -6)
 
 			--> move the close button to titlebar
@@ -1362,32 +1132,18 @@ local menus2 = {
 			fillbars:SetPoint ("bottomleft", window.widget, "bottomleft", 17, 16)
 			fillbars:SetTemplate (options_button_template)
 			fillbars:SetSize(120, 20)
-			changelog:SetTemplate (options_button_template)
-			changelog:SetSize(120, 20)
-			feedback_button:SetTemplate (options_button_template)
-			feedback_button:SetSize(120, 20)
 
-			feedback_button.textsize = 10
-			changelog.textsize = 10
 			fillbars.textsize = 10
---			history_button.textsize = 10
---			forge_button.textsize = 10
 
 			fillbars:SetIcon ("Interface\\AddOns\\Details\\images\\icons", nil, nil, nil, {323/512, 365/512, 42/512, 78/512}, {1, 1, 1, 0.6}, 4, 2)
-			changelog:SetIcon ("Interface\\AddOns\\Details\\images\\icons", nil, nil, nil, {367/512, 399/512, 43/512, 76/512}, {1, 1, 1, 0.8}, 4, 2)
-			feedback_button:SetIcon ("Interface\\FriendsFrame\\UI-Toast-BroadcastIcon", nil, nil, nil, {4/32, 27/32, 5/32, 25/32}, {1, 1, 1, 0.8}, 4, 2)
 
-			changelog_image:Hide()
 			fillbars_image:Hide()
-			feedback_image:Hide()
 
-			DetailsOptionsWindowGroupEditingText:ClearAllPoints()
-			DetailsOptionsWindowGroupEditingText:SetPoint ("bottomright", instances.widget, "topright", 0, 2)
+			DetailsOptionsWindowGroupEditingText:ClearAndSetPoint ("bottomright", instances.widget, "topright", 0, 2)
 
 			_detalhes:SetFontSize (DetailsOptionsWindowGroupEditingText, 10)
 			instances_string.textsize = 10
 			instances_string:SetPoint ("right", instances, "left", -2, 0)
-			--forge_button.textsize = 10
 
 			--> menus height
 
@@ -1419,12 +1175,9 @@ local menus2 = {
 						up:SetNormalTexture ([[Interface\Buttons\Arrow-Up-Up]])
 						up:SetPushedTexture ([[Interface\Buttons\Arrow-Up-Down]])
 						up:SetDisabledTexture ([[Interface\Buttons\Arrow-Up-Disabled]])
-						up:GetNormalTexture():ClearAllPoints()
-						up:GetPushedTexture():ClearAllPoints()
-						up:GetDisabledTexture():ClearAllPoints()
-						up:GetNormalTexture():SetPoint ("center", up, "center", 1, 1)
-						up:GetPushedTexture():SetPoint ("center", up, "center", 1, 1)
-						up:GetDisabledTexture():SetPoint ("center", up, "center", 1, 1)
+						up:GetNormalTexture():ClearAndSetPoint ("center", up, "center", 1, 1)
+						up:GetPushedTexture():ClearAndSetPoint ("center", up, "center", 1, 1)
+						up:GetDisabledTexture():ClearAndSetPoint ("center", up, "center", 1, 1)
 						up:SetSize (16, 16)
 						up:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]]})
 						up:SetBackdropColor (0, 0, 0, 0.3)
@@ -1433,12 +1186,9 @@ local menus2 = {
 						down:SetNormalTexture ([[Interface\Buttons\Arrow-Down-Up]])
 						down:SetPushedTexture ([[Interface\Buttons\Arrow-Down-Down]])
 						down:SetDisabledTexture ([[Interface\Buttons\Arrow-Down-Disabled]])
-						down:GetNormalTexture():ClearAllPoints()
-						down:GetPushedTexture():ClearAllPoints()
-						down:GetDisabledTexture():ClearAllPoints()
-						down:GetNormalTexture():SetPoint ("center", down, "center", 1, -5)
-						down:GetPushedTexture():SetPoint ("center", down, "center", 1, -5)
-						down:GetDisabledTexture():SetPoint ("center", down, "center", 1, -5)
+						down:GetNormalTexture():ClearAndSetPoint ("center", down, "center", 1, -5)
+						down:GetPushedTexture():ClearAndSetPoint ("center", down, "center", 1, -5)
+						down:GetDisabledTexture():ClearAndSetPoint ("center", down, "center", 1, -5)
 						down:SetSize (16, 16)
 						down:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]]})
 						down:SetBackdropColor (0, 0, 0, 0.35)
@@ -1467,11 +1217,6 @@ local menus2 = {
 
 		if (_detalhes.player_details_window.skin == "ElvUI") then
 			window:UseElvUISkin()
-		end
-
-		--> is the default one, doesn't need to change anything
-		function window:UseClassicSkin()
-			window.using_skin = 1
 		end
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1544,15 +1289,7 @@ function window:CreateFrame20()
 
 		--local icon, texcoord = [[Interface\AddOns\Details\images\icons]], {479/512, 506/512, 186/512, 221/512}
 
-		local build_tooltip_menu = function()
-			local fonts = {}
-			for name, fontPath in pairs (SharedMedia:HashTable ("font")) do
-
-				fonts [#fonts+1] = {value = name, icon = font_select_icon, texcoord = font_select_texcoord, label = name, onclick = on_select_tooltip_font, font = fontPath, descfont = name, desc = "Our thoughts strayed constantly\nAnd without boundary\nThe ringing of the division bell had began."}
-			end
-			table.sort (fonts, function (t1, t2) return t1.label < t2.label end)
-			return fonts
-		end
+		local build_tooltip_menu = font_menu_builder (on_select_tooltip_font, "Our thoughts strayed constantly\nAnd without boundary\nThe ringing of the division bell had began.")
 
 		g:NewLabel (frame20, _, "$parentTooltipFontLabel", "TooltipFontLabel", Loc ["STRING_OPTIONS_TEXT_FONT"] , "GameFontHighlightLeft")
 		local d = g:NewDropDown (frame20, _, "$parentTooltipFontDropdown", "TooltipFontDropdown", DROPDOWN_WIDTH, dropdown_height, build_tooltip_menu, _detalhes.tooltip.fontface, options_dropdown_template)
@@ -1588,11 +1325,7 @@ function window:CreateFrame20()
 		local onSelectTimeAbbreviation = function (_, _, abbreviationtype)
 			_detalhes.tooltip.abbreviation = abbreviationtype
 
-			_detalhes.atributo_damage:UpdateSelectedToKFunction()
-			_detalhes.atributo_heal:UpdateSelectedToKFunction()
-			_detalhes.atributo_energy:UpdateSelectedToKFunction()
-			_detalhes.atributo_misc:UpdateSelectedToKFunction()
-			_detalhes.atributo_custom:UpdateSelectedToKFunction()
+			_detalhes:UpdateToKFunctions()
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -1625,11 +1358,7 @@ function window:CreateFrame20()
 		g:NewLabel (frame20, _, "$parentTooltipMaximizeLabel", "TooltipMaximizeLabel", Loc ["STRING_OPTIONS_TOOLTIPS_MAXIMIZE"], "GameFontHighlightLeft")
 		local onSelectMaximize = function (_, _, maximizeType)
 			_detalhes.tooltip.maximize_method = maximizeType
-			_detalhes.atributo_damage:UpdateSelectedToKFunction()
-			_detalhes.atributo_heal:UpdateSelectedToKFunction()
-			_detalhes.atributo_energy:UpdateSelectedToKFunction()
-			_detalhes.atributo_misc:UpdateSelectedToKFunction()
-			_detalhes.atributo_custom:UpdateSelectedToKFunction()
+			_detalhes:UpdateToKFunctions()
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -1686,7 +1415,7 @@ function window:CreateFrame20()
 				for name, texturePath in pairs (textures2) do
 					texTable2 [#texTable2+1] = {value = name, label = name, onclick = onSelectTextureBackdrop, icon = [[Interface\DialogFrame\UI-DialogBox-Corner]], texcoord = {0.09375, 1, 0, 0.78}, iconsize = iconsize}
 				end
-				table.sort (texTable2, function (t1, t2) return t1.label < t2.label end)
+				table_sort (texTable2, function (t1, t2) return t1.label < t2.label end)
 				return texTable2
 			end
 
@@ -1985,22 +1714,6 @@ function window:CreateFrame19()
 				frame19.minimapActionDropdown:SetPoint ("left", frame19.minimapActionLabel, "right", 2, 0)
 				window:CreateLineBackground2 (frame19, "minimapActionDropdown", "minimapActionLabel", Loc ["STRING_OPTIONS_MINIMAP_ACTION_DESC"])
 			end
-	--> hot corner
-
-		--anchor
-		g:NewLabel (frame19, _, "$parentHotcornerAnchor", "hotcornerAnchorLabel", Loc ["STRING_OPTIONS_HOTCORNER_ANCHOR"], "GameFontNormal")
-
-		--show or hide
-			g:NewLabel (frame19, _, "$parentHotcornerLabel", "hotcornerLabel", Loc ["STRING_OPTIONS_HOTCORNER"], "GameFontHighlightLeft")
-			g:NewSwitch (frame19, _, "$parentHotcornerSlider", "hotcornerSlider", 60, 20, _, _, not _detalhes.hotcorner_topleft.hide, nil, nil, nil, nil, options_switch_template)
-
-			frame19.hotcornerSlider:SetPoint ("left", frame19.hotcornerLabel, "right", 2, 0)
-			frame19.hotcornerSlider:SetAsCheckBox()
-			frame19.hotcornerSlider.OnSwitch = function (self, _, value)
-				_G.HotCorners:HideHotCornerButton ("Details!", "TOPLEFT", not value)
-			end
-			window:CreateLineBackground2 (frame19, "hotcornerSlider", "hotcornerLabel", Loc ["STRING_OPTIONS_HOTCORNER_DESC"])
-
 	--> broker
 		--anchor
 		g:NewLabel (frame19, _, "$parentHotcornerAnchor", "brokerAnchorLabel", Loc ["STRING_OPTIONS_DATABROKER"], "GameFontNormal")
@@ -2140,8 +1853,6 @@ function window:CreateFrame19()
 			{"minimapAnchorLabel", 1, true},
 			{"minimapLabel", 2},
 			{"minimapActionLabel", 3},
-			{"hotcornerAnchorLabel", 4, true},
-			{"hotcornerLabel", 5},
 			{"brokerAnchorLabel", 6, true},
 			{"brokerTextLabel", 7},
 			{"BrokerNumberAbbreviateLabel", 8},
@@ -2182,78 +1893,6 @@ function window:CreateFrame18()
 
 		--fazer os headers com espa�o para images
 		--fazer o bot�o para abrir o painel de op�opoes
-
-		--> streamer plugin - a.k.a. player spell tracker
-			--> title anchor
-			g:NewLabel (frame18, _, "$parentStreamerPluginAnchor", "streamerPluginAnchor", "Streamer Plugin: Action Tracker", "GameFontNormal")
-			local streamerTitleDesc = g:NewLabel (frame18, _, "$parentStreamerTitleDescText", "StreamerTitleDescTextLabel", "Show the spells you are casting, allowing the viewer to follow your decision making and learn your rotation.", "GameFontNormal", 10, "white")
-			streamerTitleDesc:SetSize (270, 40)
-			streamerTitleDesc:SetJustifyV ("top")
-			streamerTitleDesc:SetPoint ("topleft", frame18.streamerPluginAnchor, "bottomleft", 0, -4)
-
-			local streamerTitleImage = g:CreateImage (frame18, [[Interface\AddOns\Details\images\icons2]], 256, 41, "overlay", {0.5, 1, 0.49, 0.57})
-			streamerTitleImage:SetPoint ("topleft", frame18.streamerPluginAnchor, "bottomleft", 0, -40)
-
-			--> get the plugin object
-			local StreamerPlugin = _detalhes:GetPlugin ("DETAILS_PLUGIN_STREAM_OVERLAY")
-			if (StreamerPlugin) then
-				--> get the plugin settings table
-				local tPluginSettings = _detalhes:GetPluginSavedTable ("DETAILS_PLUGIN_STREAM_OVERLAY")
-				if (tPluginSettings) then
-					local bIsPluginEnabled = tPluginSettings.enabled
-					--> plugin already enabled
-					if (bIsPluginEnabled) then
-						--> config button
-						local configure_streamer_plugin = function()
-							StreamerPlugin.OpenOptionsPanel (true)
-							C_Timer:After (0.2, function()
-								window:Hide()
-							end)
-						end
-						local configurePluginButton = g:NewButton (frame18, _, "$parentConfigureStreamerPluginButton", "configureStreamerPlugin", 100, 20, configure_streamer_plugin, nil, nil, nil, "Action Tracker Options", nil, options_button_template)
-						configurePluginButton:SetWidth (button_width)
-						configurePluginButton:SetPoint ("topleft", streamerTitleImage, "bottomleft", 0, -7)
-
-						--> text telling how to disable
-						local pluginAlreadyEnabled = g:NewLabel (frame18, _, "$parentStreamerAlreadyEnabledText", "StreamerAlreadyEnabledTextLabel", "Plugin is enabled. You may disable it on Plugin Management section.", "GameFontNormal", 10, "white")
-						pluginAlreadyEnabled:SetJustifyV ("top")
-						pluginAlreadyEnabled:SetSize (270, 40)
-						pluginAlreadyEnabled:SetPoint ("topleft", configurePluginButton, "bottomleft", 0, -7)
-					else
-						--> plugin isnt enabled, create the enable button
-						local enable_streamer_plugin = function()
-							tPluginSettings.enabled = true
-							StreamerPlugin.__enabled = true
-							_detalhes:SendEvent ("PLUGIN_ENABLED", StreamerPlugin)
-
-							frame18.enableStreamerPluginButton:Hide()
-
-							--> config button
-							local configure_streamer_plugin = function()
-								StreamerPlugin.OpenOptionsPanel()
-							end
-							local configurePluginButton = g:NewButton (frame18, _, "$parentConfigureStreamerPluginButton", "configureStreamerPlugin", 100, 20, configure_streamer_plugin, nil, nil, nil, "Action Tracker Options", nil, options_button_template)
-							configurePluginButton:SetWidth (button_width)
-							configurePluginButton:SetPoint ("topleft", streamerTitleImage, "bottomleft", 0, -7)
-
-							--> text telling how to disable
-							local pluginAlreadyEnabled = g:NewLabel (frame18, _, "$parentStreamerAlreadyEnabledText", "StreamerAlreadyEnabledTextLabel", "Plugin is enabled. You may disable it on Plugin Management section.", "GameFontNormal", 10, "white")
-							pluginAlreadyEnabled:SetJustifyV ("top")
-							pluginAlreadyEnabled:SetSize (270, 40)
-							pluginAlreadyEnabled:SetPoint ("topleft", configurePluginButton, "bottomleft", 0, -7)
-						end
-
-						local enablePluginButton = g:NewButton (frame18, _, "$parentEnableStreamerPluginButton", "enableStreamerPluginButton", 100, 20, enable_streamer_plugin, nil, nil, nil, "Enable Plugin", nil, options_button_template)
-						enablePluginButton:SetWidth (button_width)
-						enablePluginButton:SetPoint ("topleft", streamerTitleImage, "bottomleft", 0, -5)
-					end
-				end
-			else
-				--> plugin is disabled at the addon control panel
-				local pluginDisabled = g:NewLabel (frame18, _, "$parentStreamerDisabledText", "StreamerDisabledTextLabel", "Details!: Streamer Plugin is disabled on the AddOns Control Panel.", "GameFontNormal", 10, "red")
-				pluginDisabled:SetSize (270, 40)
-				pluginDisabled:SetPoint ("topleft", streamerTitleImage, "bottomleft", 0, -2)
-			end
 
 
 		--> event tracker
@@ -2392,22 +2031,6 @@ function window:CreateFrame18()
 
 				window:CreateLineBackground2 (frame18, "ClearCacheSlider", "ClearCacheLabel", "Reduces the chance of getting a serial number overlap when working with multiple realms.")
 
-			--> advanced animations
-			--[[
-				g:NewLabel (frame18, _, "$parentAdvancedAnimationsLabel", "AdvancedAnimationsLabel", "Use Animation Acceleration", "GameFontHighlightLeft")
-				g:NewSwitch (frame18, _, "$parentAdvancedAnimationsSlider", "AdvancedAnimationsSlider", 60, 20, _, _, _detalhes.streamer_config.use_animation_accel, nil, nil, nil, nil, options_switch_template)
-
-				frame18.AdvancedAnimationsSlider:SetPoint ("left", frame18.AdvancedAnimationsLabel, "right", 2)
-				frame18.AdvancedAnimationsSlider:SetAsCheckBox()
-				frame18.AdvancedAnimationsSlider.OnSwitch = function (_, _, value)
-					_detalhes.streamer_config.use_animation_accel = not _detalhes.streamer_config.use_animation_accel
-					_detalhes:RefreshAnimationFunctions()
-					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
-				end
-
-				window:CreateLineBackground2 (frame18, "AdvancedAnimationsSlider", "AdvancedAnimationsLabel", "Animation speed changes accordly to the amount of space the bar needs to travel.")
-			--]]
-
 		--> anchoring
 		local x = window.left_start_at
 		titleFrame18:SetPoint (x, window.title_y_pos)
@@ -2417,8 +2040,6 @@ function window:CreateFrame18()
 		frame18.a = a
 
 		local left_side = {
-			{"streamerPluginAnchor", 0, true},
-
 			{"eventTrackerAnchor", 0, true},
 			{"eventTrackerAnchor", 0, true},
 			{"eventTrackerAnchor", 0, true},
@@ -2468,15 +2089,7 @@ function window:CreateFrame17()
 		local onSelectCombatAlpha = function (_, _, combat_alpha)
 			local instance = _G.DetailsOptionsWindow.instance
 
-			instance:SetCombatAlpha (combat_alpha)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetCombatAlpha (combat_alpha)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetCombatAlpha (combat_alpha) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -2505,17 +2118,10 @@ function window:CreateFrame17()
 
 		frame17.hideOnCombatAlphaSlider:SetPoint ("left", frame17.hideOnCombatAlphaLabel, "right", 2, 0)
 		frame17.hideOnCombatAlphaSlider:SetHook ("OnValueChange", function (self, instance, amount) --> slider, fixedValue, sliderValue
-			instance.hide_in_combat_alpha = amount
-			instance:SetCombatAlpha (nil, nil, true)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance.hide_in_combat_alpha = amount
-						this_instance:SetCombatAlpha (nil, nil, true)
-					end
-				end
-			end
+			for_window_group (instance, function (i)
+				i.hide_in_combat_alpha = amount
+				i:SetCombatAlpha (nil, nil, true)
+			end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
@@ -2565,56 +2171,24 @@ function window:CreateFrame17()
 		frame17.alphaIconsTooSwitch:SetAsCheckBox()
 
 		frame17.alphaIconsTooSwitch.OnSwitch = function (self, instance, value)
-			instance:SetMenuAlpha (nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetMenuAlpha (nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetMenuAlpha (nil, nil, nil, value) end)
 
 		end
 		frame17.alphaSwitch.OnSwitch = function (self, instance, value)
-			instance:SetMenuAlpha (value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetMenuAlpha (value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetMenuAlpha (value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
 		frame17.menuOnEnterSlider:SetHook ("OnValueChange", function (self, instance, value)
-			self.amt:SetText (string.format ("%.2f", value))
-			instance:SetMenuAlpha (nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetMenuAlpha (nil, value)
-					end
-				end
-			end
+			self.amt:SetText (string_format ("%.2f", value))
+			for_window_group (instance, function (i) i:SetMenuAlpha (nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			return true
 		end)
 		frame17.menuOnLeaveSlider:SetHook ("OnValueChange", function (self, instance, value)
-			self.amt:SetText (string.format ("%.2f", value))
-			instance:SetMenuAlpha (nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetMenuAlpha (nil, nil, value)
-					end
-				end
-			end
+			self.amt:SetText (string_format ("%.2f", value))
+			for_window_group (instance, function (i) i:SetMenuAlpha (nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			return true
@@ -2637,14 +2211,14 @@ function window:CreateFrame17()
 				local icones = sub_atributo.icones
 				for index, att_name in ipairs (sub_atributo.lista) do
 					local texture, texcoord = unpack (icones [index])
-					tinsert (t, {value = i, label = att_name, onclick = Current_Switch_Func, icon = texture, texcoord = texcoord})
+					t[#t+1] = {value = i, label = att_name, onclick = Current_Switch_Func, icon = texture, texcoord = texcoord}
 					window.lastSwitchList [i] = {atributo, index, i}
 					i = i + 1
 				end
 			end
 
 			for index, ptable in ipairs (_detalhes.RaidTables.Menu) do
-				tinsert (t, {value = i, label = ptable [1], onclick = Current_Switch_Func, icon = ptable [2]})
+				t[#t+1] = {value = i, label = ptable [1], onclick = Current_Switch_Func, icon = ptable [2]}
 				window.lastSwitchList [i] = {"raid", ptable [4], i}
 				i = i + 1
 			end
@@ -2995,9 +2569,7 @@ function window:CreateFrame16()
 
 		local accept = function()
 			big_code_editor:ClearFocus()
-			if (not big_code_editor.is_export) then
-				_detalhes:TimeDataUpdate (big_code_editor.index, nil, big_code_editor:GetText())
-			end
+			_detalhes:TimeDataUpdate (big_code_editor.index, nil, big_code_editor:GetText())
 			big_code_editor:Hide()
 		end
 		local cancel = function()
@@ -3024,9 +2596,7 @@ function window:CreateFrame16()
 				end
 
 				big_code_editor:SetText (func)
-				big_code_editor.original_code = func
 				big_code_editor.index = index
-				big_code_editor.is_export = nil
 				big_code_editor:Show()
 
 				frame16.userTimeCaptureAddPanel:Hide()
@@ -3571,15 +3141,7 @@ function window:CreateFrame14()
 		frame14.attributeEnabledSwitch:SetPoint ("left", frame14.attributeEnabledLabel, "right", 2)
 		frame14.attributeEnabledSwitch:SetAsCheckBox()
 		frame14.attributeEnabledSwitch.OnSwitch = function (self, instance, value)
-			instance:AttributeMenu (value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:AttributeMenu (value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:AttributeMenu (value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -3597,28 +3159,12 @@ function window:CreateFrame14()
 		frame14.attributeAnchorYSlider:SetPoint ("left", frame14.attributeAnchorYLabel, "right", 2)
 
 		frame14.attributeAnchorXSlider:SetHook ("OnValueChange", function (self, instance, amount)
-			instance:AttributeMenu (nil, amount)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:AttributeMenu (nil, amount)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:AttributeMenu (nil, amount) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
 		frame14.attributeAnchorYSlider:SetHook ("OnValueChange", function (self, instance, amount)
-			instance:AttributeMenu (nil, nil, amount)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:AttributeMenu (nil, nil, amount)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:AttributeMenu (nil, nil, amount) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
@@ -3628,27 +3174,12 @@ function window:CreateFrame14()
 
 	--font
 		local on_select_attribute_font = function (self, instance, fontName)
-			instance:AttributeMenu (nil, nil, nil, fontName)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:AttributeMenu (nil, nil, nil, fontName)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:AttributeMenu (nil, nil, nil, fontName) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
 
-		local build_font_menu = function()
-			local fonts = {}
-			for name, fontPath in pairs (SharedMedia:HashTable ("font")) do
-				fonts [#fonts+1] = {value = name, label = name, icon = font_select_icon, texcoord = font_select_texcoord, onclick = on_select_attribute_font, font = fontPath, descfont = name, desc = "Our thoughts strayed constantly\nAnd without boundary\nThe ringing of the division bell had began."}
-			end
-			table.sort (fonts, function (t1, t2) return t1.label < t2.label end)
-			return fonts
-		end
+		local build_font_menu = font_menu_builder (on_select_attribute_font, "Our thoughts strayed constantly\nAnd without boundary\nThe ringing of the division bell had began.")
 
 		g:NewLabel (frame14, _, "$parentAttributeFontLabel", "attributeFontLabel", Loc ["STRING_OPTIONS_TEXT_FONT"], "GameFontHighlightLeft")
 		local d = g:NewDropDown (frame14, _, "$parentAttributeFontDropdown", "attributeFontDropdown", DROPDOWN_WIDTH, dropdown_height, build_font_menu, instance.attribute_text.text_face, options_dropdown_template)
@@ -3664,15 +3195,7 @@ function window:CreateFrame14()
 		frame14.attributeTextSizeSlider:SetPoint ("left", frame14.attributeTextSizeLabel, "right", 2)
 
 		frame14.attributeTextSizeSlider:SetHook ("OnValueChange", function (self, instance, amount)
-			instance:AttributeMenu (nil, nil, nil, nil, amount)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:AttributeMenu (nil, nil, nil, nil, amount)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:AttributeMenu (nil, nil, nil, nil, amount) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
@@ -3684,15 +3207,7 @@ function window:CreateFrame14()
 
 			local instance = _G.DetailsOptionsWindow.instance
 
-			instance:AttributeMenu (nil, nil, nil, nil, nil, {r, g, b, a})
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:AttributeMenu (nil, nil, nil, nil, nil, {r, g, b, a})
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:AttributeMenu (nil, nil, nil, nil, nil, {r, g, b, a}) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -3709,15 +3224,7 @@ function window:CreateFrame14()
 		frame14.attributeShadowSwitch:SetPoint ("left", frame14.attributeShadowLabel, "right", 2)
 		frame14.attributeShadowSwitch:SetAsCheckBox()
 		frame14.attributeShadowSwitch.OnSwitch = function (self, instance, value)
-			instance:AttributeMenu (nil, nil, nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:AttributeMenu (nil, nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:AttributeMenu (nil, nil, nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -3732,15 +3239,7 @@ function window:CreateFrame14()
 		frame14.attributeSideSwitch:SetPoint ("left", frame14.attributeSideLabel, "right", 2)
 		frame14.attributeSideSwitch:SetAsCheckBox()
 		frame14.attributeSideSwitch.OnSwitch = function (self, instance, value)
-			instance:AttributeMenu (nil, nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:AttributeMenu (nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:AttributeMenu (nil, nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -3755,14 +3254,7 @@ function window:CreateFrame14()
 		frame14.AttributeEncounterTimerSwitch:SetPoint ("left", frame14.AttributeEncounterTimerLabel, "right", 2)
 		frame14.AttributeEncounterTimerSwitch:SetAsCheckBox()
 		frame14.AttributeEncounterTimerSwitch.OnSwitch = function (self, instance, value)
-			instance:AttributeMenu (nil, nil, nil, nil, nil, nil, nil, nil, value)
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:AttributeMenu (nil, nil, nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:AttributeMenu (nil, nil, nil, nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -3981,20 +3473,6 @@ function window:CreateFrame1()
 		end
 		window:CreateLineBackground2 (frame1, "Show3DModelSlider", "Show3DModelLabel", "Показывает 3D модель над подсказкой Details вместо аватара (только когда возможно отобразить юнит)")
 
-	-->  realm name --------------------------------------------------------------------------------------------------------------------------------------------
-
-		-- g:NewLabel (frame1, _, "$parentRealmNameLabel", "realmNameLabel", Loc ["STRING_OPTIONS_REALMNAME"], "GameFontHighlightLeft")
-		-- g:NewSwitch (frame1, _, "$parentRealmNameSlider", "realmNameSlider", 60, 20, _, _, _detalhes.remove_realm_from_name, nil, nil, nil, nil, options_switch_template)
-		-- frame1.realmNameSlider:SetPoint ("left", frame1.realmNameLabel, "right", 2)
-		-- frame1.realmNameSlider:SetAsCheckBox()
-
-		-- frame1.realmNameSlider.OnSwitch = function (self, _, value)
-		-- 	_detalhes.remove_realm_from_name = value
-		-- 	_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
-		-- end
-
-		-- window:CreateLineBackground2 (frame1, "realmNameSlider", "realmNameLabel", Loc ["STRING_OPTIONS_REALMNAME_DESC"])
-
 	--> Segments Locked
 
 		g:NewLabel (frame1, _, "$parentSegmentsLockedLabel", "SegmentsLockedLabel", Loc ["STRING_OPTIONS_LOCKSEGMENTS"], "GameFontHighlightLeft")
@@ -4043,6 +3521,7 @@ function window:CreateFrame1()
 			_detalhes.ps_abbreviation = abbreviationtype
 
 			_detalhes:UpdateToKFunctions()
+			_detalhes:AtualizaGumpPrincipal (-1, true)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -4077,35 +3556,6 @@ function window:CreateFrame1()
 		frame1.avatarPreview2.texture = background
 		frame1.avatarPreview2.texcoord = cords
 		frame1.avatarPreview2:SetVertexColor (unpack (color))
-
-	--> numerical system
-		g:NewLabel (frame1, _, "$parentNumericalSystemLabel", "NumericalSystemLabel", Loc ["STRING_NUMERALSYSTEM"], "GameFontHighlightLeft")
-
-		local onSelectNumeralSystem = function (_, _, systemNumber)
-			_detalhes:SelectNumericalSystem (systemNumber)
-		end
-
-		local asian1K, asian10K, asian1B = _detalhes.gump:GetAsianNumberSymbols()
-		local asianNumerals = {value = 2, label = Loc ["STRING_NUMERALSYSTEM_MYRIAD_EASTASIA"], desc = "1" .. asian1K .. " = 1.000 \n1" .. asian10K .. " = 10.000 \n10" .. asian10K .. " = 100.000 \n100" .. asian10K .. " = 1.000.000", onclick = onSelectNumeralSystem, icon = icon, iconcolor = iconcolor, iconsize = iconsize}
-
-		--> if region is western it'll be using Korean symbols, set a font on the dropdown so it won't show ?????
-		local clientRegion = _detalhes.gump:GetClientRegion()
-		if (clientRegion == "western" or clientRegion == "russia") then
-			asianNumerals.descfont = _detalhes.gump:GetBestFontForLanguage ("koKR")
-		end
-
-		local numeralSystems = {
-			{value = 1, label = Loc ["STRING_NUMERALSYSTEM_ARABIC_WESTERN"], desc = "1K = 1.000 \n10K = 10.000 \n100K = 100.000 \n1M = 1.000.000", onclick = onSelectNumeralSystem, icon = icon, iconcolor = iconcolor, iconsize = iconsize},
-			asianNumerals
-		}
-
-		local buildNumeralSystemsMenu = function()
-			return numeralSystems
-		end
-
-		local d = g:NewDropDown (frame1, _, "$parentNumericalSystemOfADropdown", "NumericalSystemDropdown", 160, dropdown_height, buildNumeralSystemsMenu, _detalhes.numerical_system, options_dropdown_template)
-		d:SetPoint ("left", frame1.NumericalSystemLabel, "right", 2, 0)
-		window:CreateLineBackground2 (frame1, "NumericalSystemDropdown", "NumericalSystemLabel", Loc ["STRING_NUMERALSYSTEM_DESC"])
 
 	--> animate bars
 
@@ -4197,29 +3647,13 @@ function window:CreateFrame1()
 				if (instance.menu_alpha.enabled and a ~= instance.color[4]) then
 					_detalhes:Msg (Loc ["STRING_OPTIONS_MENU_ALPHAWARNING"])
 					_G.DetailsOptionsWindow6StatusbarColorPick.MyObject:SetColor (r, g, b, instance.menu_alpha.onleave)
-					instance:InstanceColor (r, g, b, instance.menu_alpha.onleave, nil, true)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:InstanceColor (r, g, b, instance.menu_alpha.onleave, nil, true)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:InstanceColor (r, g, b, instance.menu_alpha.onleave, nil, true) end)
 
 					return
 				end
 
 				_G.DetailsOptionsWindow6StatusbarColorPick.MyObject:SetColor (r, g, b, a)
-				instance:InstanceColor (r, g, b, a, nil, true)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:InstanceColor (r, g, b, a, nil, true)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:InstanceColor (r, g, b, a, nil, true) end)
 
 			end
 			local change_color = function()
@@ -4285,15 +3719,7 @@ function window:CreateFrame1()
 
 			frame1.clickThroughInCombatSlider:SetPoint ("left", frame1.clickThroughInCombatLabel, "right", 2, 0)
 			frame1.clickThroughInCombatSlider.OnSwitch = function (self, _, value) --> slider, fixedValue, sliderValue (false, true)
-				_G.DetailsOptionsWindow.instance:UpdateClickThroughSettings (value)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (_G.DetailsOptionsWindow.instance:GetInstanceGroup()) do
-						if (this_instance ~= _G.DetailsOptionsWindow.instance) then
-							this_instance:UpdateClickThroughSettings (value)
-						end
-					end
-				end
+				for_window_group (_G.DetailsOptionsWindow.instance, function (i) i:UpdateClickThroughSettings (value) end)
 			end
 
 			window:CreateLineBackground2 (frame1, "clickThroughInCombatSlider", "clickThroughInCombatLabel", Loc["Only apply click through when in combat."])
@@ -4306,15 +3732,7 @@ function window:CreateFrame1()
 
 			frame1.clickThroughWindowSlider:SetPoint ("left", frame1.clickThroughWindowLabel, "right", 2, 0)
 			frame1.clickThroughWindowSlider.OnSwitch = function (self, _, value) --> slider, fixedValue, sliderValue (false, true)
-				_G.DetailsOptionsWindow.instance:UpdateClickThroughSettings (nil, value)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (_G.DetailsOptionsWindow.instance:GetInstanceGroup()) do
-						if (this_instance ~= _G.DetailsOptionsWindow.instance) then
-							this_instance:UpdateClickThroughSettings (nil, value)
-						end
-					end
-				end
+				for_window_group (_G.DetailsOptionsWindow.instance, function (i) i:UpdateClickThroughSettings (nil, value) end)
 			end
 
 			window:CreateLineBackground2 (frame1, "clickThroughWindowSlider", "clickThroughWindowLabel", Loc["The window will be click through."])
@@ -4327,15 +3745,7 @@ function window:CreateFrame1()
 
 			frame1.clickThroughBarsSlider:SetPoint ("left", frame1.clickThroughBarsLabel, "right", 2, 0)
 			frame1.clickThroughBarsSlider.OnSwitch = function (self, _, value) --> slider, fixedValue, sliderValue (false, true)
-				_G.DetailsOptionsWindow.instance:UpdateClickThroughSettings (nil, nil, value)
-
-				if (_detalhes.options_group_edit and not _G.DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (_G.DetailsOptionsWindow.instance:GetInstanceGroup()) do
-						if (this_instance ~= _G.DetailsOptionsWindow.instance) then
-							this_instance:UpdateClickThroughSettings (nil, nil, value)
-						end
-					end
-				end
+				for_window_group (_G.DetailsOptionsWindow.instance, function (i) i:UpdateClickThroughSettings (nil, nil, value) end)
 			end
 
 			window:CreateLineBackground2 (frame1, "clickThroughBarsSlider", "clickThroughBarsLabel", Loc["Player bars will be click through, won't show tooltips when hover hover them."])
@@ -4382,7 +3792,6 @@ function window:CreateFrame1()
 
 		g:NewLabel (frame1, _, "$parentClickThroughAnchor", "clickThroughLabel", Loc["Click_Through"], "GameFontNormal")
 
-		local w_start = 10
 
 		titulo_display:SetPoint (window.left_start_at, window.title_y_pos)
 		titulo_display_desc:SetPoint (window.left_start_at, window.title_y_pos2)
@@ -4400,13 +3809,6 @@ function window:CreateFrame1()
 
 		frame1.IgnoreNicknamesLabel:SetPoint (avatar_x_anchor, -215)
 		frame1.Show3DModelLabel:SetPoint(avatar_x_anchor, -235)
-		-- frame1.realmNameLabel:SetPoint (avatar_x_anchor, -255)
-		
-
-		--frame1.ToolsLabel:SetPoint (avatar_x_anchor, -265)
-		--frame1.EraseDataLabel:SetPoint (avatar_x_anchor, -290)
-		--frame1.BookmarkButton:SetPoint (avatar_x_anchor, -315)
-		--frame1.ClassColorsButton:SetPoint (avatar_x_anchor, -340)
 
 		local x = avatar_x_anchor
 
@@ -4438,7 +3840,6 @@ function window:CreateFrame1()
 
 			{"maxInstancesLabel", 7, true},
 			{"dpsAbbreviateLabel", 8},
-			{"NumericalSystemLabel", 9},
 
 			{frame1.ToolsLabel, 10, true},
 			{frame1.EraseDataLabel, 11},
@@ -4448,12 +3849,6 @@ function window:CreateFrame1()
 
 
 
-			--{"WindowControlsLabel", 9, true},
-			--{"LockButton", 10},
-			--{"CloseButton", 11},
-			--{"BreakSnapButton", 12},
-			--{"SetWindowColorButton", 13},
-			--{"CreateWindowButton", 14, true},
 
 		}
 
@@ -4831,7 +4226,6 @@ function window:CreateFrame13()
 			return menu
 		end
 		local select_profile_dropdown = g:NewDropDown (frame13, _, "$parentSelectProfileDropdown", "selectProfileDropdown", 160, dropdown_height, build_profile_menu, 0, options_dropdown_template)
-		local d = select_profile_dropdown
 
 		local select_profile_label = g:NewLabel (frame13, _, "$parentSelectProfileLabel", "selectProfileLabel", Loc ["STRING_OPTIONS_PROFILES_SELECT"], "GameFontHighlightLeft")
 		select_profile_dropdown:SetPoint ("left", select_profile_label, "right", 2, 0)
@@ -4840,10 +4234,6 @@ function window:CreateFrame13()
 
 	--> always use this profile dropdown
 		local profile_selected_alwaysuse = function (_, instance, profile_name)
-
-			--if (not _detalhes.always_use_profile or not profile_name) then
-			--	return
-			--end
 
 			_detalhes.always_use_profile_name = profile_name
 			local unitname = UnitName ("player")
@@ -4915,11 +4305,7 @@ function window:CreateFrame13()
 				frame13.SelectAlwaysuseprofileDropdown:Select (_detalhes.always_use_profile_name)
 
 				local unitname = UnitName ("player")
-				if (_detalhes.always_use_profile_exception [unitname]) then
-					exclamation_frame:Show()
-				else
-					exclamation_frame:Hide()
-				end
+				exclamation_frame:SetShown(_detalhes.always_use_profile_exception [unitname])
 			else
 				exclamation_frame:Hide()
 				frame13.SelectAlwaysuseprofileDropdown:Disable()
@@ -4986,7 +4372,6 @@ function window:CreateFrame13()
 		local select_profileCopy_dropdown = g:NewDropDown (frame13, _, "$parentSelectProfileCopyDropdown", "selectProfileCopyDropdown", 160, dropdown_height, build_copy_menu, 0, options_dropdown_template)
 		select_profileCopy_dropdown:SetEmptyTextAndIcon (Loc ["STRING_OPTIONS_PROFILE_SELECT"])
 
-		local d = select_profileCopy_dropdown
 
 		local select_profileCopy_label = g:NewLabel (frame13, _, "$parentSelectProfileCopyLabel", "selectProfileCopyLabel", Loc ["STRING_OPTIONS_PROFILES_COPY"], "GameFontHighlightLeft")
 		select_profileCopy_dropdown:SetPoint ("left", select_profileCopy_label, "right", 2, 0)
@@ -5021,7 +4406,6 @@ function window:CreateFrame13()
 		local select_profileErase_dropdown = g:NewDropDown (frame13, _, "$parentSelectProfileEraseDropdown", "selectProfileEraseDropdown", 160, dropdown_height, build_erase_menu, 0, options_dropdown_template)
 		select_profileErase_dropdown:SetEmptyTextAndIcon (Loc ["STRING_OPTIONS_PROFILE_SELECT"])
 
-		local d = select_profileErase_dropdown
 
 		local select_profileErase_label = g:NewLabel (frame13, _, "$parentSelectProfileEraseLabel", "selectProfileLabel", Loc ["STRING_OPTIONS_PROFILES_ERASE"], "GameFontHighlightLeft")
 		select_profileErase_dropdown:SetPoint ("left", select_profileErase_label, "right", 2, 0)
@@ -5035,7 +4419,6 @@ function window:CreateFrame13()
 		end
 
 		local reset_profile = function()
-			local current_instance = _G.DetailsOptionsWindow.instance
 			_detalhes:ResetProfile (_detalhes:GetCurrentProfileName())
 			_detalhes:ScheduleTimer ("RefreshOptionsAfterProfileReset", 1)
 		end
@@ -5055,14 +4438,6 @@ function window:CreateFrame13()
 			if (str) then
 				_detalhes:ShowImportWindow (str, nil, "Details! Export Profile")
 
-				--[=[ debug
-				local uncompress = Details:DecompressData (str, "print")
-				if (uncompress) then
-					Details:Dump (uncompress)
-				else
-					print ("failed...")
-				end
-				--]=]
 			end
 		end
 
@@ -5162,15 +4537,7 @@ function window:CreateFrame3()
 		local instance = _G.DetailsOptionsWindow.instance
 		local file_name = custom_texture.text
 
-		instance:SetUserCustomSkinFile (file_name)
-
-		if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-			for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-				if (this_instance ~= instance) then
-					this_instance:SetUserCustomSkinFile (file_name)
-				end
-			end
-		end
+		for_window_group (instance, function (i) i:SetUserCustomSkinFile (file_name) end)
 
 		_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 	end)
@@ -5180,15 +4547,7 @@ function window:CreateFrame3()
 	local custom_texture_cancel = g:NewButton (frame3.CustomTextureEntry, _, "$parentCustomTextureCancel", "CustomTextureCancel", 20, 20, function (self)
 		local instance = _G.DetailsOptionsWindow.instance
 
-		instance:SetUserCustomSkinFile ("")
-
-		if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-			for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-				if (this_instance ~= instance) then
-					this_instance:SetUserCustomSkinFile ("")
-				end
-			end
-		end
+		for_window_group (instance, function (i) i:SetUserCustomSkinFile ("") end)
 
 		custom_texture:SetText ("")
 		_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
@@ -5212,23 +4571,20 @@ function window:CreateFrame3()
 
 	--> create functions and frames first:
 
-		local loadStyle = function (_, instance, index)
-
-			local style
-
+		local get_style = function (index)
 			if (type (index) == "table") then
-				style = index
-			else
-				style = _detalhes.savedStyles [index]
-				if (not style.version or preset_version > style.version) then
-					return _detalhes:Msg (Loc ["STRING_OPTIONS_PRESETTOOLD"])
-				end
+				return index
 			end
+			local style = _detalhes.savedStyles [index]
+			if (not style.version or preset_version > style.version) then
+				return _detalhes:Msg (Loc ["STRING_OPTIONS_PRESETTOOLD"])
+			end
+			return style
+		end
 
-			--> set skin preset
-			local skin = style.skin
+		local apply_style = function (instance, style)
 			instance.skin = ""
-			instance:ChangeSkin (skin)
+			instance:ChangeSkin (style.skin)
 
 			--> overwrite all instance parameters with saved ones
 			for key, value in pairs (style) do
@@ -5243,60 +4599,34 @@ function window:CreateFrame3()
 
 			--> apply all changed attributes
 			instance:ChangeSkin()
+		end
 
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance.skin = ""
-						this_instance:ChangeSkin (skin)
-
-						--> overwrite all instance parameters with saved ones
-						for key, value in pairs (style) do
-							if (key ~= "skin" and not _detalhes.instance_skin_ignored_values [key]) then
-								if (type (value) == "table") then
-									this_instance [key] = table_deepcopy (value)
-								else
-									this_instance [key] = value
-								end
-							end
-						end
-
-						this_instance:ChangeSkin()
-					end
-				end
+		local loadStyle = function (_, instance, index)
+			local style = get_style (index)
+			if (not style) then
+				return
 			end
+
+			for_window_group (instance, function (i) apply_style (i, style) end)
 
 			--> reload options panel
 			_detalhes:OpenOptionsWindow (_G.DetailsOptionsWindow.instance)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
-		_detalhes.loadStyleFunc = loadStyle
 
 		--> select skin
 		local onSelectSkin = function (_, instance, skin_name)
-			instance:ChangeSkin (skin_name)
-
-			if (instance._ElvUIEmbed) then
-				if AddOnSkins then
-				local AS, ASL = unpack(AddOnSkins)
-					AS:Embed_Details()
-				end
-			end
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:ChangeSkin (skin_name)
-						if (this_instance._ElvUIEmbed) then
-							if AddOnSkins then
-								local AS, ASL = unpack (AddOnSkins)
-								AS:Embed_Details()
-							end
-						end
+			for_window_group (instance, function (i)
+				i:ChangeSkin (skin_name)
+				if (i._ElvUIEmbed) then
+					local E = ElvUI and ElvUI[1]
+					local EMB = E and E:GetModule("EmbedSystem", true)
+					if (EMB and EMB.EmbedDetails) then
+						EMB:EmbedDetails()
 					end
 				end
-			end
+			end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -5418,57 +4748,12 @@ function window:CreateFrame3()
 		g:NewLabel (frame3, _, "$parentLoadCustomSkinLabel", "loadCustomSkinLabel", Loc ["STRING_OPTIONS_SAVELOAD_LOAD"], "GameFontHighlightLeft")
 		--
 		local onSelectCustomSkin = function (_, _, index)
-			local style
-
-			if (type (index) == "table") then
-				style = index
-			else
-				style = _detalhes.savedStyles [index]
-				if (not style.version or preset_version > style.version) then
-					return _detalhes:Msg (Loc ["STRING_OPTIONS_PRESETTOOLD"])
-				end
+			local style = get_style (index)
+			if (not style) then
+				return
 			end
 
-			--> set skin preset
-			local skin = style.skin
-			_G.DetailsOptionsWindow.instance.skin = ""
-			_G.DetailsOptionsWindow.instance:ChangeSkin (skin)
-
-			--> overwrite all instance parameters with saved ones
-			for key, value in pairs (style) do
-				if (key ~= "skin" and not _detalhes.instance_skin_ignored_values [key]) then
-					if (type (value) == "table") then
-						_G.DetailsOptionsWindow.instance [key] = table_deepcopy (value)
-					else
-						_G.DetailsOptionsWindow.instance [key] = value
-					end
-				end
-			end
-
-			--> apply all changed attributes
-			_G.DetailsOptionsWindow.instance:ChangeSkin()
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (_G.DetailsOptionsWindow.instance:GetInstanceGroup()) do
-					if (this_instance ~= _G.DetailsOptionsWindow.instance) then
-						this_instance.skin = ""
-						this_instance:ChangeSkin (skin)
-
-						--> overwrite all instance parameters with saved ones
-						for key, value in pairs (style) do
-							if (key ~= "skin" and not _detalhes.instance_skin_ignored_values [key]) then
-								if (type (value) == "table") then
-									this_instance [key] = table_deepcopy (value)
-								else
-									this_instance [key] = value
-								end
-							end
-						end
-
-						this_instance:ChangeSkin()
-					end
-				end
-			end
+			for_window_group (_G.DetailsOptionsWindow.instance, function (i) apply_style (i, style) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 
@@ -5483,9 +4768,9 @@ function window:CreateFrame3()
 
 		local loadtable = {}
 		local buildCustomSkinMenu = function()
-			table.wipe (loadtable)
+			table_wipe (loadtable)
 			for index, _table in ipairs (_detalhes.savedStyles) do
-				tinsert (loadtable, {value = index, label = _table.name, onclick = onSelectCustomSkin, icon = "Interface\\GossipFrame\\TabardGossipIcon", iconcolor = {.7, .7, .5, 1}})
+				loadtable[#loadtable+1] = {value = index, label = _table.name, onclick = onSelectCustomSkin, icon = "Interface\\GossipFrame\\TabardGossipIcon", iconcolor = {.7, .7, .5, 1}}
 			end
 			return loadtable
 		end
@@ -5511,9 +4796,9 @@ function window:CreateFrame3()
 
 		local loadtable2 = {}
 		local buildCustomSkinToEraseMenu = function()
-			table.wipe (loadtable2)
+			table_wipe (loadtable2)
 			for index, _table in ipairs (_detalhes.savedStyles) do
-				tinsert (loadtable2, {value = index, label = _table.name, onclick = onSelectCustomSkinToErase, icon = [[Interface\Glues\LOGIN\Glues-CheckBox-Check]], color = {1, 1, 1}, iconcolor = {1, .9, .9, 0.8}})
+				loadtable2[#loadtable2+1] = {value = index, label = _table.name, onclick = onSelectCustomSkinToErase, icon = [[Interface\Glues\LOGIN\Glues-CheckBox-Check]], color = {1, 1, 1}, iconcolor = {1, .9, .9, 0.8}}
 			end
 			return loadtable2
 		end
@@ -5541,9 +4826,9 @@ function window:CreateFrame3()
 
 		local loadtable2 = {}
 		local buildCustomSkinToExportMenu = function()
-			table.wipe (loadtable2)
+			table_wipe (loadtable2)
 			for index, _table in ipairs (_detalhes.savedStyles) do
-				tinsert (loadtable2, {value = index, label = _table.name, onclick = onSelectCustomSkinToExport, icon = [[Interface\Buttons\UI-GuildButton-MOTD-Up]], color = {1, 1, 1}, iconcolor = {1, .9, .9, 0.8}, texcoord = {1, 0, 0, 1}})
+				loadtable2[#loadtable2+1] = {value = index, label = _table.name, onclick = onSelectCustomSkinToExport, icon = [[Interface\Buttons\UI-GuildButton-MOTD-Up]], color = {1, 1, 1}, iconcolor = {1, .9, .9, 0.8}, texcoord = {1, 0, 0, 1}}
 			end
 			return loadtable2
 		end
@@ -5668,7 +4953,7 @@ function window:CreateFrame3()
 			frame3.ChatTabEmbedSizeCorrectionSlider:SetHook ("OnValueChange", function (self, instance, amount)
 				_detalhes.chat_tab_embed.x_offset = amount
 
-				if (_detalhes.chat_embed.enabled) then
+				if (_detalhes.chat_tab_embed.enabled) then
 					_detalhes.chat_embed:DoEmbed()
 				end
 
@@ -5684,7 +4969,7 @@ function window:CreateFrame3()
 			frame3.ChatTabEmbedSizeCorrection2Slider:SetHook ("OnValueChange", function (self, instance, amount)
 				_detalhes.chat_tab_embed.y_offset = amount
 
-				if (_detalhes.chat_embed.enabled) then
+				if (_detalhes.chat_tab_embed.enabled) then
 					_detalhes.chat_embed:DoEmbed()
 				end
 
@@ -5770,15 +5055,7 @@ function window:CreateFrame4()
 		frame4.rowHeightSlider:SetPoint ("left", frame4.rowHeightLabel, "right", 2)
 		--frame4.rowHeightSlider:SetThumbSize (50)
 		frame4.rowHeightSlider:SetHook ("OnValueChange", function (self, instance, amount)
-			instance:SetBarSettings (amount)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarSettings (amount)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarSettings (amount) end)
 
 			_detalhes:SendOptionsModifiedEvent (instance)
 		end)
@@ -5788,18 +5065,10 @@ function window:CreateFrame4()
 
 	--> grow direction
 		local set_bar_grow_direction = function (_, instance, value)
-			instance:SetBarGrowDirection (value)
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarGrowDirection (value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarGrowDirection (value) end)
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
 
-		local grow_icon_size = {14, 14}
 		local grow_options = {
 			{value = 1, label = Loc ["STRING_TOP_TO_BOTTOM"], iconsize = orientation_icon_size, onclick = set_bar_grow_direction, icon = [[Interface\Calendar\MoreArrow]], texcoord = {0, 1, 0, 0.7}},
 			{value = 2, label = Loc ["STRING_BOTTOM_TO_TOP"], iconsize = orientation_icon_size, onclick = set_bar_grow_direction, icon = [[Interface\Calendar\MoreArrow]], texcoord = {0, 1, 0.7, 0}}
@@ -5817,14 +5086,7 @@ function window:CreateFrame4()
 	--> orientation
 		--texture
 		local set_bar_orientation = function (_, instance, value)
-			instance:SetBarOrientationDirection (value)
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarOrientationDirection (value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarOrientationDirection (value) end)
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
 
@@ -5844,15 +5106,7 @@ function window:CreateFrame4()
 
 	--> sort direction
 		local set_bar_sorting = function (_, instance, value)
-			instance.bars_sort_direction = value
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance.bars_sort_direction = value
-					end
-				end
-			end
+			for_window_group (instance, function (i) i.bars_sort_direction = value end)
 
 			_detalhes:AtualizaGumpPrincipal (-1, true)
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
@@ -5878,15 +5132,7 @@ function window:CreateFrame4()
 
 		frame4.BarSpacementSlider:SetPoint ("left", frame4.BarSpacementLabel, "right", 2)
 		frame4.BarSpacementSlider:SetHook ("OnValueChange", function (self, instancia, amount)
-			instancia:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, amount)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instancia:GetInstanceGroup()) do
-					if (this_instance ~= instancia) then
-						this_instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, amount)
-					end
-				end
-			end
+			for_window_group (instancia, function (i) i:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, amount) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
@@ -5894,7 +5140,6 @@ function window:CreateFrame4()
 
 	--> Top Texture
 
-		local texture_icon = [[Interface\TARGETINGFRAME\UI-PhasingIcon]]
 		local texture_icon = [[Interface\AddOns\Details\images\icons]]
 		local texture_icon_size = {14, 14}
 		local texture_texcoord = {469/512, 505/512, 249/512, 284/512}
@@ -5904,15 +5149,7 @@ function window:CreateFrame4()
 
 		--texture
 		local onSelectTexture = function (_, instance, textureName)
-			instance:SetBarSettings (nil, textureName)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarSettings (nil, textureName)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarSettings (nil, textureName) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -5923,7 +5160,7 @@ function window:CreateFrame4()
 			for name, texturePath in pairs (textures) do
 				texTable[#texTable+1] = {value = name, label = name, iconsize = texture_icon_size, statusbar = texturePath,  onclick = onSelectTexture, icon = texture_icon, texcoord = texture_texcoord}
 			end
-			table.sort (texTable, function (t1, t2) return t1.label < t2.label end)
+			table_sort (texTable, function (t1, t2) return t1.label < t2.label end)
 			return texTable
 		end
 
@@ -5943,15 +5180,7 @@ function window:CreateFrame4()
 			local instance = _G.DetailsOptionsWindow.instance
 			local file_name = custom_texture.text
 
-			instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, file_name)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, file_name)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, file_name) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
@@ -5961,15 +5190,7 @@ function window:CreateFrame4()
 		local custom_texture_cancel = g:NewButton (frame4.CustomTextureEntry, _, "$parentCustomTextureCancel", "CustomTextureCancel", 20, 20, function (self)
 			local instance = _G.DetailsOptionsWindow.instance
 
-			instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "")
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, "") end)
 
 			custom_texture:SetText ("")
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
@@ -5988,19 +5209,11 @@ function window:CreateFrame4()
 
 		-- row texture color
 		local rowcolor_callback = function (button, r, g, b, a)
-			_G.DetailsOptionsWindow.instance.row_info.alpha = a
-			_G.DetailsOptionsWindow.instance:SetBarSettings (nil, nil, nil, {r, g, b})
-			_G.DetailsOptionsWindow.instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, a)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (_G.DetailsOptionsWindow.instance:GetInstanceGroup()) do
-					if (this_instance ~= _G.DetailsOptionsWindow.instance) then
-						this_instance.row_info.alpha = a
-						this_instance:SetBarSettings (nil, nil, nil, {r, g, b})
-						this_instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, a)
-					end
-				end
-			end
+			for_window_group (_G.DetailsOptionsWindow.instance, function (i)
+				i.row_info.alpha = a
+				i:SetBarSettings (nil, nil, nil, {r, g, b})
+				i:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, a)
+			end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6017,15 +5230,7 @@ function window:CreateFrame4()
 		frame4.classColorSlider:SetAsCheckBox()
 		frame4.classColorSlider:SetPoint ("left", frame4.classColorsLabel, "right", 2, -1)
 		frame4.classColorSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarSettings (nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarSettings (nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarSettings (nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6039,15 +5244,7 @@ function window:CreateFrame4()
 
 		--texture
 		local onSelectTextureBackground = function (_, instance, textureName)
-			instance:SetBarSettings (nil, nil, nil, nil, textureName)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarSettings (nil, nil, nil, nil, textureName)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarSettings (nil, nil, nil, nil, textureName) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6058,7 +5255,7 @@ function window:CreateFrame4()
 			for name, texturePath in pairs (textures2) do
 				texTable2[#texTable2+1] = {value = name, label = name, iconsize = texture_icon_size, statusbar = texturePath,  onclick = onSelectTextureBackground, icon = texture_icon, texcoord = texture_texcoord}
 			end
-			table.sort (texTable2, function (t1, t2) return t1.label < t2.label end)
+			table_sort (texTable2, function (t1, t2) return t1.label < t2.label end)
 			return texTable2
 		end
 
@@ -6071,15 +5268,7 @@ function window:CreateFrame4()
 
 		--bar background color
 		local rowcolorbackground_callback = function (button, r, g, b, a)
-			_G.DetailsOptionsWindow.instance:SetBarSettings (nil, nil, nil, nil, nil, nil, {r, g, b, a})
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (_G.DetailsOptionsWindow.instance:GetInstanceGroup()) do
-					if (this_instance ~= _G.DetailsOptionsWindow.instance) then
-						this_instance:SetBarSettings (nil, nil, nil, nil, nil, nil, {r, g, b, a})
-					end
-				end
-			end
+			for_window_group (_G.DetailsOptionsWindow.instance, function (i) i:SetBarSettings (nil, nil, nil, nil, nil, nil, {r, g, b, a}) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6097,15 +5286,7 @@ function window:CreateFrame4()
 		frame4.rowBackgroundColorByClassSlider:SetAsCheckBox()
 		frame4.rowBackgroundColorByClassSlider:SetPoint ("left", frame4.rowBackgroundColorByClassLabel, "right", 2)
 		frame4.rowBackgroundColorByClassSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarSettings (nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarSettings (nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarSettings (nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6129,38 +5310,20 @@ function window:CreateFrame4()
 
 		--> dropdown
 		local OnSelectIconFile = function (_, _, iconpath)
-			_G.DetailsOptionsWindow.instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, iconpath)
-			frame4.iconFileEntry:SetText (iconpath)
-
-			if (_G.DetailsOptionsWindow.instance.row_info.use_spec_icons) then
-				_G.DetailsOptionsWindow.instance:SetBarSpecIconSettings (false)
-			end
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (_G.DetailsOptionsWindow.instance:GetInstanceGroup()) do
-					if (this_instance ~= _G.DetailsOptionsWindow.instance) then
-						this_instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, iconpath)
-						if (this_instance.row_info.use_spec_icons) then
-							this_instance:SetBarSpecIconSettings (false)
-						end
-					end
+			for_window_group (_G.DetailsOptionsWindow.instance, function (i)
+				i:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, iconpath)
+				if (i.row_info.use_spec_icons) then
+					i:SetBarSpecIconSettings (false)
 				end
-			end
+			end)
+			frame4.iconFileEntry:SetText (iconpath)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
 
 		local OnSelectIconFileSpec = function (_, _, iconpath)
-			_G.DetailsOptionsWindow.instance:SetBarSpecIconSettings (true, iconpath, true)
+			for_window_group (_G.DetailsOptionsWindow.instance, function (i) i:SetBarSpecIconSettings (true, iconpath, true) end)
 			frame4.iconFileEntry:SetText (iconpath)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (_G.DetailsOptionsWindow.instance:GetInstanceGroup()) do
-					if (this_instance ~= _G.DetailsOptionsWindow.instance) then
-						this_instance:SetBarSpecIconSettings (true, iconpath, true)
-					end
-				end
-			end
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6205,30 +5368,14 @@ function window:CreateFrame4()
 
 			local text = frame4.iconFileEntry.text
 			if (text:find ("spec_")) then
-				instance:SetBarSpecIconSettings (true, text, true)
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:SetBarSpecIconSettings (true, text, true)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:SetBarSpecIconSettings (true, text, true) end)
 			else
-				if (instance.row_info.use_spec_icons) then
-					instance:SetBarSpecIconSettings (false)
-				end
-				instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, text)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							if (this_instance.row_info.use_spec_icons) then
-								this_instance:SetBarSpecIconSettings (false)
-							end
-							this_instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, text)
-						end
+				for_window_group (instance, function (i)
+					if (i.row_info.use_spec_icons) then
+						i:SetBarSpecIconSettings (false)
 					end
-				end
+					i:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, text)
+				end)
 			end
 
 			d:Select (false)
@@ -6277,15 +5424,7 @@ function window:CreateFrame4()
 		frame4.barStartSlider:SetAsCheckBox()
 		frame4.barStartSlider:SetPoint ("left", frame4.barStartLabel, "right", 2)
 		frame4.barStartSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6302,15 +5441,7 @@ function window:CreateFrame4()
 		frame4.BackdropEnabledSlider:SetPoint ("left", frame4.BackdropEnabledLabel, "right", 2, -1)
 		frame4.BackdropEnabledSlider:SetAsCheckBox()
 		frame4.BackdropEnabledSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarBackdropSettings (value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarBackdropSettings (value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarBackdropSettings (value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6318,15 +5449,7 @@ function window:CreateFrame4()
 
 		--texture
 		local onSelectTextureBackdrop = function (_, instance, textureName)
-			instance:SetBarBackdropSettings (nil, nil, nil, textureName)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarBackdropSettings (nil, nil, nil, textureName)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarBackdropSettings (nil, nil, nil, textureName) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6338,7 +5461,7 @@ function window:CreateFrame4()
 			for name, texturePath in pairs (textures2) do
 				texTable2 [#texTable2+1] = {value = name, label = name, onclick = onSelectTextureBackdrop, icon = [[Interface\DialogFrame\UI-DialogBox-Corner]], texcoord = {0.09375, 1, 0, 0.78}, iconsize = iconsize}
 			end
-			table.sort (texTable2, function (t1, t2) return t1.label < t2.label end)
+			table_sort (texTable2, function (t1, t2) return t1.label < t2.label end)
 			return texTable2
 		end
 
@@ -6355,15 +5478,7 @@ function window:CreateFrame4()
 		frame4.BackdropSizeSlider:SetPoint ("left", frame4.BackdropSizeLabel, "right", 2)
 		--frame4.BackdropSizeSlider:SetThumbSize (50)
 		frame4.BackdropSizeSlider:SetHook ("OnValueChange", function (self, instance, amount)
-			instance:SetBarBackdropSettings (nil, amount)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarBackdropSettings (nil, amount)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarBackdropSettings (nil, amount) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
@@ -6371,15 +5486,7 @@ function window:CreateFrame4()
 
 		--color
 		local backdropcolor_callback = function (button, r, g, b, a)
-			_G.DetailsOptionsWindow.instance:SetBarBackdropSettings (nil, nil, {r, g, b, a})
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (_G.DetailsOptionsWindow.instance:GetInstanceGroup()) do
-					if (this_instance ~= _G.DetailsOptionsWindow.instance) then
-						this_instance:SetBarBackdropSettings (nil, nil, {r, g, b, a})
-					end
-				end
-			end
+			for_window_group (_G.DetailsOptionsWindow.instance, function (i) i:SetBarBackdropSettings (nil, nil, {r, g, b, a}) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6472,15 +5579,7 @@ function window:CreateFrame5()
 	--> text color
 		local textcolor_callback = function (button, r, g, b, a)
 			local instance = _G.DetailsOptionsWindow.instance
-			instance:SetBarTextSettings (nil, nil, {r, g, b, 1})
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, {r, g, b, 1})
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, {r, g, b, 1}) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6497,15 +5596,7 @@ function window:CreateFrame5()
 		frame5.fonsizeSlider:SetPoint ("left", frame5.fonsizeLabel, "right", 2)
 		--frame5.fonsizeSlider:SetThumbSize (50)
 		frame5.fonsizeSlider:SetHook ("OnValueChange", function (self, instance, amount)
-			instance:SetBarTextSettings (amount)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (amount)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (amount) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
@@ -6515,28 +5606,12 @@ function window:CreateFrame5()
 	--> Text Fonts
 
 		local onSelectFont = function (_, instance, fontName)
-			instance:SetBarTextSettings (nil, fontName)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, fontName)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, fontName) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
 
-		local buildFontMenu = function()
-			local fontObjects = SharedMedia:HashTable ("font")
-			local fontTable = {}
-			for name, fontPath in pairs (fontObjects) do
-				fontTable[#fontTable+1] = {value = name, label = name, icon = font_select_icon, texcoord = font_select_texcoord, onclick = onSelectFont, font = fontPath, descfont = name, desc = Loc ["STRING_MUSIC_DETAILS_ROBERTOCARLOS"]}
-			end
-			table.sort (fontTable, function (t1, t2) return t1.label < t2.label end)
-			return fontTable
-		end
+		local buildFontMenu = font_menu_builder (onSelectFont, Loc ["STRING_MUSIC_DETAILS_ROBERTOCARLOS"])
 
 		local d = g:NewDropDown (frame5, _, "$parentFontDropdown", "fontDropdown", DROPDOWN_WIDTH, dropdown_height, buildFontMenu, nil, options_dropdown_template)
 
@@ -6554,15 +5629,7 @@ function window:CreateFrame5()
 		frame5.classColorsRightTextSlider:SetAsCheckBox()
 		frame5.classColorsLeftTextSlider:SetAsCheckBox()
 		frame5.classColorsLeftTextSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarTextSettings (nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6574,15 +5641,7 @@ function window:CreateFrame5()
 
 		frame5.classColorsRightTextSlider:SetPoint ("left", frame5.classColorsRightTextLabel, "right", 2)
 		frame5.classColorsRightTextSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarTextSettings (nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6596,15 +5655,7 @@ function window:CreateFrame5()
 		frame5.textLeftOutlineSlider:SetPoint ("left", frame5.textLeftOutlineLabel, "right", 2)
 		frame5.textLeftOutlineSlider:SetAsCheckBox()
 		frame5.textLeftOutlineSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6618,15 +5669,7 @@ function window:CreateFrame5()
 		frame5.textLeftOutlineSmallSlider:SetPoint ("left", frame5.textLeftOutlineSmallLabel, "right", 2)
 		frame5.textLeftOutlineSmallSlider:SetAsCheckBox()
 		frame5.textLeftOutlineSmallSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6636,15 +5679,7 @@ function window:CreateFrame5()
 	--> left outline small color
 		local left_outline_small_callback = function (button, r, g, b, a)
 			local instance = _G.DetailsOptionsWindow.instance
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, {r, g, b, a})
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, {r, g, b, a})
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, {r, g, b, a}) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6661,15 +5696,7 @@ function window:CreateFrame5()
 		frame5.PositionNumberSlider:SetPoint ("left", frame5.PositionNumberLabel, "right", 2)
 		frame5.PositionNumberSlider:SetAsCheckBox()
 		frame5.PositionNumberSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6683,15 +5710,7 @@ function window:CreateFrame5()
 		frame5.TranslitTextSlider:SetPoint ("left", frame5.TranslitTextLabel, "right", 2)
 		frame5.TranslitTextSlider:SetAsCheckBox()
 		frame5.TranslitTextSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6707,15 +5726,7 @@ function window:CreateFrame5()
 		frame5.textRightOutlineSlider:SetPoint ("left", frame5.textRightOutlineLabel, "right", 2)
 		frame5.textRightOutlineSlider:SetAsCheckBox()
 		frame5.textRightOutlineSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6730,17 +5741,9 @@ function window:CreateFrame5()
 		frame5.textRightOutlineSmallSlider:SetPoint ("left", frame5.textRightOutlineSmallLabel, "right", 2)
 		frame5.textRightOutlineSmallSlider:SetAsCheckBox()
 		frame5.textRightOutlineSmallSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value) end)
 			--(13, smalloutline_Right, smalloutlinecolor_Right, smalloutline_right, smalloutlinecolor_right)
 			--14 15 16 17
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6750,15 +5753,7 @@ function window:CreateFrame5()
 	--> right outline small color
 		local right_outline_small_callback = function (button, r, g, b, a)
 			local instance = _G.DetailsOptionsWindow.instance
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, {r, g, b, a})
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, {r, g, b, a})
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, {r, g, b, a}) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6770,15 +5765,7 @@ function window:CreateFrame5()
 
 	--> percent type
 		local onSelectPercent = function (_, instance, percentType)
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, percentType)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, percentType)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, percentType) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6806,15 +5793,7 @@ function window:CreateFrame5()
 		frame5.cutomRightTextSlider:SetPoint ("left", frame5.cutomRightTextLabel, "right", 2)
 		frame5.cutomRightTextSlider:SetAsCheckBox()
 		frame5.cutomRightTextSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6842,15 +5821,7 @@ function window:CreateFrame5()
 					t = t:gsub ("||", "|")
 
 					local instance = _G.DetailsOptionsWindow.instance
-					instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, t)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, t)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, t) end)
 
 				else
 					local t = frame5.cutomRightTextEntry.text
@@ -6874,15 +5845,7 @@ function window:CreateFrame5()
 			t = t:gsub ("||", "|")
 
 			local instance = _G.DetailsOptionsWindow.instance
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, t)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, t)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, t) end)
 
 		end)
 		frame5.cutomRightTextEntry:SetHook ("OnEscapePressed", function()
@@ -6931,15 +5894,7 @@ function window:CreateFrame5()
 		frame5.cutomLeftTextSlider:SetAsCheckBox()
 		frame5.cutomLeftTextSlider.OnSwitch = function (self, instance, value)
 			local instance = _G.DetailsOptionsWindow.instance
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -6967,15 +5922,7 @@ function window:CreateFrame5()
 					t = t:gsub ("||", "|")
 
 					local instance = _G.DetailsOptionsWindow.instance
-					instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, t)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, t)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, t) end)
 
 				else
 					local t = frame5.cutomLeftTextEntry.text
@@ -6999,15 +5946,7 @@ function window:CreateFrame5()
 			t = t:gsub ("||", "|")
 
 			local instance = _G.DetailsOptionsWindow.instance
-			instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, t)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, t)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarTextSettings (nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, t) end)
 
 		end)
 		frame5.cutomLeftTextEntry:SetHook ("OnEscapePressed", function()
@@ -7056,15 +5995,7 @@ function window:CreateFrame5()
 		frame5.RightTextShowTotalSlider:SetPoint ("left", frame5.RightTextShowTotalLabel, "right", 2)
 		frame5.RightTextShowTotalSlider:SetAsCheckBox()
 		frame5.RightTextShowTotalSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarRightTextSettings (value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarRightTextSettings (value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarRightTextSettings (value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -7078,15 +6009,7 @@ function window:CreateFrame5()
 		frame5.RightTextShowPSSlider:SetPoint ("left", frame5.RightTextShowPSLabel, "right", 2)
 		frame5.RightTextShowPSSlider:SetAsCheckBox()
 		frame5.RightTextShowPSSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarRightTextSettings (nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarRightTextSettings (nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarRightTextSettings (nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -7100,15 +6023,7 @@ function window:CreateFrame5()
 		frame5.RightTextShowPercentSlider:SetPoint ("left", frame5.RightTextShowPercentLabel, "right", 2)
 		frame5.RightTextShowPercentSlider:SetAsCheckBox()
 		frame5.RightTextShowPercentSlider.OnSwitch = function (self, instance, value)
-			instance:SetBarRightTextSettings (nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarRightTextSettings (nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarRightTextSettings (nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -7117,15 +6032,7 @@ function window:CreateFrame5()
 
 		--brackets
 		local onSelectBracket = function (_, instance, value)
-			instance:SetBarRightTextSettings (nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarRightTextSettings (nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarRightTextSettings (nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -7150,15 +6057,7 @@ function window:CreateFrame5()
 
 		--separators
 		local onSelectSeparator = function (_, instance, value)
-			instance:SetBarRightTextSettings (nil, nil, nil, nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBarRightTextSettings (nil, nil, nil, nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBarRightTextSettings (nil, nil, nil, nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -7266,29 +6165,13 @@ function window:CreateFrame6()
 			if (instance.menu_alpha.enabled and a ~= instance.color[4]) then
 				_detalhes:Msg (Loc ["STRING_OPTIONS_MENU_ALPHAWARNING"])
 				_G.DetailsOptionsWindow6StatusbarColorPick.MyObject:SetColor (r, g, b, instance.menu_alpha.onleave)
-				instance:InstanceColor (r, g, b, instance.menu_alpha.onleave, nil, true)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:InstanceColor (r, g, b, instance.menu_alpha.onleave, nil, true)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:InstanceColor (r, g, b, instance.menu_alpha.onleave, nil, true) end)
 
 				return
 			end
 
 			_G.DetailsOptionsWindow6StatusbarColorPick.MyObject:SetColor (r, g, b, a)
-			instance:InstanceColor (r, g, b, a, nil, true)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:InstanceColor (r, g, b, a, nil, true)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:InstanceColor (r, g, b, a, nil, true) end)
 
 			_detalhes:SendOptionsModifiedEvent (instance)
 		end
@@ -7302,17 +6185,10 @@ function window:CreateFrame6()
 		local windowbackgroundcolor_callback = function (button, r, g, b, a)
 			local instance = _G.DetailsOptionsWindow.instance
 
-			instance:SetBackgroundColor (r, g, b)
-			instance:SetBackgroundAlpha (a)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBackgroundColor (r, g, b)
-						this_instance:SetBackgroundAlpha (a)
-					end
-				end
-			end
+			for_window_group (instance, function (i)
+				i:SetBackgroundColor (r, g, b)
+				i:SetBackgroundAlpha (a)
+			end)
 
 			_detalhes:SendOptionsModifiedEvent (instance)
 		end
@@ -7346,15 +6222,7 @@ function window:CreateFrame6()
 			frame6.stretchAnchorSlider:SetPoint ("left", frame6.stretchAnchorLabel, "right", 2)
 			frame6.stretchAnchorSlider:SetAsCheckBox()
 			frame6.stretchAnchorSlider.OnSwitch = function (self, instance, value)
-				instance:StretchButtonAnchor (value)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:StretchButtonAnchor (value)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:StretchButtonAnchor (value) end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -7370,15 +6238,7 @@ function window:CreateFrame6()
 			frame6.stretchAlwaysOnTopSlider:SetAsCheckBox()
 
 			frame6.stretchAlwaysOnTopSlider.OnSwitch = function (self, instance, value)
-				instance:StretchButtonAlwaysOnTop (value)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:StretchButtonAlwaysOnTop (value)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:StretchButtonAlwaysOnTop (value) end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -7392,20 +6252,11 @@ function window:CreateFrame6()
 			frame6.instanceToolbarSideSlider:SetPoint ("left", frame6.instanceToolbarSideLabel, "right", 2)
 			frame6.instanceToolbarSideSlider:SetAsCheckBox()
 			frame6.instanceToolbarSideSlider.OnSwitch = function (self, instance, value)
-				instance:ToolbarSide (value)
-
+				for_window_group (instance, function (i) i:ToolbarSide (value) end)
 				local group_editing = _detalhes.options_group_edit
 				_detalhes.options_group_edit = nil
 					_G.DetailsOptionsWindow7:update_menuanchor_xy (instance)
 				_detalhes.options_group_edit = group_editing
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:ToolbarSide (value)
-						end
-					end
-				end
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -7420,16 +6271,8 @@ function window:CreateFrame6()
 			frame6.instanceMicroDisplaysSideSlider:SetPoint ("left", frame6.instanceMicroDisplaysSideLabel, "right", 2)
 			frame6.instanceMicroDisplaysSideSlider:SetAsCheckBox()
 			frame6.instanceMicroDisplaysSideSlider.OnSwitch = function (self, instance, value)
-				instance:MicroDisplaysSide (value, true)
+				for_window_group (instance, function (i) i:MicroDisplaysSide (value, true) end)
 				window:update_microframes()
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:MicroDisplaysSide (value, true)
-						end
-					end
-				end
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -7615,14 +6458,7 @@ function window:CreateFrame6()
 		frame6.LockMiniDisplaysSlider:SetAsCheckBox()
 		frame6.LockMiniDisplaysSlider.OnSwitch = function (self, instance, value)
 
-			instance:MicroDisplaysLock (value)
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:MicroDisplaysLock (value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:MicroDisplaysLock (value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -7636,23 +6472,13 @@ function window:CreateFrame6()
 		frame6.sideBarsSlider:SetPoint ("left", frame6.sideBarsLabel, "right", 2)
 		frame6.sideBarsSlider:SetAsCheckBox()
 		frame6.sideBarsSlider.OnSwitch = function (self, instance, value)
-			if (value) then
-				instance:ShowSideBars()
-			else
-				instance:HideSideBars()
-			end
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						if (value) then
-							this_instance:ShowSideBars()
-						else
-							this_instance:HideSideBars()
-						end
-					end
+			for_window_group (instance, function (i)
+				if (value) then
+					i:ShowSideBars()
+				else
+					i:HideSideBars()
 				end
-			end
+			end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -7667,23 +6493,13 @@ function window:CreateFrame6()
 		frame6.statusbarSlider:SetPoint ("left", frame6.statusbarLabel, "right", 2)
 		frame6.statusbarSlider:SetAsCheckBox()
 		frame6.statusbarSlider.OnSwitch = function (self, instance, value)
-			if (value) then
-				instance:ShowStatusBar()
-			else
-				instance:HideStatusBar()
-			end
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						if (value) then
-							this_instance:ShowStatusBar()
-						else
-							this_instance:HideStatusBar()
-						end
-					end
+			for_window_group (instance, function (i)
+				if (value) then
+					i:ShowStatusBar()
+				else
+					i:HideStatusBar()
 				end
-			end
+			end)
 
 			instance:BaseFrameSnap()
 			window:update_microframes()
@@ -7695,15 +6511,7 @@ function window:CreateFrame6()
 	--> backdrop texture
 		local onBackdropSelect = function (_, instance, backdropName)
 
-			instance:SetBackdropTexture (backdropName)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetBackdropTexture (backdropName)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetBackdropTexture (backdropName) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 
@@ -7730,15 +6538,7 @@ function window:CreateFrame6()
 
 	--> frame strata
 			local onStrataSelect = function (_, instance, strataName)
-				instance:SetFrameStrata (strataName)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:SetFrameStrata (strataName)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:SetFrameStrata (strataName) end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -7764,15 +6564,7 @@ function window:CreateFrame6()
 
 			local statusbar_color_callback = function (button, r, g, b, a)
 				local instance = _G.DetailsOptionsWindow.instance
-				instance:StatusBarColor (r, g, b, a)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:StatusBarColor (r, g, b, a)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:StatusBarColor (r, g, b, a) end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -7799,7 +6591,7 @@ function window:CreateFrame6()
 
 			frame6.WindowScaleSlider:SetHook ("OnEnter", function()
 				GameCooltip:Preset (2)
-				GameCooltip:AddLine (string.format (Loc ["STRING_OPTIONS_WINDOW_SCALE_DESC"], _G.DetailsOptionsWindow.instance.window_scale))
+				GameCooltip:AddLine (string_format (Loc ["STRING_OPTIONS_WINDOW_SCALE_DESC"], _G.DetailsOptionsWindow.instance.window_scale))
 				GameCooltip:ShowCooltip (frame6.WindowScaleSlider.widget, "tooltip")
 				return true
 			end)
@@ -7812,15 +6604,7 @@ function window:CreateFrame6()
 		frame6.IgnoreMassShowHideSlider:SetAsCheckBox()
 		frame6.IgnoreMassShowHideSlider.OnSwitch = function (self, instance, value)
 
-			instance.ignore_mass_showhide = value
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance.ignore_mass_showhide = value
-					end
-				end
-			end
+			for_window_group (instance, function (i) i.ignore_mass_showhide = value end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -7901,16 +6685,7 @@ function window:CreateFrame6()
 				else
 					local modo = _this_instance.modo
 
-					if (modo == 1) then --alone
-						atributo = _detalhes.SoloTables.Mode or 1
-						local SoloInfo = _detalhes.SoloTables.Menu [atributo]
-						if (SoloInfo) then
-							InstanceList [#InstanceList+1] = {value = index, label = "#".. index .. " " .. SoloInfo [1], onclick = onSelectDeleteInstance, icon = SoloInfo [2]}
-						else
-							InstanceList [#InstanceList+1] = {value = index, label = "#".. index .. " unknown", onclick = onSelectDeleteInstance, icon = ""}
-						end
-
-					elseif (modo == 4) then --raid
+					if (modo == 4) then --raid
 						atributo = _detalhes.RaidTables.Mode or 1
 						local RaidInfo = _detalhes.RaidTables.Menu [atributo]
 						if (RaidInfo) then
@@ -7969,7 +6744,6 @@ function window:CreateFrame6()
 			--hard instances reset
 			_detalhes:InstanciaCallFunction (_detalhes.gump.Fade, "in", nil, "barras")
 			_detalhes:InstanciaCallFunction (_detalhes.AtualizaSegmentos) -- atualiza o instancia.showing para as novas tabelas criadas
-			_detalhes:InstanciaCallFunction (_detalhes.AtualizaSoloMode_AfertReset) -- verifica se precisa zerar as tabela da janela solo mode
 			_detalhes:InstanciaCallFunction (_detalhes.ResetaGump) --_detalhes:ResetaGump ("de todas as instancias")
 			_detalhes:AtualizaGumpPrincipal (-1, true) --atualiza todas as instancias
 
@@ -8060,29 +6834,13 @@ function window:CreateFrame7()
 
 			frame7.menuAnchorXSlider:SetThumbSize (24)
 			frame7.menuAnchorXSlider:SetHook ("OnValueChange", function (self, instance, x)
-				instance:MenuAnchor (x, nil)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:MenuAnchor (x, nil)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:MenuAnchor (x, nil) end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end)
 			--frame7.menuAnchorYSlider:SetThumbSize (50)
 			frame7.menuAnchorYSlider:SetHook ("OnValueChange", function (self, instance, y)
-				instance:MenuAnchor (nil, y)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:MenuAnchor (nil, y)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:MenuAnchor (nil, y) end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end)
@@ -8123,15 +6881,7 @@ function window:CreateFrame7()
 			frame7.pluginMenuAnchorSideSlider:SetPoint ("left", frame7.menuAnchorSideLabel, "right", 2)
 			frame7.pluginMenuAnchorSideSlider:SetAsCheckBox()
 			frame7.pluginMenuAnchorSideSlider.OnSwitch = function (self, instance, value)
-				instance:LeftMenuAnchorSide (value)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:LeftMenuAnchorSide (value)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:LeftMenuAnchorSide (value) end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -8145,15 +6895,7 @@ function window:CreateFrame7()
 			frame7.desaturateMenuSlider:SetPoint ("left", frame7.desaturateMenuLabel, "right", 2)
 			frame7.desaturateMenuSlider:SetAsCheckBox()
 			frame7.desaturateMenuSlider.OnSwitch = function (self, instance, value)
-				instance:DesaturateMenu (value)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:DesaturateMenu (value)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:DesaturateMenu (value) end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -8168,40 +6910,21 @@ function window:CreateFrame7()
 			frame7.hideIconSlider:SetAsCheckBox()
 			frame7.hideIconSlider.OnSwitch = function (self, instance, value)
 
-				instance:HideMainIcon (value)
+				for_window_group (instance, function (i)
+					i:HideMainIcon (value)
 
-				if (not DetailsOptionsWindow.loading_settings and _detalhes.skins [instance.skin].icon_titletext_position) then
-					if (not value and instance.attribute_text.enabled and instance.attribute_text.side == instance.toolbar_side) then
-						instance.attribute_text.anchor [1] = _detalhes.skins [instance.skin].icon_titletext_position [1]
-						instance.attribute_text.anchor [2] = _detalhes.skins [instance.skin].icon_titletext_position [2]
-						instance:AttributeMenu()
-					elseif (value and instance.attribute_text.enabled and instance.attribute_text.side == instance.toolbar_side) then
-						instance.attribute_text.anchor [1] = _detalhes.skins [instance.skin].instance_cprops.attribute_text.anchor [1]
-						instance.attribute_text.anchor [2] = _detalhes.skins [instance.skin].instance_cprops.attribute_text.anchor [2]
-						instance:AttributeMenu()
-					end
-				end
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:HideMainIcon (value)
-
-							if (not DetailsOptionsWindow.loading_settings and _detalhes.skins [this_instance.skin].icon_titletext_position) then
-								if (not value and this_instance.attribute_text.enabled and this_instance.attribute_text.side == this_instance.toolbar_side) then
-									this_instance.attribute_text.anchor [1] = _detalhes.skins [this_instance.skin].icon_titletext_position [1]
-									this_instance.attribute_text.anchor [2] = _detalhes.skins [this_instance.skin].icon_titletext_position [2]
-									this_instance:AttributeMenu()
-								elseif (value and this_instance.attribute_text.enabled and this_instance.attribute_text.side == this_instance.toolbar_side) then
-									this_instance.attribute_text.anchor [1] = _detalhes.skins [this_instance.skin].instance_cprops.attribute_text.anchor [1]
-									this_instance.attribute_text.anchor [2] = _detalhes.skins [this_instance.skin].instance_cprops.attribute_text.anchor [2]
-									this_instance:AttributeMenu()
-								end
-							end
-
+					if (not DetailsOptionsWindow.loading_settings and _detalhes.skins [i.skin].icon_titletext_position) then
+						if (not value and i.attribute_text.enabled and i.attribute_text.side == i.toolbar_side) then
+							i.attribute_text.anchor [1] = _detalhes.skins [i.skin].icon_titletext_position [1]
+							i.attribute_text.anchor [2] = _detalhes.skins [i.skin].icon_titletext_position [2]
+							i:AttributeMenu()
+						elseif (value and i.attribute_text.enabled and i.attribute_text.side == i.toolbar_side) then
+							i.attribute_text.anchor [1] = _detalhes.skins [i.skin].instance_cprops.attribute_text.anchor [1]
+							i.attribute_text.anchor [2] = _detalhes.skins [i.skin].instance_cprops.attribute_text.anchor [2]
+							i:AttributeMenu()
 						end
 					end
-				end
+				end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -8209,38 +6932,16 @@ function window:CreateFrame7()
 			window:CreateLineBackground2 (frame7, "hideIconSlider", "hideIconLabel", Loc ["STRING_OPTIONS_HIDE_ICON_DESC"])
 
 		-- plugin icons direction
-			local grow_switch_func = function (slider, value)
-				if (value == 1) then
-					return false
-				elseif (value == 2) then
-					return true
-				end
-			end
-			local grow_return_func = function (slider, value)
-				if (value) then
-					return 2
-				else
-					return 1
-				end
-			end
-
-			g:NewSwitch (frame7, _, "$parentPluginIconsDirectionSlider", "pluginIconsDirectionSlider", 80, 20, Loc ["STRING_LEFT"], Loc ["STRING_RIGHT"], instance.plugins_grow_direction, nil, grow_switch_func, grow_return_func, nil, options_switch_template)
+			g:NewSwitch (frame7, _, "$parentPluginIconsDirectionSlider", "pluginIconsDirectionSlider", 80, 20, Loc ["STRING_LEFT"], Loc ["STRING_RIGHT"], instance.plugins_grow_direction, nil, menusode_switch_func, menuside_return_func, nil, options_switch_template)
 			g:NewLabel (frame7, _, "$parentPluginIconsDirectionLabel", "pluginIconsDirectionLabel", Loc ["STRING_OPTIONS_PICONS_DIRECTION"], "GameFontHighlightLeft")
 
 			frame7.pluginIconsDirectionSlider:SetPoint ("left", frame7.pluginIconsDirectionLabel, "right", 2)
 			frame7.pluginIconsDirectionSlider:SetAsCheckBox()
 			frame7.pluginIconsDirectionSlider.OnSwitch = function (self, instance, value)
-				instance.plugins_grow_direction = value
-				instance:ToolbarMenuSetButtons()
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance.plugins_grow_direction = value
-							this_instance:ToolbarMenuSetButtons()
-						end
-					end
-				end
+				for_window_group (instance, function (i)
+					i.plugins_grow_direction = value
+					i:ToolbarMenuSetButtons()
+				end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -8274,17 +6975,10 @@ function window:CreateFrame7()
 			local func = function (self, button, menu_button)
 				local instance = _G.DetailsOptionsWindow.instance
 
-				instance.menu_icons [menu_button] = not instance.menu_icons [menu_button]
-				instance:ToolbarMenuSetButtons()
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance.menu_icons [menu_button] = not this_instance.menu_icons [menu_button]
-							this_instance:ToolbarMenuSetButtons()
-						end
-					end
-				end
+				for_window_group (instance, function (i)
+					i.menu_icons [menu_button] = not i.menu_icons [menu_button]
+					i:ToolbarMenuSetButtons()
+				end)
 
 				if (instance.menu_icons [menu_button]) then
 					x_container [menu_button]:Hide()
@@ -8351,15 +7045,7 @@ function window:CreateFrame7()
 		frame7.menuIconSizeSlider:SetPoint ("left", frame7.menuIconSizeLabel, "right", 2, -1)
 
 		frame7.menuIconSizeSlider:SetHook ("OnValueChange", function (self, instance, value)
-			instance:ToolbarMenuButtonsSize (value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:ToolbarMenuButtonsSize (value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:ToolbarMenuButtonsSize (value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
@@ -8375,15 +7061,7 @@ function window:CreateFrame7()
 		frame7.MenuIconSpaceSlider:SetPoint ("left", frame7.MenuIconSpaceLabel, "right", 2, -1)
 
 		frame7.MenuIconSpaceSlider:SetHook ("OnValueChange", function (self, instance, value)
-			instance:ToolbarMenuSetButtonsOptions (value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:ToolbarMenuSetButtonsOptions (value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:ToolbarMenuSetButtonsOptions (value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
@@ -8398,15 +7076,7 @@ function window:CreateFrame7()
 		frame7.MenuIconShadowSlider:SetPoint ("left", frame7.MenuIconShadowLabel, "right", 2)
 		frame7.MenuIconShadowSlider:SetAsCheckBox()
 		frame7.MenuIconShadowSlider.OnSwitch = function (self, instance, value)
-			instance:ToolbarMenuSetButtonsOptions (nil, value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:ToolbarMenuSetButtonsOptions (nil, value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:ToolbarMenuSetButtonsOptions (nil, value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -8423,15 +7093,7 @@ function window:CreateFrame7()
 		frame7.autoHideLeftMenuSwitch:SetPoint ("left", frame7.autoHideLeftMenuLabel, "right", 2)
 		frame7.autoHideLeftMenuSwitch:SetAsCheckBox()
 		frame7.autoHideLeftMenuSwitch.OnSwitch = function (self, instance, value)
-			instance:SetAutoHideMenu (value)
-
-			if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-				for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-					if (this_instance ~= instance) then
-						this_instance:SetAutoHideMenu (value)
-					end
-				end
-			end
+			for_window_group (instance, function (i) i:SetAutoHideMenu (value) end)
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end
@@ -8471,15 +7133,7 @@ function window:CreateFrame7()
 			_detalhes.font_faces.menus = fontName
 		end
 
-		local buildFontMenu = function()
-			local fontObjects = SharedMedia:HashTable ("font")
-			local fontTable = {}
-			for name, fontPath in pairs (fontObjects) do
-				fontTable[#fontTable+1] = {value = name, label = name, icon = font_select_icon, texcoord = font_select_texcoord, onclick = onSelectFont, font = fontPath, descfont = name, desc = Loc ["STRING_MUSIC_DETAILS_ROBERTOCARLOS"]}
-			end
-			table.sort (fontTable, function (t1, t2) return t1.label < t2.label end)
-			return fontTable
-		end
+		local buildFontMenu = font_menu_builder (onSelectFont, Loc ["STRING_MUSIC_DETAILS_ROBERTOCARLOS"])
 
 		local d = g:NewDropDown (frame7, _, "$parentFontDropdown", "fontDropdown", DROPDOWN_WIDTH, dropdown_height, buildFontMenu, nil, options_dropdown_template)
 
@@ -8585,15 +7239,7 @@ function window:CreateFrame8()
 				frame8.ModelUpperEnabledSlider:SetPoint ("left", frame8.ModelUpperEnabledLabel, "right", 2, -1)
 				frame8.ModelUpperEnabledSlider:SetAsCheckBox()
 				frame8.ModelUpperEnabledSlider.OnSwitch = function (self, instance, value)
-					instance:SetBarModel (value)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:SetBarModel (value)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:SetBarModel (value) end)
 
 					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 				end
@@ -8604,35 +7250,19 @@ function window:CreateFrame8()
 				local select_upper_model_callback = function (model)
 					local instance = _G.DetailsOptionsWindow.instance
 
-					instance:SetBarModel (nil, model)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:SetBarModel (nil, model)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:SetBarModel (nil, model) end)
 
 					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 				end
 				local select_lower_model_callback = function (model)
 					local instance = _G.DetailsOptionsWindow.instance
 
-					instance:SetBarModel (nil, nil, nil, nil, model)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:SetBarModel (nil, nil, nil, nil, model)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:SetBarModel (nil, nil, nil, nil, model) end)
 
 					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 				end
 
-				local select_model = function (is_upper)
+				local select_model = function (_, _, is_upper)
 					if (not IsAddOnLoaded ("Details_3DModelsPaths")) then
 						local loaded, reason = LoadAddOn ("Details_3DModelsPaths")
 						if (not loaded) then
@@ -8652,7 +7282,7 @@ function window:CreateFrame8()
 				--frame8.ModelUpperSelect:InstallCustomTexture (nil, nil, nil, nil, nil, true)
 				window:CreateLineBackground2 (frame8, "ModelUpperSelect", "ModelUpperSelect", Loc ["STRING_OPTIONS_3D_USELECT_DESC"], nil, {1, 0.8, 0}, button_color_rgb)
 
-				frame8.ModelUpperSelect:SetIcon ([[Interface\WorldStateFrame\OrcHead]], nil, nil, nil, {0.03125, 1-0.03125, 0.03125, 1-0.03125}, nil, nil, 2)
+				frame8.ModelUpperSelect:SetIcon ([[Interface\Icons\INV_Misc_Head_Orc_01]], nil, nil, nil, {0.07, 0.93, 0.07, 0.93}, nil, nil, 2)
 				frame8.ModelUpperSelect:SetTextColor (button_color_rgb)
 
 
@@ -8664,15 +7294,7 @@ function window:CreateFrame8()
 				frame8.ModelUpperAlphaSlider:SetPoint ("left", frame8.ModelUpperAlphaLabel, "right", 2)
 
 				frame8.ModelUpperAlphaSlider:SetHook ("OnValueChange", function (self, instance, amount)
-					instance:SetBarModel (nil, nil, amount)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:SetBarModel (nil, nil, amount)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:SetBarModel (nil, nil, amount) end)
 
 					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 				end)
@@ -8685,15 +7307,7 @@ function window:CreateFrame8()
 				frame8.ModelLowerEnabledSlider:SetPoint ("left", frame8.ModelLowerEnabledLabel, "right", 2, -1)
 				frame8.ModelLowerEnabledSlider:SetAsCheckBox()
 				frame8.ModelLowerEnabledSlider.OnSwitch = function (self, instance, value)
-					instance:SetBarModel (nil, nil, nil, value)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:SetBarModel (nil, nil, nil, value)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:SetBarModel (nil, nil, nil, value) end)
 
 					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 				end
@@ -8705,7 +7319,7 @@ function window:CreateFrame8()
 				--frame8.ModelLowerSelect:InstallCustomTexture (nil, nil, nil, nil, nil, true)
 				window:CreateLineBackground2 (frame8, "ModelLowerSelect", "ModelLowerSelect", Loc ["STRING_OPTIONS_3D_LSELECT_DESC"], nil, {1, 0.8, 0}, button_color_rgb)
 
-				frame8.ModelLowerSelect:SetIcon ([[Interface\WorldStateFrame\OrcHead]], nil, nil, nil, {0.03125, 1-0.03125, 0.03125, 1-0.03125}, nil, nil, 2)
+				frame8.ModelLowerSelect:SetIcon ([[Interface\Icons\INV_Misc_Head_Orc_01]], nil, nil, nil, {0.07, 0.93, 0.07, 0.93}, nil, nil, 2)
 				frame8.ModelLowerSelect:SetTextColor (button_color_rgb)
 
 			--> lower model alpha
@@ -8716,15 +7330,7 @@ function window:CreateFrame8()
 				frame8.ModelLowerAlphaSlider:SetPoint ("left", frame8.ModelLowerAlphaLabel, "right", 2)
 
 				frame8.ModelLowerAlphaSlider:SetHook ("OnValueChange", function (self, instance, amount)
-					instance:SetBarModel (nil, nil, nil, nil, nil, amount)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:SetBarModel (nil, nil, nil, nil, nil, amount)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:SetBarModel (nil, nil, nil, nil, nil, amount) end)
 
 					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 				end)
@@ -8743,15 +7349,7 @@ function window:CreateFrame8()
 				frame8.BarUpdateRateSlider:SetPoint ("left", frame8.BarUpdateRateLabel, "right", 2, -1)
 				frame8.BarUpdateRateSlider:SetAsCheckBox()
 				frame8.BarUpdateRateSlider.OnSwitch = function (self, instance, value)
-					instance:FastPSUpdate (value)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:FastPSUpdate (value)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:FastPSUpdate (value) end)
 
 					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 				end
@@ -8768,15 +7366,7 @@ function window:CreateFrame8()
 				frame8.ShowMeSlider:SetPoint ("left", frame8.ShowMeLabel, "right", 2, -1)
 				frame8.ShowMeSlider:SetAsCheckBox()
 				frame8.ShowMeSlider.OnSwitch = function (self, instance, value)
-					instance:SetBarFollowPlayer (value)
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:SetBarFollowPlayer (value)
-							end
-						end
-					end
+					for_window_group (instance, function (i) i:SetBarFollowPlayer (value) end)
 
 					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 				end
@@ -8792,17 +7382,10 @@ function window:CreateFrame8()
 			frame8.totalBarSlider:SetPoint ("left", frame8.totalBarLabel, "right", 2)
 			frame8.totalBarSlider:SetAsCheckBox()
 			frame8.totalBarSlider.OnSwitch = function (self, instance, value)
-				instance.total_bar.enabled = value
-				instance:InstanceReset()
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance.total_bar.enabled = value
-							this_instance:InstanceReset()
-						end
-					end
-				end
+				for_window_group (instance, function (i)
+					i.total_bar.enabled = value
+					i:InstanceReset()
+				end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -8814,21 +7397,12 @@ function window:CreateFrame8()
 
 					local instance = _G.DetailsOptionsWindow.instance
 
-					instance.total_bar.color[1] = r
-					instance.total_bar.color[2] = g
-					instance.total_bar.color[3] = b
-					instance:InstanceReset()
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance.total_bar.color[1] = r
-								this_instance.total_bar.color[2] = g
-								this_instance.total_bar.color[3] = b
-								this_instance:InstanceReset()
-							end
-						end
-					end
+					for_window_group (instance, function (i)
+						i.total_bar.color[1] = r
+						i.total_bar.color[2] = g
+						i.total_bar.color[3] = b
+						i:InstanceReset()
+					end)
 
 					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 				end
@@ -8845,17 +7419,10 @@ function window:CreateFrame8()
 			frame8.totalBarOnlyInGroupSlider:SetPoint ("left", frame8.totalBarOnlyInGroupLabel, "right", 2)
 			frame8.totalBarOnlyInGroupSlider:SetAsCheckBox()
 			frame8.totalBarOnlyInGroupSlider.OnSwitch = function (self, instance, value)
-				instance.total_bar.only_in_group = value
-				instance:InstanceReset()
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance.total_bar.only_in_group = value
-							this_instance:InstanceReset()
-						end
-					end
-				end
+				for_window_group (instance, function (i)
+					i.total_bar.only_in_group = value
+					i:InstanceReset()
+				end)
 
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 			end
@@ -8867,17 +7434,10 @@ function window:CreateFrame8()
 
 				local instance = _G.DetailsOptionsWindow.instance
 
-				instance.total_bar.icon = texture
-				instance:InstanceReset()
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance.total_bar.icon = texture
-							this_instance:InstanceReset()
-						end
-					end
-				end
+				for_window_group (instance, function (i)
+					i.total_bar.icon = texture
+					i:InstanceReset()
+				end)
 
 				frame8.totalBarIconTexture:SetTexture (texture)
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
@@ -8951,15 +7511,7 @@ function window:CreateFrame9()
 			--> primeiro o bot�o de editar a imagem
 			local callmeback = function (width, height, overlayColor, alpha, texCoords)
 				local instance = _G.DetailsOptionsWindow.instance
-				instance:InstanceWallpaper (nil, nil, alpha, texCoords, width, height, overlayColor)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:InstanceWallpaper (nil, nil, alpha, texCoords, width, height, overlayColor)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:InstanceWallpaper (nil, nil, alpha, texCoords, width, height, overlayColor) end)
 
 				window:update_wallpaper_info()
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
@@ -8993,15 +7545,7 @@ function window:CreateFrame9()
 
 			--> agora o dropdown do alinhamento
 			local onSelectAnchor = function (_, instance, anchor)
-				instance:InstanceWallpaper (nil, anchor)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:InstanceWallpaper (nil, anchor)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:InstanceWallpaper (nil, anchor) end)
 
 				window:update_wallpaper_info()
 				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
@@ -9039,73 +7583,25 @@ function window:CreateFrame9()
 					end
 				end
 
+				local texCoords
 				if (texturePath:find ("TALENTFRAME")) then
-
-					instance:InstanceWallpaper (texturePath, nil, nil, {0, 1, 0, 0.703125}, nil, nil, {1, 1, 1, 1})
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:InstanceWallpaper (texturePath, nil, nil, {0, 1, 0, 0.703125}, nil, nil, {1, 1, 1, 1})
-							end
-						end
-					end
-
-					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
-
-					if (DetailsImageEdit and DetailsImageEdit:IsShown()) then
-						local wp = instance.wallpaper
-						if (wp.anchor == "all") then
-							g:ImageEditor (callmeback, wp.texture, wp.texcoord, wp.overlay, instance.baseframe.wallpaper:GetWidth(), instance.baseframe.wallpaper:GetHeight(), nil, wp.alpha, true)
-						else
-							g:ImageEditor (callmeback, wp.texture, wp.texcoord, wp.overlay, instance.baseframe.wallpaper:GetWidth(), instance.baseframe.wallpaper:GetHeight(), nil, wp.alpha)
-						end
-					end
-
+					texCoords = {0, 1, 0, 0.703125}
 				elseif (texturePath:find ("EncounterJournal")) then
-
-					instance:InstanceWallpaper (texturePath, nil, nil, {0.06, 0.68, 0.1, 0.57}, nil, nil, {1, 1, 1, 1})
-
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:InstanceWallpaper (texturePath, nil, nil, {0.06, 0.68, 0.1, 0.57}, nil, nil, {1, 1, 1, 1})
-							end
-						end
-					end
-
-					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
-
-					if (DetailsImageEdit and DetailsImageEdit:IsShown()) then
-						local wp = instance.wallpaper
-						if (wp.anchor == "all") then
-							g:ImageEditor (callmeback, wp.texture, wp.texcoord, wp.overlay, instance.baseframe.wallpaper:GetWidth(), instance.baseframe.wallpaper:GetHeight(), nil, wp.alpha, true)
-						else
-							g:ImageEditor (callmeback, wp.texture, wp.texcoord, wp.overlay, instance.baseframe.wallpaper:GetWidth(), instance.baseframe.wallpaper:GetHeight(), nil, wp.alpha)
-						end
-					end
-
+					texCoords = {0.06, 0.68, 0.1, 0.57}
 				else
-					local texCoords = selectedTextureOption and selectedTextureOption.texcoord
-					instance:InstanceWallpaper (texturePath, nil, nil, texCoords or {0, 1, 0, 1}, nil, nil, {1, 1, 1, 1})
+					texCoords = selectedTextureOption and selectedTextureOption.texcoord or {0, 1, 0, 1}
+				end
 
-					if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-						for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-							if (this_instance ~= instance) then
-								this_instance:InstanceWallpaper (texturePath, nil, nil, texCoords or {0, 1, 0, 1}, nil, nil, {1, 1, 1, 1})
-							end
-						end
-					end
+				for_window_group (instance, function (i) i:InstanceWallpaper (texturePath, nil, nil, texCoords, nil, nil, {1, 1, 1, 1}) end)
 
-					_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
+				_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 
-					if (DetailsImageEdit and DetailsImageEdit:IsShown()) then
-						local wp = instance.wallpaper
-						if (wp.anchor == "all") then
-							g:ImageEditor (callmeback, wp.texture, wp.texcoord, wp.overlay, instance.baseframe.wallpaper:GetWidth(), instance.baseframe.wallpaper:GetHeight(), nil, wp.alpha, true)
-						else
-							g:ImageEditor (callmeback, wp.texture, wp.texcoord, wp.overlay, instance.baseframe.wallpaper:GetWidth(), instance.baseframe.wallpaper:GetHeight(), nil, wp.alpha)
-						end
+				if (DetailsImageEdit and DetailsImageEdit:IsShown()) then
+					local wp = instance.wallpaper
+					if (wp.anchor == "all") then
+						g:ImageEditor (callmeback, wp.texture, wp.texcoord, wp.overlay, instance.baseframe.wallpaper:GetWidth(), instance.baseframe.wallpaper:GetHeight(), nil, wp.alpha, true)
+					else
+						g:ImageEditor (callmeback, wp.texture, wp.texcoord, wp.overlay, instance.baseframe.wallpaper:GetWidth(), instance.baseframe.wallpaper:GetHeight(), nil, wp.alpha)
 					end
 				end
 
@@ -9125,26 +7621,6 @@ function window:CreateFrame9()
 				["ARCHEOLOGY"] = {
 					{value = [[Interface\ARCHEOLOGY\Arch-BookCompletedLeft]], label = "Book Wallpaper", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\Arch-BookCompletedLeft]], texcoord = nil},
 					{value = [[Interface\ARCHEOLOGY\Arch-BookItemLeft]], label = "Book Wallpaper 2", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\Arch-BookItemLeft]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\Arch-Race-DraeneiBIG]], label = "Draenei", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\Arch-Race-DraeneiBIG]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\Arch-Race-DwarfBIG]], label = "Dwarf", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\Arch-Race-DwarfBIG]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\Arch-Race-NightElfBIG]], label = "Night Elf", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\Arch-Race-NightElfBIG]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\Arch-Race-OrcBIG]], label = "Orc", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\Arch-Race-OrcBIG]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\Arch-Race-PandarenBIG]], label = "Pandaren", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\Arch-Race-PandarenBIG]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\Arch-Race-TrollBIG]], label = "Troll", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\Arch-Race-TrollBIG]], texcoord = nil},
-
-					{value = [[Interface\ARCHEOLOGY\ArchRare-AncientShamanHeaddress]], label = "Ancient Shaman", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-AncientShamanHeaddress]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-BabyPterrodax]], label = "Baby Pterrodax", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-BabyPterrodax]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-ChaliceMountainKings]], label = "Chalice Mountain Kings", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-ChaliceMountainKings]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-ClockworkGnome]], label = "Clockwork Gnomes", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-ClockworkGnome]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-QueenAzsharaGown]], label = "Queen Azshara Gown", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-QueenAzsharaGown]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-QuilinStatue]], label = "Quilin Statue", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-QuilinStatue]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\Arch-TempRareSketch]], label = "Rare Sketch", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\Arch-TempRareSketch]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-ScepterofAzAqir]], label = "Scepter of Az Aqir", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-ScepterofAzAqir]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-ShriveledMonkeyPaw]], label = "Shriveled Monkey Paw", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-ShriveledMonkeyPaw]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-StaffofAmmunrae]], label = "Staff of Ammunrae", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-StaffofAmmunrae]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-TinyDinosaurSkeleton]], label = "Tiny Dinosaur", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-TinyDinosaurSkeleton]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-TyrandesFavoriteDoll]], label = "Tyrandes Favorite Doll", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-TyrandesFavoriteDoll]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ArchRare-ZinRokhDestroyer]], label = "ZinRokh Destroyer", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ArchRare-ZinRokhDestroyer]], texcoord = nil},
 				},
 
 				["RAIDS"] = {
@@ -9167,16 +7643,9 @@ function window:CreateFrame9()
 				["LOGOS"] = {
 					{value = [[Interface\Timer\Alliance-Logo]], label = "For the Alliance", onclick = onSelectSecTexture, icon = [[Interface\Timer\Alliance-Logo]], texcoord = nil},
 					{value = [[Interface\Timer\Horde-Logo]], label = "For the Horde", onclick = onSelectSecTexture, icon = [[Interface\Timer\Horde-Logo]], texcoord = nil},
-					{value = [[Interface\Destiny\EndscreenImage]], label = "Pandaria Logo", onclick = onSelectSecTexture, icon = [[Interface\Destiny\EndscreenImage]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ARCH-RACE-ORC]], label = "Orc Crest", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ARCH-RACE-ORC]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ARCH-RACE-DWARF]], label = "Dwarf Crest", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ARCH-RACE-DWARF]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ARCH-RACE-NIGHTELF]], label = "Night Elf Crest", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ARCH-RACE-NIGHTELF]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\Arch-Race-Pandaren]], label = "Padaren Crest", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\Arch-Race-Pandaren]], texcoord = nil},
-					{value = [[Interface\ARCHEOLOGY\ARCH-RACE-TROLL]], label = "Troll Crest", onclick = onSelectSecTexture, icon = [[Interface\ARCHEOLOGY\ARCH-RACE-TROLL]], texcoord = nil},
 					{value = [[Interface\FlavorImages\BloodElfLogo-small]], label = "Blood Elf Crest", onclick = onSelectSecTexture, icon = [[Interface\FlavorImages\BloodElfLogo-small]], texcoord = nil},
 					{value = [[Interface\Glues\COMMON\Glues-Logo]], label = "Wow Logo", onclick = onSelectSecTexture, icon = [[Interface\Glues\COMMON\Glues-Logo]], texcoord = nil},
 					{value = [[Interface\Glues\COMMON\GLUES-WOW-BCLOGO]], label = "Burning Cruzade Logo", onclick = onSelectSecTexture, icon = [[Interface\Glues\COMMON\GLUES-WOW-BCLOGO]], texcoord = nil},
-					{value = [[Interface\Glues\COMMON\GLUES-WOW-CCLOGO]], label = "Cataclysm Logo", onclick = onSelectSecTexture, icon = [[Interface\Glues\COMMON\GLUES-WOW-CCLOGO]], texcoord = nil},
 					{value = [[Interface\Glues\COMMON\Glues-WOW-WoltkLogo]], label = "WotLK Logo", onclick = onSelectSecTexture, icon = [[Interface\Glues\COMMON\Glues-WOW-WoltkLogo]], texcoord = nil},
 				},
 
@@ -9214,13 +7683,12 @@ function window:CreateFrame9()
 					{value = [[Interface\Glues\CREDITS\Terrokkar6]], label = "Terrokkar", onclick = onSelectSecTexture, icon = [[Interface\Glues\CREDITS\Terrokkar6]], texcoord = nil},
 					{value = [[Interface\Glues\CREDITS\ThousandNeedles2]], label = "Thousand Needles", onclick = onSelectSecTexture, icon = [[Interface\Glues\CREDITS\ThousandNeedles2]], texcoord = nil},
 					{value = [[Interface\Glues\CREDITS\Troll2]], label = "Troll", onclick = onSelectSecTexture, icon = [[Interface\Glues\CREDITS\Troll2]], texcoord = nil},
-					{value = [[Interface\Glues\CREDITS\CATACLYSM\LESSERELEMENTAL_FIRE_03B1]], label = "Fire Elemental", onclick = onSelectSecTexture, icon = [[Interface\Glues\CREDITS\CATACLYSM\LESSERELEMENTAL_FIRE_03B1]], texcoord = nil},
 				},
 
 				["DEATHKNIGHT"] = {
-					{value = [[Interface\TALENTFRAME\bg-deathknight-blood]], label = "Blood", onclick = onSelectSecTexture, icon = [[Interface\ICONS\Spell_Deathknight_BloodPresence]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-deathknight-frost]], label = "Frost", onclick = onSelectSecTexture, icon = [[Interface\ICONS\Spell_Deathknight_FrostPresence]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-deathknight-unholy]], label = "Unholy", onclick = onSelectSecTexture, icon = [[Interface\ICONS\Spell_Deathknight_UnholyPresence]], texcoord = nil}
+					{value = [[Interface\TALENTFRAME\DeathKnightBlood-TopLeft]], label = "Blood", onclick = onSelectSecTexture, icon = [[Interface\ICONS\Spell_Deathknight_BloodPresence]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\DeathKnightFrost-TopLeft]], label = "Frost", onclick = onSelectSecTexture, icon = [[Interface\ICONS\Spell_Deathknight_FrostPresence]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\DeathKnightUnholy-TopLeft]], label = "Unholy", onclick = onSelectSecTexture, icon = [[Interface\ICONS\Spell_Deathknight_UnholyPresence]], texcoord = nil}
 				},
 
 				["DRESSUP"] = {
@@ -9241,63 +7709,56 @@ function window:CreateFrame9()
 				},
 
 				["DRUID"] = {
-					{value = [[Interface\TALENTFRAME\bg-druid-bear]], label = "Guardian", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_racial_bearform]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-druid-restoration]], label = "Restoration", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_nature_healingtouch]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-druid-cat]], label = "Feral", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_shadow_vampiricaura]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-druid-balance]], label = "Balance", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_nature_starfall]], texcoord = nil}
+					{value = [[Interface\TALENTFRAME\DruidRestoration-TopLeft]], label = "Restoration", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_nature_healingtouch]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\DruidFeralCombat-TopLeft]], label = "Feral", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_shadow_vampiricaura]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\DruidBalance-TopLeft]], label = "Balance", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_nature_starfall]], texcoord = nil}
 				},
 
 				["HUNTER"] = {
-					{value = [[Interface\TALENTFRAME\bg-hunter-beastmaster]], label = "Beast Mastery", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_hunter_bestialdiscipline]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-hunter-marksman]], label = "Marksmanship", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_hunter_focusedaim]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-hunter-survival]], label = "Survival", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_hunter_camouflage]], texcoord = nil}
+					{value = [[Interface\TALENTFRAME\HunterBeastMastery-TopLeft]], label = "Beast Mastery", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_hunter_bestialdiscipline]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\HunterMarksmanship-TopLeft]], label = "Marksmanship", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_hunter_focusedaim]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\HunterSurvival-TopLeft]], label = "Survival", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_hunter_camouflage]], texcoord = nil}
 				},
 
 				["MAGE"] = {
-					{value = [[Interface\TALENTFRAME\bg-mage-arcane]], label = "Arcane", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_holy_magicalsentry]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-mage-fire]], label = "Fire", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_fire_firebolt02]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-mage-frost]], label = "Frost", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_frost_frostbolt02]], texcoord = nil}
+					{value = [[Interface\TALENTFRAME\MageArcane-TopLeft]], label = "Arcane", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_holy_magicalsentry]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\MageFire-TopLeft]], label = "Fire", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_fire_firebolt02]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\MageFrost-TopLeft]], label = "Frost", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_frost_frostbolt02]], texcoord = nil}
 				},
 
-				-- ["MONK"] = {
-				-- 	{value = [[Interface\TALENTFRAME\bg-monk-brewmaster]], label = "Brewmaster", onclick = onSelectSecTexture, icon = [[Interface\ICONS\monk_stance_drunkenox]], texcoord = nil},
-				-- 	{value = [[Interface\TALENTFRAME\bg-monk-mistweaver]], label = "Mistweaver", onclick = onSelectSecTexture, icon = [[Interface\ICONS\monk_stance_wiseserpent]], texcoord = nil},
-				-- 	{value = [[Interface\TALENTFRAME\bg-monk-battledancer]], label = "Windwalker", onclick = onSelectSecTexture, icon = [[Interface\ICONS\monk_stance_whitetiger]], texcoord = nil}
-				-- },
-
 				["PALADIN"] = {
-					{value = [[Interface\TALENTFRAME\bg-paladin-holy]], label = "Holy", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_holy_holybolt]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-paladin-protection]], label = "Protection", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_paladin_shieldofthetemplar]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-paladin-retribution]], label = "Retribution", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_holy_auraoflight]], texcoord = nil}
+					{value = [[Interface\TALENTFRAME\PaladinHoly-TopLeft]], label = "Holy", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_holy_holybolt]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\PaladinProtection-TopLeft]], label = "Protection", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_paladin_shieldofthetemplar]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\PaladinCombat-TopLeft]], label = "Retribution", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_holy_auraoflight]], texcoord = nil}
 				},
 
 				["PRIEST"] = {
-					{value = [[Interface\TALENTFRAME\bg-priest-discipline]], label = "Discipline", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_holy_powerwordshield]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-priest-holy]], label = "Holy", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_holy_guardianspirit]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-priest-shadow]], label = "Shadow", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_shadow_shadowwordpain]], texcoord = nil}
+					{value = [[Interface\TALENTFRAME\PriestDiscipline-TopLeft]], label = "Discipline", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_holy_powerwordshield]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\PriestHoly-TopLeft]], label = "Holy", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_holy_guardianspirit]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\PriestShadow-TopLeft]], label = "Shadow", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_shadow_shadowwordpain]], texcoord = nil}
 				},
 
 				["ROGUE"] = {
-					{value = [[Interface\TALENTFRAME\bg-rogue-assassination]], label = "Assassination", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_rogue_eviscerate]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-rogue-combat]], label = "Combat", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_backstab]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-rogue-subtlety]], label = "Subtlety", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_stealth]], texcoord = nil}
+					{value = [[Interface\TALENTFRAME\RogueAssassination-TopLeft]], label = "Assassination", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_rogue_eviscerate]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\RogueCombat-TopLeft]], label = "Combat", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_backstab]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\RogueSubtlety-TopLeft]], label = "Subtlety", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_stealth]], texcoord = nil}
 				},
 
 				["SHAMAN"] = {
-					{value = [[Interface\TALENTFRAME\bg-shaman-elemental]], label = "Elemental", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_nature_lightning]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-shaman-enhancement]], label = "Enhancement", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_nature_lightningshield]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-shaman-restoration]], label = "Restoration", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_nature_magicimmunity]], texcoord = nil}
+					{value = [[Interface\TALENTFRAME\ShamanElementalCombat-TopLeft]], label = "Elemental", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_nature_lightning]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\ShamanEnhancement-TopLeft]], label = "Enhancement", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_nature_lightningshield]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\ShamanRestoration-TopLeft]], label = "Restoration", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_nature_magicimmunity]], texcoord = nil}
 				},
 
 				["WARLOCK"] = {
-					{value = [[Interface\TALENTFRAME\bg-warlock-affliction]], label = "Affliction", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_shadow_deathcoil]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-warlock-demonology]], label = "Demonology", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_shadow_metamorphosis]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-warlock-destruction]], label = "Destruction", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_shadow_rainoffire]], texcoord = nil}
+					{value = [[Interface\TALENTFRAME\WarlockCurses-TopLeft]], label = "Affliction", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_shadow_deathcoil]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\WarlockSummoning-TopLeft]], label = "Demonology", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_shadow_metamorphosis]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\WarlockDestruction-TopLeft]], label = "Destruction", onclick = onSelectSecTexture, icon = [[Interface\ICONS\spell_shadow_rainoffire]], texcoord = nil}
 				},
 				["WARRIOR"] = {
-					{value = [[Interface\TALENTFRAME\bg-warrior-arms]], label = "Arms", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_warrior_savageblow]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-warrior-fury]], label = "Fury", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_warrior_innerrage]], texcoord = nil},
-					{value = [[Interface\TALENTFRAME\bg-warrior-protection]], label = "Protection", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_warrior_defensivestance]], texcoord = nil}
+					{value = [[Interface\TALENTFRAME\WarriorArms-TopLeft]], label = "Arms", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_warrior_savageblow]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\WarriorFury-TopLeft]], label = "Fury", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_warrior_innerrage]], texcoord = nil},
+					{value = [[Interface\TALENTFRAME\WarriorProtection-TopLeft]], label = "Protection", onclick = onSelectSecTexture, icon = [[Interface\ICONS\ability_warrior_defensivestance]], texcoord = nil}
 				},
 			}
 
@@ -9357,25 +7818,10 @@ function window:CreateFrame9()
 					instance.wallpaper.texture = "Interface\\AddOns\\Details\\images\\background"
 				end
 
-				instance:InstanceWallpaper (true)
-
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:InstanceWallpaper (true)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:InstanceWallpaper (true) end)
 
 			else
-				instance:InstanceWallpaper (false)
-				if (_detalhes.options_group_edit and not DetailsOptionsWindow.loading_settings) then
-					for _, this_instance in ipairs (instance:GetInstanceGroup()) do
-						if (this_instance ~= instance) then
-							this_instance:InstanceWallpaper (false)
-						end
-					end
-				end
+				for_window_group (instance, function (i) i:InstanceWallpaper (false) end)
 			end
 
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
@@ -9471,23 +7917,23 @@ function window:CreateFrame9()
 
 			local a = w.alpha or 0
 			a = a * 100
-			a = string.format ("%.1f", a) .. "%"
+			a = string_format ("%.1f", a) .. "%"
 
 			local t = w.texcoord [3] or 0
 			t = t * 100
-			t = string.format ("%.3f", t) .. "%"
+			t = string_format ("%.3f", t) .. "%"
 
 			local b = w.texcoord [4] or 1
 			b = b * 100
-			b = string.format ("%.3f", b) .. "%"
+			b = string_format ("%.3f", b) .. "%"
 
 			local l = w.texcoord [1] or 0
 			l = l * 100
-			l = string.format ("%.3f", l) .. "%"
+			l = string_format ("%.3f", l) .. "%"
 
 			local r = w.texcoord [2] or 1
 			r = r * 100
-			r = string.format ("%.3f", r) .. "%"
+			r = string_format ("%.3f", r) .. "%"
 
 			local red = w.overlay[1] or 0
 			red = math.ceil (red * 255)
@@ -9722,7 +8168,6 @@ end
 function window:CreateFrame10()
 
 		local frame10 = window.options [10][1]
-		local frame11 = window.options [11][1]
 
 		local titulo_performance_general = g:NewLabel (frame10, _, "$parentTituloPerformance1", "tituloPerformance1Label", Loc ["STRING_OPTIONS_PERFORMANCE1"], "GameFontNormal", 16)
 		local titulo_performance_general_desc = g:NewLabel (frame10, _, "$parentTituloPersona2", "tituloPersona2Label", Loc ["STRING_OPTIONS_PERFORMANCE1_DESC"], "GameFontNormal", 10, "white")
@@ -9735,7 +8180,7 @@ function window:CreateFrame10()
 		--
 		frame10.segmentsSliderToSave:SetPoint ("left", frame10.segmentsSaveLabel, "right", 2, 0)
 		frame10.segmentsSliderToSave:SetHook ("OnValueChange", function (self, _, amount) --> slider, fixedValue, sliderValue
-			_detalhes.segments_amount_to_save = math.floor (amount)
+			_detalhes.segments_amount_to_save = math_floor (amount)
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
 
@@ -9853,10 +8298,6 @@ function window:CreateFrame10()
 		end
 
 		local editing = nil
-		local modify_setting = function (config, value)
-
-		end
-
 		g:NewLabel (frame10, _, "$parentPerformanceProfilesAnchor", "PerformanceProfilesAnchorLabel", Loc ["STRING_OPTIONS_PERFORMANCEPROFILES_ANCHOR"], "GameFontNormal")
 
 		--type dropdown
@@ -9956,9 +8397,6 @@ function window:CreateFrame10()
 				editing.update_speed = amount
 				_detalhes:CheckForPerformanceProfile()
 			end
-			--_detalhes:CancelTimer (_detalhes.atualizador)
-			--_detalhes.update_speed = amount
-			--_detalhes.atualizador = _detalhes:ScheduleRepeatingTimer ("AtualizaGumpPrincipal", _detalhes.update_speed, -1)
 			updateColor (self, amount)
 		end)
 		updateColor (frame10.updatespeedSlider, _detalhes.update_speed)
@@ -10202,7 +8640,7 @@ function window:CreateFrame10()
 
 		frame10.segmentsSlider:SetPoint ("left", frame10.segmentsLabel, "right", 2, -1)
 		frame10.segmentsSlider:SetHook ("OnValueChange", function (self, _, amount) --> slider, fixedValue, sliderValue
-			_detalhes.segments_amount = math.floor (amount)
+			_detalhes.segments_amount = math_floor (amount)
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
 
@@ -10392,7 +8830,6 @@ function window:CreateFrame11()
 		reset_custom.tooltip = Loc ["STRING_OPTIONS_RESET_TO_DEFAULT"]
 
 		local test_custom_text = g:NewButton (frame11.InterruptsCustomEntry, _, "$parentTestCustomPhraseButton", "TestCustomPhraseButton", 16, 16, function()
-			local text = frame11.InterruptsCustomEntry.text
 
 			local channel = _detalhes.announce_interrupts.channel
 			_detalhes.announce_interrupts.channel = "PRINT"
@@ -10471,7 +8908,6 @@ function window:CreateFrame11()
 		reset_custom.tooltip = Loc ["STRING_OPTIONS_RESET_TO_DEFAULT"]
 
 		local test_custom_text = g:NewButton (frame11.CooldownCustomEntry, _, "$parentTestCustomPhraseButton", "TestCustomPhraseButton", 16, 16, function()
-			local text = frame11.CooldownCustomEntry.text
 
 			local channel = _detalhes.announce_cooldowns.channel
 			_detalhes.announce_cooldowns.channel = "PRINT"
@@ -10559,7 +8995,7 @@ function window:CreateFrame11()
 					L.icon:SetPoint ("topleft", f, "topleft", 10, ((#f.labels*20)*-1)-55)
 					L.text:SetPoint ("left", L.icon, "right", 2, 0)
 					L.switch:SetPoint ("left", L.text, "right", 2, 0)
-					tinsert (f.labels, L)
+					f.labels[#f.labels+1] = L
 					return L
 				end
 
@@ -10679,7 +9115,7 @@ function window:CreateFrame11()
 		g:NewSlider (frame11, _, "$parentDeathRecapRelevanceSlider", "DeathRecapRelevanceSlider", SLIDER_WIDTH, SLIDER_HEIGHT, 1, 12, 1, _detalhes.death_recap.relevance_time, nil, nil, nil, options_slider_template)
 
 		frame11.DeathRecapRelevanceSlider:SetPoint ("left", frame11.DeathRecapRelevanceLabel, "right", 2)
-		frame11.DeathsDamageSlider:SetHook ("OnValueChange", function (self, _, amount)
+		frame11.DeathRecapRelevanceSlider:SetHook ("OnValueChange", function (self, _, amount)
 			_detalhes.death_recap.relevance_time = amount
 			_detalhes:SendOptionsModifiedEvent (DetailsOptionsWindow.instance)
 		end)
@@ -10856,8 +9292,6 @@ function window:CreateFrame12()
 			self ["toolbarPluginsIcon" .. self.id]:SetBlendMode ("ADD")
 		elseif (self ["raidPluginsIcon" .. self.id]) then
 			self ["raidPluginsIcon" .. self.id]:SetBlendMode ("ADD")
-		elseif (self ["soloPluginsIcon" .. self.id]) then
-			self ["soloPluginsIcon" .. self.id]:SetBlendMode ("ADD")
 		end
 
 		if (self.plugin) then
@@ -10870,14 +9304,6 @@ function window:CreateFrame12()
 				GameCooltip:Show()
 			end
 		end
-
-		if (self.hasDesc) then
-			GameCooltip:Preset (2)
-			GameCooltip:AddLine (self.hasDesc)
-			GameCooltip:SetType ("tooltip")
-			GameCooltip:SetOwner (self, "bottomleft", "topleft", 150, -2)
-			GameCooltip:Show()
-		end
  	end
 
 	local on_leave = function (self)
@@ -10887,8 +9313,6 @@ function window:CreateFrame12()
 			self ["toolbarPluginsIcon" .. self.id]:SetBlendMode ("BLEND")
 		elseif (self ["raidPluginsIcon" .. self.id]) then
 			self ["raidPluginsIcon" .. self.id]:SetBlendMode ("BLEND")
-		elseif (self ["soloPluginsIcon" .. self.id]) then
-			self ["soloPluginsIcon" .. self.id]:SetBlendMode ("BLEND")
 		end
 
 		GameCooltip:Hide()
@@ -10896,58 +9320,25 @@ function window:CreateFrame12()
 
 	local y = -20
 
-	--> toolbar
-	g:NewLabel (frame4, _, "$parentToolbarPluginsLabel", "toolbarLabel", Loc ["STRING_OPTIONS_PLUGINS_TOOLBAR_ANCHOR"], "GameFontNormal", 16)
-	frame4.toolbarLabel:SetPoint ("topleft", frame4, "topleft", 10, y)
-
-	y = y - 30
-
-	do
+	local add_plugin_header = function (suffix)
 		local descbar = frame4:CreateTexture (nil, "artwork")
 		descbar:SetTexture (.3, .3, .3, .8)
 		descbar:SetPoint ("topleft", frame4, "topleft", 5, y+3)
 		descbar:SetSize (650, 20)
-		g:NewLabel (frame4, _, "$parentDescNameLabel", "descNameLabel", Loc ["STRING_OPTIONS_PLUGINS_NAME"], "GameFontNormal", 12)
+		g:NewLabel (frame4, _, "$parentDescNameLabel" .. suffix, "descNameLabel", Loc ["STRING_OPTIONS_PLUGINS_NAME"], "GameFontNormal", 12)
 		frame4.descNameLabel:SetPoint ("topleft", frame4, "topleft", 15, y)
-		g:NewLabel (frame4, _, "$parentDescAuthorLabel", "descAuthorLabel", Loc ["STRING_OPTIONS_PLUGINS_AUTHOR"], "GameFontNormal", 12)
+		g:NewLabel (frame4, _, "$parentDescAuthorLabel" .. suffix, "descAuthorLabel", Loc ["STRING_OPTIONS_PLUGINS_AUTHOR"], "GameFontNormal", 12)
 		frame4.descAuthorLabel:SetPoint ("topleft", frame4, "topleft", 180, y)
-		g:NewLabel (frame4, _, "$parentDescVersionLabel", "descVersionLabel", Loc ["STRING_OPTIONS_PLUGINS_VERSION"], "GameFontNormal", 12)
+		g:NewLabel (frame4, _, "$parentDescVersionLabel" .. suffix, "descVersionLabel", Loc ["STRING_OPTIONS_PLUGINS_VERSION"], "GameFontNormal", 12)
 		frame4.descVersionLabel:SetPoint ("topleft", frame4, "topleft", 290, y)
-		g:NewLabel (frame4, _, "$parentDescEnabledLabel", "descEnabledLabel", Loc ["STRING_ENABLED"], "GameFontNormal", 12)
+		g:NewLabel (frame4, _, "$parentDescEnabledLabel" .. suffix, "descEnabledLabel", Loc ["STRING_ENABLED"], "GameFontNormal", 12)
 		frame4.descEnabledLabel:SetPoint ("topleft", frame4, "topleft", 400, y)
-		g:NewLabel (frame4, _, "$parentDescOptionsLabel", "descOptionsLabel", Loc ["STRING_OPTIONS_PLUGINS_OPTIONS"], "GameFontNormal", 12)
+		g:NewLabel (frame4, _, "$parentDescOptionsLabel" .. suffix, "descOptionsLabel", Loc ["STRING_OPTIONS_PLUGINS_OPTIONS"], "GameFontNormal", 12)
 		frame4.descOptionsLabel:SetPoint ("topleft", frame4, "topleft", 510, y)
 	end
 
-	y = y - 30
-
-	--> toolbar plugins loop
-	local i = 1
-	local allplugins_toolbar = _detalhes.ToolBar.NameTable --where is store all plugins for the title bar
-
-	--first loop and see which plugins isn't installed
-	--then add a 'ghost' plugin so the player can download
-
-	local allExistentToolbarPlugins = {
-		{"DETAILS_PLUGIN_CHART_VIEWER", "Details_ChartViewer", "Chart Viewer", "View combat data in handsome charts.", "https://www.curseforge.com/wow/addons/details-chart-viewer-plugin"},
-		{"DETAILS_PLUGIN_DEATH_GRAPHICS", "Details_DeathGraphs", "Advanced Death Logs", "Encounter endurance per player (who's dying more), deaths timeline by enemy spells and regular death logs.", "https://www.curseforge.com/wow/addons/details-advanced-death-logs-plug"},
-		--{"Details_TargetCaller", "Target Caller", "Show raid damage done to an entity since you targetted it.", "https://www.curseforge.com/wow/addons/details-target-caller-plugin"},
-		{"DETAILS_PLUGIN_TIME_LINE", "Details_TimeLine", "Time Line", "View raid cooldowns usage, debuff gain, boss casts in a fancy time line.", "https://www.curseforge.com/wow/addons/details_timeline"},
-	}
-
-	local allExistentRaidPlugins = {
-		--{"DETAILS_PLUGIN_CHART_VIEWER", "Details_ChartViewer", "Chart Viewer", "View combat data in handsome charts.", "https://www.curseforge.com/wow/addons/details-chart-viewer-plugin"},
-		--{"DETAILS_PLUGIN_DEATH_GRAPHICS", "Details_DeathGraphs", "Advanced Death Logs", "Encounter endurance per player (who's dying more), deaths timeline by enemy spells and regular death logs.", "https://www.curseforge.com/wow/addons/details-advanced-death-logs-plug"},
-		{"DETAILS_PLUGIN_TARGET_CALLER", "Details_TargetCaller", "Target Caller", "Show raid damage done to an entity since you targetted it.", "https://www.curseforge.com/wow/addons/details-target-caller-plugin"},
-		--{"DETAILS_PLUGIN_TIME_LINE", "Details_TimeLine", "Time Line", "View raid cooldowns usage, debuff gain, boss casts in a fancy time line.", "https://www.curseforge.com/wow/addons/details_timeline"},
-	}
-
-	local installedToolbarPlugins = {}
-	local installedRaidPlugins = {}
-
-	for absName, pluginObject in pairs (allplugins_toolbar) do
-
-		local bframe = CreateFrame ("Button", "OptionsPluginToolbarBG", frame4)
+	local add_plugin_row = function (key, Key, absName, pluginObject, i, sliderY, onSwitch)
+		local bframe = CreateFrame ("Button", "OptionsPlugin" .. Key .. "BG", frame4)
 		bframe:SetSize (640, 20)
 		bframe:SetPoint ("topleft", frame4, "topleft", 10, y)
 		bframe:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16, insets = {left = 1, right = 1, top = 0, bottom = 1}})
@@ -10957,101 +9348,65 @@ function window:CreateFrame12()
 		bframe.plugin = pluginObject
 		bframe.id = i
 
-		g:NewImage (bframe, pluginObject.__icon, 18, 18, nil, nil, "toolbarPluginsIcon"..i, "$parentToolbarPluginsIcon"..i)
-		bframe ["toolbarPluginsIcon"..i]:SetPoint ("topleft", frame4, "topleft", 10, y)
+		g:NewImage (bframe, pluginObject.__icon, 18, 18, nil, nil, key .. "PluginsIcon" .. i, "$parent" .. Key .. "PluginsIcon" .. i)
+		bframe [key .. "PluginsIcon" .. i]:SetPoint ("topleft", frame4, "topleft", 10, y)
 
-		g:NewLabel (bframe, _, "$parentToolbarPluginsLabel"..i, "toolbarPluginsLabel"..i, pluginObject.__name)
-		bframe ["toolbarPluginsLabel"..i]:SetPoint ("left", bframe ["toolbarPluginsIcon"..i], "right", 2, 0)
+		g:NewLabel (bframe, _, "$parent" .. Key .. "PluginsLabel" .. i, key .. "PluginsLabel" .. i, pluginObject.__name)
+		bframe [key .. "PluginsLabel" .. i]:SetPoint ("left", bframe [key .. "PluginsIcon" .. i], "right", 2, 0)
 
-		g:NewLabel (bframe, _, "$parentToolbarPluginsLabel2"..i, "toolbarPluginsLabel2"..i, pluginObject.__author)
-		bframe ["toolbarPluginsLabel2"..i]:SetPoint ("topleft", frame4, "topleft", 180, y-4)
+		g:NewLabel (bframe, _, "$parent" .. Key .. "PluginsLabel2" .. i, key .. "PluginsLabel2" .. i, pluginObject.__author)
+		bframe [key .. "PluginsLabel2" .. i]:SetPoint ("topleft", frame4, "topleft", 180, y-4)
 
-		g:NewLabel (bframe, _, "$parentToolbarPluginsLabel3"..i, "toolbarPluginsLabel3"..i, pluginObject.__version)
-		bframe ["toolbarPluginsLabel3"..i]:SetPoint ("topleft", frame4, "topleft", 290, y-4)
+		g:NewLabel (bframe, _, "$parent" .. Key .. "PluginsLabel3" .. i, key .. "PluginsLabel3" .. i, pluginObject.__version)
+		bframe [key .. "PluginsLabel3" .. i]:SetPoint ("topleft", frame4, "topleft", 290, y-4)
 
 		local plugin_stable = _detalhes:GetPluginSavedTable (absName)
 		local plugin = _detalhes:GetPlugin (absName)
-		g:NewSwitch (bframe, _, "$parentToolbarSlider"..i, "toolbarPluginsSlider"..i, 60, 20, _, _, plugin_stable.enabled, nil, nil, nil, nil, options_switch_template)
-		bframe ["toolbarPluginsSlider"..i].PluginName = absName
-		tinsert (window.plugin_widgets, bframe ["toolbarPluginsSlider"..i])
-		bframe ["toolbarPluginsSlider"..i]:SetPoint ("topleft", frame4, "topleft", 415, y)
-		bframe ["toolbarPluginsSlider"..i]:SetAsCheckBox()
-		bframe ["toolbarPluginsSlider"..i].OnSwitch = function (self, _, value)
+		local slider = key .. "PluginsSlider" .. i
+		g:NewSwitch (bframe, _, "$parent" .. Key .. "Slider" .. i, slider, 60, 20, _, _, plugin_stable.enabled, nil, nil, nil, nil, options_switch_template)
+		bframe [slider].PluginName = absName
+		window.plugin_widgets[#window.plugin_widgets+1] = bframe [slider]
+		bframe [slider]:SetPoint ("topleft", frame4, "topleft", 415, y + sliderY)
+		bframe [slider]:SetAsCheckBox()
+		bframe [slider].OnSwitch = function (self, _, value)
 			plugin_stable.enabled = value
 			plugin.__enabled = value
-			if (value) then
-				_detalhes:SendEvent ("PLUGIN_ENABLED", plugin)
-			else
-				_detalhes:SendEvent ("PLUGIN_DISABLED", plugin)
-			end
+			onSwitch (plugin, value)
 		end
 
 		if (pluginObject.OpenOptionsPanel) then
 			g:NewButton (bframe, nil, "$parentOptionsButton"..i, "OptionsButton"..i, 120, 20, pluginObject.OpenOptionsPanel, nil, nil, nil, Loc ["STRING_OPTIONS_PLUGINS_OPTIONS"], nil, options_button_template)
 			bframe ["OptionsButton"..i]:SetPoint ("topleft", frame4, "topleft", 510, y-0)
-			--bframe ["OptionsButton"..i]:InstallCustomTexture()
-
 			window:CreateLineBackground2 (bframe, "OptionsButton"..i, "OptionsButton"..i, nil, nil, {1, 0.8, 0}, button_color_rgb)
 			bframe ["OptionsButton"..i]:SetTextColor (button_color_rgb)
 			bframe ["OptionsButton"..i]:SetIcon ([[Interface\Buttons\UI-OptionsButton]], 14, 14, nil, {0, 1, 0, 1}, nil, 3)
 		end
-
-		i = i + 1
-		y = y - 20
-
-		--plugins installed, adding their abs name
-		DetailsFramework.table.addunique (installedToolbarPlugins, absName)
-
 	end
 
-	local notInstalledColor = "gray"
+	--> toolbar
+	g:NewLabel (frame4, _, "$parentToolbarPluginsLabel", "toolbarLabel", Loc ["STRING_OPTIONS_PLUGINS_TOOLBAR_ANCHOR"], "GameFontNormal", 16)
+	frame4.toolbarLabel:SetPoint ("topleft", frame4, "topleft", 10, y)
 
-	for o = 1, #allExistentToolbarPlugins do
-		local pluginAbsName = allExistentToolbarPlugins [o] [1]
-		if (not DetailsFramework.table.find (installedToolbarPlugins, pluginAbsName)) then
+	y = y - 30
 
-			local absName = pluginAbsName
-			local pluginObject = {
-				__icon = "",
-				__name = allExistentToolbarPlugins [o] [3],
-				__author = "Not Installed",
-				__version = "",
-				OpenOptionsPanel = false,
-			}
+	add_plugin_header ("")
 
-			local bframe = CreateFrame ("Button", "OptionsPluginToolbarBG", frame4)
-			bframe:SetSize (640, 20)
-			bframe:SetPoint ("topleft", frame4, "topleft", 10, y)
-			bframe:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16, insets = {left = 1, right = 1, top = 0, bottom = 1}})
-			bframe:SetBackdropColor (.3, .3, .3, .3)
-			bframe:SetScript ("OnEnter", on_enter)
-			bframe:SetScript ("OnLeave", on_leave)
-			--bframe.plugin = pluginObject
-			bframe.id = i
-			bframe.hasDesc = allExistentToolbarPlugins [o] [4]
+	y = y - 30
 
-			g:NewImage (bframe, pluginObject.__icon, 18, 18, nil, nil, "toolbarPluginsIcon"..i, "$parentToolbarPluginsIcon"..i)
-			bframe ["toolbarPluginsIcon"..i]:SetPoint ("topleft", frame4, "topleft", 10, y)
+	--> toolbar plugins loop
+	local i = 1
+	local allplugins_toolbar = _detalhes.ToolBar.NameTable --where is store all plugins for the title bar
 
-			g:NewLabel (bframe, _, "$parentToolbarPluginsLabel"..i, "toolbarPluginsLabel"..i, pluginObject.__name)
-			bframe ["toolbarPluginsLabel"..i]:SetPoint ("left", bframe ["toolbarPluginsIcon"..i], "right", 2, 0)
-			bframe ["toolbarPluginsLabel"..i].color = notInstalledColor
-
-			g:NewLabel (bframe, _, "$parentToolbarPluginsLabel2"..i, "toolbarPluginsLabel2"..i, pluginObject.__author)
-			bframe ["toolbarPluginsLabel2"..i]:SetPoint ("topleft", frame4, "topleft", 180, y-4)
-			bframe ["toolbarPluginsLabel2"..i].color = notInstalledColor
-
-			g:NewLabel (bframe, _, "$parentToolbarPluginsLabel3"..i, "toolbarPluginsLabel3"..i, pluginObject.__version)
-			bframe ["toolbarPluginsLabel3"..i]:SetPoint ("topleft", frame4, "topleft", 290, y-4)
-			bframe ["toolbarPluginsLabel3"..i].color = notInstalledColor
-
-			local installButton = DetailsFramework:CreateButton (bframe, function() Details:CopyPaste (allExistentToolbarPlugins [o] [5]) end, 120, 20, "Install")
-			installButton:SetTemplate (options_button_template)
-			installButton:SetPoint ("topleft", frame4, "topleft", 510, y-0)
-
-			i = i + 1
-			y = y - 20
-		end
+	for absName, pluginObject in pairs (allplugins_toolbar) do
+		add_plugin_row ("toolbar", "Toolbar", absName, pluginObject, i, 0, function (plugin, value)
+			if (value) then
+				_detalhes:SendEvent ("PLUGIN_ENABLED", plugin)
+			else
+				_detalhes:SendEvent ("PLUGIN_DISABLED", plugin)
+			end
+		end)
+		i = i + 1
+		y = y - 20
 	end
 
 	y = y - 10
@@ -11062,61 +9417,14 @@ function window:CreateFrame12()
 
 	y = y - 30
 
-	do
-		local descbar = frame4:CreateTexture (nil, "artwork")
-		descbar:SetTexture (.3, .3, .3, .8)
-		descbar:SetPoint ("topleft", frame4, "topleft", 5, y+3)
-		descbar:SetSize (650, 20)
-		g:NewLabel (frame4, _, "$parentDescNameLabel2", "descNameLabel", Loc ["STRING_OPTIONS_PLUGINS_NAME"], "GameFontNormal", 12)
-		frame4.descNameLabel:SetPoint ("topleft", frame4, "topleft", 15, y)
-		g:NewLabel (frame4, _, "$parentDescAuthorLabel2", "descAuthorLabel", Loc ["STRING_OPTIONS_PLUGINS_AUTHOR"], "GameFontNormal", 12)
-		frame4.descAuthorLabel:SetPoint ("topleft", frame4, "topleft", 180, y)
-		g:NewLabel (frame4, _, "$parentDescVersionLabel2", "descVersionLabel", Loc ["STRING_OPTIONS_PLUGINS_VERSION"], "GameFontNormal", 12)
-		frame4.descVersionLabel:SetPoint ("topleft", frame4, "topleft", 290, y)
-		g:NewLabel (frame4, _, "$parentDescEnabledLabel2", "descEnabledLabel", Loc ["STRING_ENABLED"], "GameFontNormal", 12)
-		frame4.descEnabledLabel:SetPoint ("topleft", frame4, "topleft", 400, y)
-		g:NewLabel (frame4, _, "$parentDescOptionsLabel2", "descOptionsLabel", Loc ["STRING_OPTIONS_PLUGINS_OPTIONS"], "GameFontNormal", 12)
-		frame4.descOptionsLabel:SetPoint ("topleft", frame4, "topleft", 510, y)
-	end
+	add_plugin_header ("2")
 
 	y = y - 30
 
 	local i = 1
 	local allplugins_raid = _detalhes.RaidTables.NameTable
 	for absName, pluginObject in pairs (allplugins_raid) do
-
-		local bframe = CreateFrame ("Button", "OptionsPluginRaidBG", frame4)
-		bframe:SetSize (640, 20)
-		bframe:SetPoint ("topleft", frame4, "topleft", 10, y)
-		bframe:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16, insets = {left = 1, right = 1, top = 0, bottom = 1}})
-		bframe:SetBackdropColor (.3, .3, .3, .3)
-		bframe:SetScript ("OnEnter", on_enter)
-		bframe:SetScript ("OnLeave", on_leave)
-		bframe.plugin = pluginObject
-		bframe.id = i
-
-		g:NewImage (bframe, pluginObject.__icon, 18, 18, nil, nil, "raidPluginsIcon"..i, "$parentRaidPluginsIcon"..i)
-		bframe ["raidPluginsIcon"..i]:SetPoint ("topleft", frame4, "topleft", 10, y)
-
-		g:NewLabel (bframe, _, "$parentRaidPluginsLabel"..i, "raidPluginsLabel"..i, pluginObject.__name)
-		bframe ["raidPluginsLabel"..i]:SetPoint ("left", bframe ["raidPluginsIcon"..i], "right", 2, 0)
-
-		g:NewLabel (bframe, _, "$parentRaidPluginsLabel2"..i, "raidPluginsLabel2"..i, pluginObject.__author)
-		bframe ["raidPluginsLabel2"..i]:SetPoint ("topleft", frame4, "topleft", 180, y-4)
-
-		g:NewLabel (bframe, _, "$parentRaidPluginsLabel3"..i, "raidPluginsLabel3"..i, pluginObject.__version)
-		bframe ["raidPluginsLabel3"..i]:SetPoint ("topleft", frame4, "topleft", 290, y-4)
-
-		local plugin_stable = _detalhes:GetPluginSavedTable (absName)
-		local plugin = _detalhes:GetPlugin (absName)
-		g:NewSwitch (bframe, _, "$parentRaidSlider"..i, "raidPluginsSlider"..i, 60, 20, _, _, plugin_stable.enabled, nil, nil, nil, nil, options_switch_template)
-		tinsert (window.plugin_widgets, bframe ["raidPluginsSlider"..i])
-		bframe ["raidPluginsSlider"..i].PluginName = absName
-		bframe ["raidPluginsSlider"..i]:SetPoint ("topleft", frame4, "topleft", 415, y+1)
-		bframe ["raidPluginsSlider"..i]:SetAsCheckBox()
-		bframe ["raidPluginsSlider"..i].OnSwitch = function (self, _, value)
-			plugin_stable.enabled = value
-			plugin.__enabled = value
+		add_plugin_row ("raid", "Raid", absName, pluginObject, i, 1, function (plugin, value)
 			if (not value) then
 				for index, instancia in ipairs (_detalhes.tabela_instancias) do
 					if (instancia.modo == 4) then -- 4 = raid
@@ -11128,155 +9436,7 @@ function window:CreateFrame12()
 					end
 				end
 			end
-		end
-
-		if (pluginObject.OpenOptionsPanel) then
-			g:NewButton (bframe, nil, "$parentOptionsButton"..i, "OptionsButton"..i, 120, 20, pluginObject.OpenOptionsPanel, nil, nil, nil, Loc ["STRING_OPTIONS_PLUGINS_OPTIONS"], nil, options_button_template)
-			bframe ["OptionsButton"..i]:SetPoint ("topleft", frame4, "topleft", 510, y-0)
-			--bframe ["OptionsButton"..i]:InstallCustomTexture()
-
-			window:CreateLineBackground2 (bframe, "OptionsButton"..i, "OptionsButton"..i, nil, nil, {1, 0.8, 0}, button_color_rgb)
-			bframe ["OptionsButton"..i]:SetTextColor (button_color_rgb)
-			bframe ["OptionsButton"..i]:SetIcon ([[Interface\Buttons\UI-OptionsButton]], 14, 14, nil, {0, 1, 0, 1}, nil, 3)
-		end
-
-		--plugins installed, adding their abs name
-		DetailsFramework.table.addunique (installedRaidPlugins, absName)
-
-		i = i + 1
-		y = y - 20
-	end
-
-	for o = 1, #allExistentRaidPlugins do
-		local pluginAbsName = allExistentRaidPlugins [o] [1]
-		if (not DetailsFramework.table.find (installedRaidPlugins, pluginAbsName)) then
-
-			local absName = pluginAbsName
-			local pluginObject = {
-				__icon = "",
-				__name = allExistentRaidPlugins [o] [3],
-				__author = "Not Installed",
-				__version = "",
-				OpenOptionsPanel = false,
-			}
-
-			local bframe = CreateFrame ("Button", "OptionsPluginToolbarBG", frame4)
-			bframe:SetSize (640, 20)
-			bframe:SetPoint ("topleft", frame4, "topleft", 10, y)
-			bframe:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16, insets = {left = 1, right = 1, top = 0, bottom = 1}})
-			bframe:SetBackdropColor (.3, .3, .3, .3)
-			bframe:SetScript ("OnEnter", on_enter)
-			bframe:SetScript ("OnLeave", on_leave)
-			--bframe.plugin = pluginObject
-			bframe.id = i
-			bframe.hasDesc = allExistentRaidPlugins [o] [4]
-
-			g:NewImage (bframe, pluginObject.__icon, 18, 18, nil, nil, "toolbarPluginsIcon"..i, "$parentToolbarPluginsIcon"..i)
-			bframe ["toolbarPluginsIcon"..i]:SetPoint ("topleft", frame4, "topleft", 10, y)
-
-			g:NewLabel (bframe, _, "$parentToolbarPluginsLabel"..i, "toolbarPluginsLabel"..i, pluginObject.__name)
-			bframe ["toolbarPluginsLabel"..i]:SetPoint ("left", bframe ["toolbarPluginsIcon"..i], "right", 2, 0)
-			bframe ["toolbarPluginsLabel"..i].color = notInstalledColor
-
-			g:NewLabel (bframe, _, "$parentToolbarPluginsLabel2"..i, "toolbarPluginsLabel2"..i, pluginObject.__author)
-			bframe ["toolbarPluginsLabel2"..i]:SetPoint ("topleft", frame4, "topleft", 180, y-4)
-			bframe ["toolbarPluginsLabel2"..i].color = notInstalledColor
-
-			g:NewLabel (bframe, _, "$parentToolbarPluginsLabel3"..i, "toolbarPluginsLabel3"..i, pluginObject.__version)
-			bframe ["toolbarPluginsLabel3"..i]:SetPoint ("topleft", frame4, "topleft", 290, y-4)
-			bframe ["toolbarPluginsLabel3"..i].color = notInstalledColor
-
-			local installButton = DetailsFramework:CreateButton (bframe, function() Details:CopyPaste (allExistentRaidPlugins [o] [5]) end, 120, 20, "Install")
-			installButton:SetTemplate (options_button_template)
-			installButton:SetPoint ("topleft", frame4, "topleft", 510, y-0)
-
-			i = i + 1
-			y = y - 20
-		end
-	end
-
-	y = y - 10
-
-	-- solo
-	g:NewLabel (frame4, _, "$parentSoloPluginsLabel", "soloLabel", Loc ["STRING_OPTIONS_PLUGINS_SOLO_ANCHOR"], "GameFontNormal", 16)
-	frame4.soloLabel:SetPoint ("topleft", frame4, "topleft", 10, y)
-
-	y = y - 30
-
-	do
-		local descbar = frame4:CreateTexture (nil, "artwork")
-		descbar:SetTexture (.3, .3, .3, .8)
-		descbar:SetPoint ("topleft", frame4, "topleft", 5, y+3)
-		descbar:SetSize (650, 20)
-		g:NewLabel (frame4, _, "$parentDescNameLabel3", "descNameLabel", Loc ["STRING_OPTIONS_PLUGINS_NAME"], "GameFontNormal", 12)
-		frame4.descNameLabel:SetPoint ("topleft", frame4, "topleft", 15, y)
-		g:NewLabel (frame4, _, "$parentDescAuthorLabel3", "descAuthorLabel", Loc ["STRING_OPTIONS_PLUGINS_AUTHOR"], "GameFontNormal", 12)
-		frame4.descAuthorLabel:SetPoint ("topleft", frame4, "topleft", 180, y)
-		g:NewLabel (frame4, _, "$parentDescVersionLabel3", "descVersionLabel", Loc ["STRING_OPTIONS_PLUGINS_VERSION"], "GameFontNormal", 12)
-		frame4.descVersionLabel:SetPoint ("topleft", frame4, "topleft", 290, y)
-		g:NewLabel (frame4, _, "$parentDescEnabledLabel3", "descEnabledLabel", Loc ["STRING_ENABLED"], "GameFontNormal", 12)
-		frame4.descEnabledLabel:SetPoint ("topleft", frame4, "topleft", 400, y)
-		g:NewLabel (frame4, _, "$parentDescOptionsLabel3", "descOptionsLabel", Loc ["STRING_OPTIONS_PLUGINS_OPTIONS"], "GameFontNormal", 12)
-		frame4.descOptionsLabel:SetPoint ("topleft", frame4, "topleft", 510, y)
-	end
-
-	y = y - 30
-
-	local i = 1
-	local allplugins_solo = _detalhes.SoloTables.NameTable
-	for absName, pluginObject in pairs (allplugins_solo) do
-
-		local bframe = CreateFrame ("Button", "OptionsPluginSoloBG", frame4)
-		bframe:SetSize (640, 20)
-		bframe:SetPoint ("topleft", frame4, "topleft", 10, y)
-		bframe:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 16, insets = {left = 1, right = 1, top = 0, bottom = 1}})
-		bframe:SetBackdropColor (.3, .3, .3, .3)
-		bframe:SetScript ("OnEnter", on_enter)
-		bframe:SetScript ("OnLeave", on_leave)
-		bframe.plugin = pluginObject
-		bframe.id = i
-
-		g:NewImage (bframe, pluginObject.__icon, 18, 18, nil, nil, "soloPluginsIcon"..i, "$parentSoloPluginsIcon"..i)
-		bframe ["soloPluginsIcon"..i]:SetPoint ("topleft", frame4, "topleft", 10, y)
-
-		g:NewLabel (bframe, _, "$parentSoloPluginsLabel"..i, "soloPluginsLabel"..i, pluginObject.__name)
-		bframe ["soloPluginsLabel"..i]:SetPoint ("left", bframe ["soloPluginsIcon"..i], "right", 2, 0)
-
-		g:NewLabel (bframe, _, "$parentSoloPluginsLabel2"..i, "soloPluginsLabel2"..i, pluginObject.__author)
-		bframe ["soloPluginsLabel2"..i]:SetPoint ("topleft", frame4, "topleft", 180, y-4)
-
-		g:NewLabel (bframe, _, "$parentSoloPluginsLabel3"..i, "soloPluginsLabel3"..i, pluginObject.__version)
-		bframe ["soloPluginsLabel3"..i]:SetPoint ("topleft", frame4, "topleft", 290, y-4)
-
-		local plugin_stable = _detalhes:GetPluginSavedTable (absName)
-		local plugin = _detalhes:GetPlugin (absName)
-		g:NewSwitch (bframe, _, "$parentSoloSlider"..i, "soloPluginsSlider"..i, 60, 20, _, _, plugin_stable.enabled, nil, nil, nil, nil, options_switch_template)
-		tinsert (window.plugin_widgets, bframe ["soloPluginsSlider"..i])
-		bframe ["soloPluginsSlider"..i].PluginName = absName
-		bframe ["soloPluginsSlider"..i]:SetPoint ("topleft", frame4, "topleft", 415, y+1)
-		bframe ["soloPluginsSlider"..i]:SetAsCheckBox()
-		bframe ["soloPluginsSlider"..i].OnSwitch = function (self, _, value)
-			plugin_stable.enabled = value
-			plugin.__enabled = value
-			if (not value) then
-				for index, instancia in ipairs (_detalhes.tabela_instancias) do
-					if (instancia.modo == 1 and instancia.baseframe) then -- 1 = solo
-						_detalhes:TrocaTabela (instancia, 0, 1, 1, nil, 2)
-					end
-				end
-			end
-		end
-
-		if (pluginObject.OpenOptionsPanel) then
-			g:NewButton (bframe, nil, "$parentOptionsButton"..i, "OptionsButton"..i, 86, 18, pluginObject.OpenOptionsPanel, nil, nil, nil, Loc ["STRING_OPTIONS_PLUGINS_OPTIONS"], nil, options_button_template)
-			bframe ["OptionsButton"..i]:SetPoint ("topleft", frame4, "topleft", 510, y-0)
-			--bframe ["OptionsButton"..i]:InstallCustomTexture()
-
-			window:CreateLineBackground2 (bframe, "OptionsButton"..i, "OptionsButton"..i, nil, nil, {1, 0.8, 0}, button_color_rgb)
-			bframe ["OptionsButton"..i]:SetTextColor (button_color_rgb)
-			bframe ["OptionsButton"..i]:SetIcon ([[Interface\Buttons\UI-OptionsButton]], 14, 14, nil, {0, 1, 0, 1}, nil, 3)
-		end
-
+		end)
 		i = i + 1
 		y = y - 20
 	end
@@ -11335,7 +9495,7 @@ end
 				_detalhes.LoadingOptionsPanelFrame:Hide()
 				window.IsLoading = false
 			else
-				percent_string.text = "wait... " .. math.floor (step * panel_index) .. "%"
+				percent_string.text = "wait... " .. math_floor (step * panel_index) .. "%"
 				_detalhes.LoadingOptionsPanelFrame.ProgressBar.value = (step * panel_index)
 			end
 
@@ -11420,11 +9580,7 @@ end --> if not window
 		_G.DetailsOptionsWindow6MicroDisplayCenterDropdown.MyObject:Select (center)
 		_G.DetailsOptionsWindow6MicroDisplayRightDropdown.MyObject:Select (right)
 
-		if (not instance.show_statusbar and instance.micro_displays_side == 2) then
-			_G.DetailsOptionsWindow6.MicroDisplayWarningLabel:Show()
-		else
-			_G.DetailsOptionsWindow6.MicroDisplayWarningLabel:Hide()
-		end
+		_G.DetailsOptionsWindow6.MicroDisplayWarningLabel:SetShown(not instance.show_statusbar and instance.micro_displays_side == 2)
 	end
 
 	function window:update_all (editing_instance, section)
@@ -11435,15 +9591,13 @@ end --> if not window
 		-- _G.DetailsOptionsWindow1RealmNameSlider.MyObject:SetValue (_detalhes.remove_realm_from_name)
 		_G.DetailsOptionsWindow1SegmentsLockedSlider.MyObject:SetValue (_detalhes.instances_segments_locked) --locked segments
 
-		_G.DetailsOptionsWindow1NumericalSystemOfADropdown.MyObject:Select (_detalhes.numerical_system)
-
 		_G.DetailsOptionsWindow1WheelSpeedSlider.MyObject:SetValue (_detalhes.scroll_speed)
 		_G.DetailsOptionsWindow1SliderMaxInstances.MyObject:SetValue (_detalhes.instances_amount)
 		_G.DetailsOptionsWindow1AbbreviateDropdown.MyObject:Select (_detalhes.ps_abbreviation)
 		_G.DetailsOptionsWindow1SliderUpdateSpeed.MyObject:SetValue (_detalhes.update_speed)
 		_G.DetailsOptionsWindow1AnimateSlider.MyObject:SetValue (_detalhes.use_row_animations)
 
-		_G.DetailsOptionsWindow1WindowControlsAnchor:SetText (string.format (Loc ["STRING_OPTIONS_WC_ANCHOR"], editing_instance.meu_id))
+		_G.DetailsOptionsWindow1WindowControlsAnchor:SetText (string_format (Loc ["STRING_OPTIONS_WC_ANCHOR"], editing_instance.meu_id))
 
 		_G.DetailsOptionsWindow1EraseDataDropdown.MyObject:Select (_detalhes.segments_auto_erase)
 
@@ -11847,7 +10001,6 @@ end --> if not window
 		_G.DetailsOptionsWindow18FasterUpdatesSlider.MyObject:SetValue (_detalhes.streamer_config.faster_updates)
 		_G.DetailsOptionsWindow18QuickDetectionSlider.MyObject:SetValue (_detalhes.streamer_config.quick_detection)
 		_G.DetailsOptionsWindow18ClearCacheSlider.MyObject:SetValue (_detalhes.streamer_config.reset_spec_cache)
-		--_G.DetailsOptionsWindow18AdvancedAnimationsSlider.MyObject:SetValue (_detalhes.streamer_config.use_animation_accel)
 
 		--> window 17
 		_G.DetailsOptionsWindow17CombatAlphaDropdown.MyObject:Select (editing_instance.hide_in_combat_type, true)
@@ -12006,15 +10159,6 @@ end --> if not window
 		_G.DetailsOptionsWindow19BrokerEntry.MyObject:SetText (_detalhes.data_broker_text)
 		_G.DetailsOptionsWindow19BrokerNumberAbbreviateDropdown.MyObject:Select (_detalhes.minimap.text_format)
 
-		if (not _G.HotCorners) then
-			_G.DetailsOptionsWindow19HotcornerSlider.MyObject:Disable()
-			if (not _G.DetailsOptionsWindow19HotcornerAnchor.MyObject:GetText():find ("not installed")) then
-				_G.DetailsOptionsWindow19HotcornerAnchor.MyObject:SetText (_G.DetailsOptionsWindow19HotcornerAnchor.MyObject:GetText() .. " |cFFFF5555(not installed)|r")
-			end
-		else
-			_G.DetailsOptionsWindow19HotcornerSlider.MyObject:SetValue (not _detalhes.hotcorner_topleft.hide)
-		end
-
 		_G.DetailsOptionsWindow19ItemLevelSlider.MyObject:SetValue (_detalhes.track_item_level)
 
 		--report
@@ -12109,7 +10253,8 @@ end --> if not window
 
 		_G.DetailsOptionsWindow5FixedTextColor.MyObject:SetColor (unpack (editing_instance.row_info.fixed_text_color))
 
-		_G.DetailsOptionsWindow1NicknameEntry.MyObject.text = _detalhes:GetNickname (UnitName ("player"), UnitName ("player"), true) or ""
+		local optPlayerName = UnitName ("player")
+		_G.DetailsOptionsWindow1NicknameEntry.MyObject.text = _detalhes:GetNickname (optPlayerName, optPlayerName, true) or ""
 		_G.DetailsOptionsWindow1TTDropdown.MyObject:Select (_detalhes.time_type, true)
 
 		_G.DetailsOptionsWindow.MyObject.instance = instance
@@ -12149,8 +10294,8 @@ end --> if not window
 
 		window:Show()
 
-		local avatar = NickTag:GetNicknameAvatar (UnitName ("player"), NICKTAG_DEFAULT_AVATAR, true)
-		local background, cords, color = NickTag:GetNicknameBackground (UnitName ("player"), NICKTAG_DEFAULT_BACKGROUND, NICKTAG_DEFAULT_BACKGROUND_CORDS, {1, 1, 1, 1}, true)
+		local avatar = NickTag:GetNicknameAvatar (optPlayerName, NICKTAG_DEFAULT_AVATAR, true)
+		local background, cords, color = NickTag:GetNicknameBackground (optPlayerName, NICKTAG_DEFAULT_BACKGROUND, NICKTAG_DEFAULT_BACKGROUND_CORDS, {1, 1, 1, 1}, true)
 
 		_G.DetailsOptionsWindow1AvatarPreviewTexture.MyObject.texture = avatar
 		_G.DetailsOptionsWindow1AvatarPreviewTexture2.MyObject.texture = background
@@ -12165,7 +10310,7 @@ end --> if not window
 			_G.DetailsOptionsWindow1.HaveAvatar = false
 		end
 
-		local nick = _detalhes:GetNickname (UnitName ("player"), UnitName ("player"), true)
+		local nick = _detalhes:GetNickname (optPlayerName, optPlayerName, true)
 		_G.DetailsOptionsWindow1AvatarNicknameLabel:SetText (nick)
 
 		if (window.update_wallpaper_info) then
@@ -12198,11 +10343,15 @@ end --> if not window
 		--> its loading while in combat
 		function _detalhes:options_loading_done()
 			if (_G.DetailsOptionsWindow.full_created) then
+				_detalhes:CancelTimer (_detalhes.options_loading_check, true)
+				_detalhes.options_loading_check = nil
 				_G.DetailsOptionsWindow.MyObject:update_all (instance)
-				_detalhes:CancelTimer (window.loading_check, true)
 			end
 		end
-		window.loading_check = _detalhes:ScheduleRepeatingTimer ("options_loading_done", 0.1)
+		if (_detalhes.options_loading_check) then
+			_detalhes:CancelTimer (_detalhes.options_loading_check, true)
+		end
+		_detalhes.options_loading_check = _detalhes:ScheduleRepeatingTimer ("options_loading_done", 0.1)
 	end
 
 	window:Show()

@@ -2,8 +2,11 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	local _detalhes = _G._detalhes
-	local Loc = LibStub ("AceLocale-3.0"):GetLocale ( "Details" )
 	local _
+	local ipairs = ipairs
+	local type = type
+	local pcall = pcall
+	local GetTime = GetTime
 
 	--> Event types:
 	_detalhes.RegistredEvents = {
@@ -37,7 +40,6 @@
 			["COMBAT_BOSS_DEFEATED"] = {},
 			["COMBAT_BOSS_FOUND"] = {},
 			["COMBAT_INVALID"] = {},
-			["COMBAT_PREPOTION_UPDATED"] = {},
 			["COMBAT_CHARTTABLES_CREATING"] = {},
 			["COMBAT_CHARTTABLES_CREATED"] = {},
 			["COMBAT_ENCOUNTER_PHASE_CHANGED"] = {},
@@ -51,13 +53,7 @@
 			["GROUP_ONENTER"] = {},
 			["GROUP_ONLEAVE"] = {},
 
-		--> buffs
-			["BUFF_UPDATE"] = {},
-			["BUFF_UPDATE_DEBUFFPOWER"] = {},
-
 		--> network
-			["REALM_CHANNEL_ENTER"] = {}, --deprecated (realm channels are disabled)
-			["REALM_CHANNEL_LEAVE"] = {}, --deprecated
 			["COMM_EVENT_RECEIVED"] = {}, --added on core 129
 			["COMM_EVENT_SENT"] = {}, --added on core 129
 	}
@@ -75,51 +71,13 @@
 		return false
 	end
 
-local common_events = {
-	["DETAILS_INSTANCE_OPEN"] = true,
-	["DETAILS_INSTANCE_CLOSE"] = true,
-	["DETAILS_INSTANCE_SIZECHANGED"] = true,
-	["DETAILS_INSTANCE_STARTRESIZE"] = true,
-	["DETAILS_INSTANCE_ENDRESIZE"] = true,
-	["DETAILS_INSTANCE_STARTSTRETCH"] = true,
-	["DETAILS_INSTANCE_ENDSTRETCH"] = true,
-	["DETAILS_INSTANCE_CHANGESEGMENT"] = true,
-	["DETAILS_INSTANCE_CHANGEATTRIBUTE"] = true,
-	["DETAILS_INSTANCE_CHANGEMODE"] = true,
-	["DETAILS_INSTANCE_NEWROW"] = true,
-	["DETAILS_OPTIONS_MODIFIED"] = true,
-	["DETAILS_DATA_RESET"] = true,
-	["DETAILS_DATA_SEGMENTREMOVED"] = true,
-	["COMBAT_ENCOUNTER_START"] = true,
-	["COMBAT_ENCOUNTER_END"] = true,
-	["COMBAT_PLAYER_ENTER"] = true,
-	["COMBAT_PLAYER_LEAVE"] = true,
-	["COMBAT_PLAYER_TIMESTARTED"] = true,
-	["COMBAT_BOSS_WIPE"] = true,
-	["COMBAT_BOSS_DEFEATED"] = true,
-	["COMBAT_BOSS_FOUND"] = true,
-	["COMBAT_INVALID"] = true,
-	["COMBAT_PREPOTION_UPDATED"] = true,
-	["COMBAT_CHARTTABLES_CREATING"] = true,
-	["COMBAT_CHARTTABLES_CREATED"] = true,
-	["COMBAT_ENCOUNTER_PHASE_CHANGED"] = true,
-	["COMBAT_ARENA_START"] = true,
-	["COMBAT_ARENA_END"] = true,
-	["GROUP_ONENTER"] = true,
-	["GROUP_ONLEAVE"] = true,
-	["ZONE_TYPE_CHANGED"] = true,
-	["REALM_CHANNEL_ENTER"] = true,
-	["REALM_CHANNEL_LEAVE"] = true,
-	["COMM_EVENT_RECEIVED"] = true,
-	["COMM_EVENT_SENT"] = true,
-}
-
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> register a event
 
 	function _detalhes:RegisterEvent (object, event, func)
 
-		if (not _detalhes.RegistredEvents [event]) then
+		local eventTable = _detalhes.RegistredEvents [event]
+		if (not eventTable) then
 			if (object.Msg) then
 				object:DelayMsg ("[debug] unknown event:", event, object.__name)
 			else
@@ -128,48 +86,15 @@ local common_events = {
 			return
 		end
 
-		if (common_events [event]) then
-			if (not AlreadyRegistred (_detalhes.RegistredEvents [event], object)) then
-				if (func) then
-					tinsert (_detalhes.RegistredEvents [event], {object, func, __eventtable = true})
-				else
-					tinsert (_detalhes.RegistredEvents [event], object)
-				end
-				return true
+		if (not AlreadyRegistred (eventTable, object)) then
+			if (func) then
+				eventTable[#eventTable+1] = {object, func, __eventtable = true}
 			else
-				return false
+				eventTable[#eventTable+1] = object
 			end
+			return true
 		else
-			if (event == "BUFF_UPDATE") then
-				if (not AlreadyRegistred (_detalhes.RegistredEvents ["BUFF_UPDATE"], object)) then
-					if (func) then
-						tinsert (_detalhes.RegistredEvents ["BUFF_UPDATE"], {object, func, __eventtable = true})
-					else
-						tinsert (_detalhes.RegistredEvents ["BUFF_UPDATE"], object)
-					end
-					_detalhes.Buffs:CatchBuffs()
-					_detalhes.RecordPlayerSelfBuffs = true
-					_detalhes:UpdateParserGears()
-					return true
-				else
-					return false
-				end
-
-			elseif (event == "BUFF_UPDATE_DEBUFFPOWER") then
-				if (not AlreadyRegistred (_detalhes.RegistredEvents ["BUFF_UPDATE_DEBUFFPOWER"], object)) then
-					if (func) then
-						tinsert (_detalhes.RegistredEvents ["BUFF_UPDATE_DEBUFFPOWER"], {object, func, __eventtable = true})
-					else
-						tinsert (_detalhes.RegistredEvents ["BUFF_UPDATE_DEBUFFPOWER"], object)
-					end
-					_detalhes.RecordPlayerAbilityWithBuffs = true
-					_detalhes:UpdateDamageAbilityGears()
-					_detalhes:UpdateParserGears()
-					return true
-				else
-					return false
-				end
-			end
+			return false
 		end
 	end
 
@@ -178,7 +103,8 @@ local common_events = {
 
 	function _detalhes:UnregisterEvent (object, event)
 
-		if (not _detalhes.RegistredEvents [event]) then
+		local eventTable = _detalhes.RegistredEvents [event]
+		if (not eventTable) then
 			if (object.Msg) then
 				object:Msg ("(debug) unknown event", event)
 			else
@@ -187,42 +113,12 @@ local common_events = {
 			return
 		end
 
-		if (common_events [event]) then
-			local index = AlreadyRegistred (_detalhes.RegistredEvents [event], object)
-			if (index) then
-				table.remove (_detalhes.RegistredEvents [event], index)
-				return true
-			else
-				return false
-			end
+		local index = AlreadyRegistred (eventTable, object)
+		if (index) then
+			tremove (eventTable, index)
+			return true
 		else
-			if (event == "BUFF_UPDATE") then
-				local index = AlreadyRegistred (_detalhes.RegistredEvents ["BUFF_UPDATE"], object)
-				if (index) then
-					table.remove (_detalhes.RegistredEvents ["BUFF_UPDATE"], index)
-					if (#_detalhes.RegistredEvents ["BUFF_UPDATE"] < 1) then
-						_detalhes.RecordPlayerSelfBuffs = true
-						_detalhes:UpdateParserGears()
-					end
-					return true
-				else
-					return false
-				end
-
-			elseif (event == "BUFF_UPDATE_DEBUFFPOWER") then
-				local index = AlreadyRegistred (_detalhes.RegistredEvents ["BUFF_UPDATE_DEBUFFPOWER"], object)
-				if (index) then
-					table.remove (_detalhes.RegistredEvents ["BUFF_UPDATE_DEBUFFPOWER"], index)
-					if (#_detalhes.RegistredEvents ["BUFF_UPDATE_DEBUFFPOWER"] < 1) then
-						_detalhes.RecordPlayerAbilityWithBuffs = false
-						_detalhes:UpdateDamageAbilityGears()
-						_detalhes:UpdateParserGears()
-					end
-					return true
-				else
-					return false
-				end
-			end
+			return false
 		end
 	end
 
@@ -333,13 +229,6 @@ local common_events = {
 				end
 			end
 
-			for _, PluginObject in ipairs (_detalhes.SoloTables.Plugins) do
-				if (PluginObject.__enabled) then
-					_detalhes:QuickDispatchEventWithContext (PluginObject, PluginObject.OnDetailsEvent, event)
-					--PluginObject:OnDetailsEvent (event)
-				end
-			end
-
 			for _, PluginObject in ipairs (_detalhes.ToolBar.Plugins) do
 				if (PluginObject.__enabled) then
 					_detalhes:QuickDispatchEventWithContext (PluginObject, PluginObject.OnDetailsEvent, event)
@@ -359,11 +248,12 @@ local common_events = {
 --> special cases
 	function _detalhes:SendOptionsModifiedEvent (instance)
 
-		_detalhes.last_options_modified = _detalhes.last_options_modified or (GetTime() - 5)
+		local now = GetTime()
+		_detalhes.last_options_modified = _detalhes.last_options_modified or (now - 5)
 
-		if (_detalhes.last_options_modified + 0.3 < GetTime()) then
-			_detalhes:SendEvent ("DETAILS_OPTIONS_MODIFIED", nil, instance, param)
-			_detalhes.last_options_modified = GetTime()
+		if (_detalhes.last_options_modified + 0.3 < now) then
+			_detalhes:SendEvent ("DETAILS_OPTIONS_MODIFIED", nil, instance)
+			_detalhes.last_options_modified = now
 			if (_detalhes.last_options_modified_schedule) then
 				_detalhes:CancelTimer (_detalhes.last_options_modified_schedule)
 				_detalhes.last_options_modified_schedule = nil

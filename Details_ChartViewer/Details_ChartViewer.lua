@@ -1,10 +1,7 @@
 local AceLocale = LibStub ("AceLocale-3.0")
 local Loc = AceLocale:GetLocale ("Details_ChartViewer")
 
-local _math_floor = math.floor
-local _cstr = string.format
 local _string_len = string.len
-local UnitGroupRolesAssigned = UnitGroupRolesAssigned
 local ipairs = ipairs
 
 --> Create the plugin Object
@@ -15,7 +12,7 @@ local CVF = ChartViewer.Frame
 --> desc
 ChartViewer:SetPluginDescription (Loc ["STRING_PLUGIN_DESC"])
 
-local plugin_version = "v2.90"
+local plugin_version = "v2.91"
 
 local function CreatePluginFrames (data)
 
@@ -59,24 +56,15 @@ local function CreatePluginFrames (data)
 				options:SetFrameLevel (10)
 			end
 
-			ChartViewer:RefreshScale()
-
 		elseif (event == "PLUGIN_DISABLED") then
 			ChartViewer:HideButton()
 
 		elseif (event == "PLUGIN_ENABLED") then
 			ChartViewer:CanShowOrHideButton()
-			if (ChartViewerWindowFrame and ChartViewerWindowFrame:IsShown()) then
-				ChartViewer:RefreshScale()
-			end
 
 		elseif (event ==  "DETAILS_STARTED") then
 			--> craete icon
 			ChartViewer:CanShowOrHideButton()
-
-		elseif (event ==  "DETAILS_DATA_RESET") then
-			--ChartViewer:CanShowOrHideButton()
-			--ChartViewerWindowFrame:Hide()
 
 		elseif (event ==  "COMBAT_PLAYER_LEAVE") then
 			ChartViewer:CheckFor_CreateNewTabForCombat()
@@ -108,10 +96,6 @@ local function CreatePluginFrames (data)
 ----------> Check Combat
 function ChartViewer:CheckFor_CreateNewTabForCombat()
 
-	if (not ChartViewer.db.options.auto_create) then
-		return
-	end
-
 	local combat = ChartViewer:GetCurrentCombat()
 	if (combat) then
 
@@ -142,7 +126,6 @@ function ChartViewer:CheckFor_CreateNewTabForCombat()
 
 		elseif (combat.is_boss) then
 			local has_raid_tab = false
-			local role = UnitGroupRolesAssigned ("player")
 			local iType = "raid-" .. "DAMAGER"
 
 			for _, tab in ChartViewer:GetAllTabs() do
@@ -287,7 +270,6 @@ end
 			ChartViewer.create_button.text = Loc ["STRING_CONFIRM"]
 
 			ChartViewer.name_textentry.text = tab.name
-			ChartViewer.texture_dropdown:Select (tab.texture)
 
 			ChartViewer.NewTabPanel.editing = tab
 			ChartViewer.NewTabPanel:Show()
@@ -353,8 +335,7 @@ end
 			local onClick = function (self, button)
 				if button == "LeftButton" and IsShiftKeyDown() then
 					if self.index and ChartViewer.tabs[self.index] then
-						table.remove(ChartViewer.tabs, self.index)
-						ChartViewer:TabRefresh (#ChartViewer.tabs)
+						ChartViewer:TabErase (self.index)
 					end
 					return
 				end
@@ -392,7 +373,7 @@ end
 
 		--if is a boss encounter, force close the window
 		local check_for_boss = function()
-			if (_detalhes and _detalhes.tabela_vigente and _detalhes.tabela_vigente.is_boss) then
+			if (_detalhes.tabela_vigente.is_boss) then
 				if (CVF and CVF:IsShown()) then
 					CVF:Hide()
 				end
@@ -400,9 +381,6 @@ end
 		end
 
 		function ChartViewer:OnCombatEnter()
-			ChartViewer.current_on_combat = true
-			ChartViewer.capturing_data = true
-
 			C_Timer:After (1, check_for_boss)
 		end
 
@@ -415,13 +393,6 @@ end
 		function ChartViewer:HideButton()
 			if (ChartViewer.ToolbarButton:IsShown()) then
 				ChartViewer:HideToolbarIcon (ChartViewer.ToolbarButton)
-			end
-		end
-
-		function ChartViewer:RefreshScale()
-			local scale = ChartViewer.options.window_scale
-			if (ChartViewerWindowFrame) then
-				ChartViewerWindowFrame:SetScale (scale)
 			end
 		end
 
@@ -457,7 +428,6 @@ end
 			elseif (self.options.show_method == 4) then --> automatic
 
 				local segments = ChartViewer:GetCombatSegments()
-				local segments_start_index = 1
 
 				for i = 1, #segments do
 					local this_combat = segments [i]
@@ -485,20 +455,6 @@ end
 			["PLAYER_ENTERING_WORLD"] = true,
 		}
 
-		function ChartViewer:CreateNewDataFeed (templateID)
-			local name = ChartViewer.DataFeedTemplatesByIndex [templateID]
-			local script = ChartViewer.DataFeedTemplates [name]
-
-			if (script) then
-				local result = ChartViewer:TimeDataRegister (name, script, nil, "Chart Viewer", "1.0", [[Interface\ICONS\TEMP]], true)
-				if (type (result) == "string") then
-					ChartViewer:Msg (result)
-				else
-					ChartViewer:Msg (Loc ["STRING_ADDEDOKAY"])
-				end
-			end
-		end
-
 ----------> Graphic Frame
 
 	--graphic
@@ -515,28 +471,7 @@ end
 		chart_panel:HideCloseButton()
 		chart_panel:RightClickClose (false)
 
-		if (not DetailsPluginContainerWindow) then
-			chart_panel:SetScript ("OnMouseDown", function (self, button)
-				if (button == "LeftButton") then
-					if (not frame.isMoving) then
-						frame.isMoving = true
-						frame:StartMoving()
-					end
-				elseif (button == "RightButton") then
-					if (not frame.isMoving) then
-						frame:Hide()
-					end
-				end
-			end)
-			chart_panel:SetScript ("OnMouseUp", function (self, button)
-				if (button == "LeftButton" and frame.isMoving) then
-					frame.isMoving = nil
-					frame:StopMovingOrSizing()
-				end
-			end)
-		else
-			chart_panel:EnableMouse (false)
-		end
+		chart_panel:EnableMouse (false)
 
 		chart_panel:SetBackdrop({
 				edgeFile = [[Interface\Buttons\WHITE8X8]], tile = true, tileSize = 16, edgeSize = 1,
@@ -589,7 +524,7 @@ end
 			end
 
 			local elapsed_time = combat:GetCombatTime()
-			local texture = current_tab.texture
+			local texture = "line"
 			local data = {}
 			local maxTime = 0
 			local boss_id = combat.is_boss and combat.is_boss.id
@@ -751,21 +686,7 @@ end
 
 	--open window
 		function ChartViewer:OpenWindow()
-			local segments = ChartViewer:GetCombatSegments()
-
-			for i = 1, #segments do
-				local this_combat = segments [i]
-				if (this_combat.is_boss and this_combat.is_boss.index) then
-
-					ChartViewer.current_segment = i
-					ChartViewer.segments_dropdown:Refresh()
-					ChartViewer.segments_dropdown:Select (1, true)
-
-					break
-				end
-			end
-
-			ChartViewer:TabRefresh()
+			ChartViewer.RefreshWindow()
 
 			--ChartViewerWindowFrame:Show()
 			DetailsPluginContainerWindow.OpenPlugin (ChartViewer)
@@ -783,18 +704,7 @@ end
 
 		local CoolTip = GameCooltip2
 
-		CoolTip:Reset()
-		CoolTip:SetType ("menu")
-
-		CoolTip:SetOption ("TextSize", Details.font_sizes.menus)
-		CoolTip:SetOption ("TextFont", Details.font_faces.menus)
-
-		CoolTip:SetOption ("LineHeightSizeOffset", 3)
-		CoolTip:SetOption ("VerticalOffset", 2)
-		CoolTip:SetOption ("VerticalPadding", -4)
-		CoolTip:SetOption ("FrameHeightSizeOffset", -3)
-
-		Details:SetTooltipMinWidth()
+		Details:SetPluginMenuCooltip()
 
 		--build the menu with the available tabs
 			for index, tab in ipairs (ChartViewer.tabs) do
@@ -843,17 +753,6 @@ local build_options_panel = function()
 			desc = "When the icon is shown over Details! toolbar.",
 			name = Loc ["STRING_OPTIONS_SHOWICON"]
 		},
-		{
-			type = "range",
-			get = function() return ChartViewer.options.window_scale end,
-			set = function (self, fixedparam, value) ChartViewer.options.window_scale = value; ChartViewer:RefreshScale() end,
-			min = 0.65,
-			max = 1.50,
-			step = 0.1,
-			desc = "Set the window size",
-			name = Loc ["STRING_OPTIONS_WINDOWSCALE"],
-			usedecimals = true,
-		},
 	}
 	ChartViewer:GetFramework():BuildMenu (options_frame, menu, 15, -75, 260)
 end
@@ -877,27 +776,6 @@ local create_segment_dropdown = function()
 	statusbar_background:SetFrameLevel (9)
 
 	local frame = ChartViewerWindowFrame
-	if (not DetailsPluginContainerWindow) then
-		statusbar_background:SetScript ("OnMouseDown", function (self, button)
-			if (button == "LeftButton") then
-				if (not frame.isMoving) then
-					frame.isMoving = true
-					frame:StartMoving()
-				end
-			elseif (button == "RightButton") then
-				if (not frame.isMoving) then
-					frame:Hide()
-				end
-			end
-		end)
-		statusbar_background:SetScript ("OnMouseUp", function (self, button)
-			if (button == "LeftButton" and frame.isMoving) then
-				frame.isMoving = nil
-				frame:StopMovingOrSizing()
-			end
-		end)
-	end
-
 	local on_segment_chosen = function (self, _, segment)
 		ChartViewer.current_segment = segment
 		ChartViewer:RefreshGraphic (ChartViewer:GetCombat (segment))
@@ -933,22 +811,6 @@ local create_segment_dropdown = function()
 	ChartViewer.segments_dropdown = segments_dropdown
 end
 
---<
-local create_delete_button = function (f, name)
-	local frame = CreateFrame ("frame", "ChartViewerDeleteButton" .. (name or math.random (1, 100000)), f)
-	frame:SetPoint ("topleft", f, "topleft", 10, -10)
-	frame:SetBackdrop ({bgFile = [[Interface\AddOns\Details\images\background]], edgeFile = "Interface\\Buttons\\UI-SliderBar-Border", edgeSize = 8})
-
-	local delete_button = CreateFrame ("button", nil, frame)
-	delete_button:SetPoint ("topleft", frame, "topleft")
-	delete_button:SetPoint ("bottomright", frame, "bottomright")
-	delete_button:SetScript ("OnClick", function()
-		ChartViewer.tabs [delete_button.Id] = nil
-		ChartViewer:TabRefresh (#ChartViewer.tabs)
-	end)
-	return frame
-end
-
 local create_add_tab_button = function()
 	local fw = ChartViewer:GetFramework()
 
@@ -974,13 +836,7 @@ local create_add_tab_panel = function()
 
 	Details:FormatBackground (panel)
 
-	local titlebar = CreateFrame ("frame", nil, panel.widget)
-	titlebar:SetPoint ("topleft", panel.widget, "topleft", 2, -3)
-	titlebar:SetPoint ("topright", panel.widget, "topright", -2, -3)
-	titlebar:SetHeight (20)
-	titlebar:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-	titlebar:SetBackdropColor (.5, .5, .5, 1)
-	titlebar:SetBackdropBorderColor (0, 0, 0, 1)
+	local titlebar = _detalhes:CreateWindowTitleBar (panel.widget)
 	--> title
 	local titleLabel = _detalhes.gump:NewLabel (titlebar, titlebar, nil, "titulo", "Add Chart", "GameFontHighlightLeft", 12, {227/255, 186/255, 4/255})
 	titleLabel:SetPoint ("center", titlebar , "center")
@@ -988,12 +844,6 @@ local create_add_tab_panel = function()
 
 
 	local x_start = 10
-
-	--<
-	local tab_size = {
-		width = 1024,
-		height = 768,
-	}
 
 	-- name
 		--label
@@ -1090,25 +940,6 @@ local create_add_tab_panel = function()
 		ChartViewer.data_dropdown = data_dropdown
 		data_dropdown:SetTemplate (ChartViewer:GetFramework():GetTemplate ("dropdown", "OPTIONS_DROPDOWN_TEMPLATE"))
 
-	-- line texture
-		--label
-		local texture_label = fw:CreateLabel (panel, "Texture:")
-
-		--dropdown
-		local texture_options = {
-			{value = "thinline", label = "Thin Line", icon = [[Interface\AddOns\Details\Libs\LibGraph-2.0\thinline]], iconcolor = {1, 1, 1}, iconsize = {30, 14}, texcoord = {0, 1, 0.3, 0.7}, onclick = nil},
-			{value = "line", label = "Normal Line", icon = [[Interface\AddOns\Details\Libs\LibGraph-2.0\line]], iconcolor = {1, 1, 1}, iconsize = {30, 14}, texcoord = {0, 1, 0.3, 0.7}, onclick = nil},
-			--{value = "sline", label = "Sline", desc = "", icon = [[Interface\AddOns\Details\Libs\LibGraph-2.0\sline]], iconcolor = {1, 1, 1}, iconsize = {130, 14}, texcoord = {0, 1, 0.3, 0.7}, onclick = nil},
-			--{value = "smallline", label = "Small Line", desc = "", icon = [[Interface\AddOns\Details\Libs\LibGraph-2.0\smallline]], iconcolor = {1, 1, 1}, iconsize = {130, 14}, texcoord = {0, 1, 0.3, 0.7}, onclick = nil},
-		}
-		local texture_options_func = function()
-			return texture_options
-		end
-		local texture_dropdown = fw:CreateDropDown (panel, texture_options_func, 1, 150, 20)
-		texture_dropdown:SetPoint ("left", texture_label, "right", 2, 0)
-		ChartViewer.texture_dropdown = texture_dropdown
-		texture_dropdown:SetTemplate (ChartViewer:GetFramework():GetTemplate ("dropdown", "OPTIONS_DROPDOWN_TEMPLATE"))
-
 		local internal_options = {
 			["MULTICHARTS~Your Team Damage~Enemy Team Damage"] = {colors = {["Your Team Damage"] = {1, 1, 1}, ["Enemy Team Damage"] = {1, 0.6, 0.2}}, iType = "arena-DAMAGER", name = "Arena Damage"},
 			["MULTICHARTS~Your Team Healing~Enemy Team Healing"] = {colors = {["Your Team Healing"] = {1, 1, 1}, ["Enemy Team Healing"] = {1, 0.6, 0.2}}, iType = "arena-HEALER", name = "Arena Heal"},
@@ -1150,7 +981,7 @@ local create_add_tab_panel = function()
 			local tab_name = name_textentry.text
 			local tab_type = type_dropdown.value
 			local tab_data = data_dropdown.value
-			local tab_texture = texture_dropdown.value
+			local tab_texture = "line"
 
 			if (ChartViewer.NewTabPanel.editing) then
 				ChartViewer.NewTabPanel.editing.texture = tab_texture
@@ -1178,7 +1009,6 @@ local create_add_tab_panel = function()
 		name_label:SetPoint ("topleft", panel, "topleft", x_start, y*2)
 		type_label:SetPoint ("topleft", panel, "topleft", x_start, y*3)
 		data_label:SetPoint ("topleft", panel, "topleft", x_start, y*4)
-		texture_label:SetPoint ("topleft", panel, "topleft", x_start, y*5)
 
 		create_button:SetPoint ("topleft", panel, "topleft", 10, y*7)
 		cancel_button:SetPoint ("left", create_button, "right", 20, 0)
@@ -1196,146 +1026,130 @@ end
 function ChartViewer:OnEvent (_, event, ...)
 
 	if (event == "ADDON_LOADED") then
-		local AddonName = select (1, ...)
+		local AddonName = (...)
 		if (AddonName == "Details_ChartViewer") then
 
-			if (_G._detalhes) then
+			--> register player damage done chart data
+			ChartViewer:TimeDataRegister ("Player Damage Done", ChartViewer.PlayerDamageDoneChartCode, nil, "Chart Viewer", "1.0", [[Interface\ICONS\Ability_MeleeDamage]], true)
 
-				--> register player damage done chart data
-				ChartViewer:TimeDataRegister ("Player Damage Done", ChartViewer.PlayerDamageDoneChartCode, nil, "Chart Viewer", "1.0", [[Interface\ICONS\Ability_MeleeDamage]], true)
+			--> create widgets
+			CreatePluginFrames()
 
-				--> create widgets
-				CreatePluginFrames()
+			local MINIMAL_DETAILS_VERSION_REQUIRED = 76
 
-				local MINIMAL_DETAILS_VERSION_REQUIRED = 76
-
-				--> Install
-				local install, saveddata, is_enabled = _G._detalhes:InstallPlugin ("TOOLBAR", Loc ["STRING_PLUGIN_NAME"], [[Interface\Addons\Details_ChartViewer\icon]], ChartViewer, "DETAILS_PLUGIN_CHART_VIEWER", MINIMAL_DETAILS_VERSION_REQUIRED, "Details! Team", plugin_version)
-				if (type (install) == "table" and install.error) then
-					print (Loc ["STRING_PLUGIN_NAME"], install.errortext)
-					return
-				end
-				-- /run DETAILS_PLUGIN_CHART_VIEWER:ShowButton()
-				if (not saveddata.tabs) then
-					--> first run
-					local welcome = CreateFrame ("frame", nil, ChartViewerFrame)
-					welcome:SetFrameStrata ("TOOLTIP")
-					welcome:SetPoint ("center", ChartViewerFrame, "center")
-					welcome:SetSize (300, 150)
-					ChartViewer.welcome_panel = welcome
-					welcome:Hide()
-					welcome:SetBackdrop ({edgeFile = "Interface\\Buttons\\UI-SliderBar-Border", edgeSize = 8,
-					bgFile = [[Interface\AddOns\Details\images\background]], tile = true, tileSize = 130, insets = {left = 1, right = 1, top = 5, bottom = 5}})
-
-					local str = _detalhes.gump:CreateLabel (welcome, "- Each tab shows a graphic.\n\n- Double click a tab to edit it.\n\n- Click on 'Add Chart' to create a new tab.\n\n- Press escape or right mouse button to close the panel.")
-					str:SetPoint (15, -15)
-					str:SetWidth (270)
-
-					local close_button = _detalhes.gump:CreateButton (welcome, function() welcome:Hide() end, 86, 16, "Close")
-					close_button:InstallCustomTexture()
-					close_button:SetPoint ("center", welcome, "center")
-					close_button:SetPoint ("bottom", welcome, "bottom", 0, 10)
-				end
-
-				--> detect 1.x versions
-				if (saveddata.tabs and saveddata.tabs[1] and saveddata.tabs[1].captures) then
-					table.wipe (saveddata.tabs)
-				end
-
-				--> build tab container
-				saveddata.tabs = saveddata.tabs or {}
-				saveddata.options = saveddata.options or {show_method = 4, window_scale = 1.0}
-				if (saveddata.options.auto_create == nil) then
-					saveddata.options.auto_create = true
-				end
-
-				ChartViewer.tabs = saveddata.tabs
-				ChartViewer.options = saveddata.options
-
-				ChartViewer.tabs.last_selected = ChartViewer.tabs.last_selected or 1
-
-				ChartViewer.tab_container = {}
-
-				if (#ChartViewer.tabs == 0) then
-					ChartViewer.tabs [1] = {name = "Your Damage", segment_type = 2, data = "Player Damage Done", texture = "line", version = "v2.0"}
-					ChartViewer.tabs [2] = {name = "Class Damage", segment_type = 1, data = "PRESET_DAMAGE_SAME_CLASS", texture = "line", version = "v2.0", iType = "raid-DAMAGER"}
-					ChartViewer.tabs [3] = {name = "Raid Damage", segment_type = 2, data = "Raid Damage Done", texture = "line", version = "v2.0"}
-				end
-
-				--> register wow events
-				CVF:RegisterEvent ("PARTY_MEMBERS_CHANGED")
-				CVF:RegisterEvent ("RAID_ROSTER_UPDATE")
-				CVF:RegisterEvent ("ZONE_CHANGED_NEW_AREA")
-				CVF:RegisterEvent ("PLAYER_ENTERING_WORLD")
-
-				if (is_enabled) then
-					ChartViewer:CanShowOrHideButton()
-				else
-					ChartViewer:HideButton()
-				end
-
-				--> register details events
-				_G._detalhes:RegisterEvent (ChartViewer, "DETAILS_DATA_RESET")
-
-				_G._detalhes:RegisterEvent (ChartViewer, "COMBAT_PLAYER_LEAVE")
-				_G._detalhes:RegisterEvent (ChartViewer, "COMBAT_PLAYER_ENTER")
-
-				_G._detalhes:RegisterEvent (ChartViewer, "COMBAT_CHARTTABLES_CREATING")
-				_G._detalhes:RegisterEvent (ChartViewer, "COMBAT_CHARTTABLES_CREATED")
-
-				create_segment_dropdown()
-				create_add_tab_panel()
-				create_add_tab_button()
-
-				ChartViewer.current_segment = 1
-
-				ChartViewer.NewTabPanel:Hide()
-
-				--> replace the built-in frame with the outside frame
-				ChartViewer.Frame = _G.ChartViewerWindowFrame
-
-				--> embed the plugin into the plugin window
-				if (DetailsPluginContainerWindow) then
-					DetailsPluginContainerWindow.EmbedPlugin (ChartViewer, ChartViewerWindowFrame)
-				end
-
-				C_Timer:After (5, function()
-					--> adjust the size of the chart frame
-					local height = ChartViewerWindowFrame:GetHeight()
-					ChartViewerWindowFrameChartFrame:SetSize (ChartViewerWindowFrame:GetWidth()-20, height-100)
-
-					ChartViewerWindowFrame:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-					ChartViewerWindowFrame:SetBackdropColor (0.2, 0.2, 0.2, .6)
-					ChartViewerWindowFrame:SetBackdropBorderColor (0, 0, 0, 1)
-
-				--title bar
-					local titlebar = CreateFrame ("frame", nil, ChartViewerWindowFrame)
-					titlebar:SetPoint ("topleft", ChartViewerWindowFrame, "topleft", 2, -3)
-					titlebar:SetPoint ("topright", ChartViewerWindowFrame, "topright", -2, -3)
-					titlebar:SetHeight (20)
-					titlebar:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-					titlebar:SetBackdropColor (.5, .5, .5, 1)
-					titlebar:SetBackdropBorderColor (0, 0, 0, 1)
-
-					local name_bg_texture = ChartViewerWindowFrame:CreateTexture (nil, "background")
-					name_bg_texture:SetTexture ([[Interface\PetBattles\_PetBattleHorizTile]], true)
-					name_bg_texture:SetHorizTile (true)
-					name_bg_texture:SetTexCoord (0, 1, 126/256, 19/256)
-					name_bg_texture:SetPoint ("topleft", ChartViewerWindowFrame, "topleft", 2, -22)
-					name_bg_texture:SetPoint ("bottomright", ChartViewerWindowFrame, "bottomright")
-					name_bg_texture:SetHeight (54)
-					name_bg_texture:SetVertexColor (0, 0, 0, 0.2)
-
-				--window title
-					local titleLabel = _detalhes.gump:NewLabel (titlebar, titlebar, nil, "titulo", "Chart Viewer", "GameFontHighlightLeft", 12, {227/255, 186/255, 4/255})
-					titleLabel:SetPoint ("center", ChartViewerWindowFrame, "center")
-					titleLabel:SetPoint ("top", ChartViewerWindowFrame, "top", 0, -7)
-
-				--close button
-
-
-				end)
+			--> Install
+			local install, saveddata, is_enabled = _G._detalhes:InstallPlugin ("TOOLBAR", Loc ["STRING_PLUGIN_NAME"], [[Interface\Addons\Details_ChartViewer\icon]], ChartViewer, "DETAILS_PLUGIN_CHART_VIEWER", MINIMAL_DETAILS_VERSION_REQUIRED, "Accidev", plugin_version)
+			if (type (install) == "table" and install.error) then
+				print (Loc ["STRING_PLUGIN_NAME"], install.errortext)
+				return
 			end
+			-- /run DETAILS_PLUGIN_CHART_VIEWER:ShowButton()
+			if (not saveddata.tabs) then
+				--> first run
+				local welcome = CreateFrame ("frame", nil, ChartViewerFrame)
+				welcome:SetFrameStrata ("TOOLTIP")
+				welcome:SetPoint ("center", ChartViewerFrame, "center")
+				welcome:SetSize (300, 150)
+				ChartViewer.welcome_panel = welcome
+				welcome:Hide()
+				welcome:SetBackdrop ({edgeFile = "Interface\\Buttons\\UI-SliderBar-Border", edgeSize = 8,
+				bgFile = [[Interface\AddOns\Details\images\background]], tile = true, tileSize = 130, insets = {left = 1, right = 1, top = 5, bottom = 5}})
+
+				local str = _detalhes.gump:CreateLabel (welcome, "- Each tab shows a graphic.\n\n- Double click a tab to edit it.\n\n- Click on 'Add Chart' to create a new tab.\n\n- Press escape or right mouse button to close the panel.")
+				str:SetPoint (15, -15)
+				str:SetWidth (270)
+
+				local close_button = _detalhes.gump:CreateButton (welcome, function() welcome:Hide() end, 86, 16, "Close")
+				close_button:InstallCustomTexture()
+				close_button:SetPoint ("center", welcome, "center")
+				close_button:SetPoint ("bottom", welcome, "bottom", 0, 10)
+			end
+
+			--> detect 1.x versions
+			if (saveddata.tabs and saveddata.tabs[1] and saveddata.tabs[1].captures) then
+				table.wipe (saveddata.tabs)
+			end
+
+			--> build tab container
+			saveddata.tabs = saveddata.tabs or {}
+			saveddata.options = saveddata.options or {show_method = 4}
+
+			ChartViewer.tabs = saveddata.tabs
+			ChartViewer.options = saveddata.options
+
+			ChartViewer.tabs.last_selected = ChartViewer.tabs.last_selected or 1
+
+			ChartViewer.tab_container = {}
+
+			if (#ChartViewer.tabs == 0) then
+				ChartViewer.tabs [1] = {name = "Your Damage", segment_type = 2, data = "Player Damage Done", texture = "line", version = "v2.0"}
+				ChartViewer.tabs [2] = {name = "Class Damage", segment_type = 1, data = "PRESET_DAMAGE_SAME_CLASS", texture = "line", version = "v2.0", iType = "raid-DAMAGER"}
+				ChartViewer.tabs [3] = {name = "Raid Damage", segment_type = 2, data = "Raid Damage Done", texture = "line", version = "v2.0"}
+			end
+
+			--> register wow events
+			CVF:RegisterEvent ("PARTY_MEMBERS_CHANGED")
+			CVF:RegisterEvent ("RAID_ROSTER_UPDATE")
+			CVF:RegisterEvent ("ZONE_CHANGED_NEW_AREA")
+			CVF:RegisterEvent ("PLAYER_ENTERING_WORLD")
+
+			if (is_enabled) then
+				ChartViewer:CanShowOrHideButton()
+			else
+				ChartViewer:HideButton()
+			end
+
+			--> register details events
+			_G._detalhes:RegisterEvent (ChartViewer, "COMBAT_PLAYER_LEAVE")
+			_G._detalhes:RegisterEvent (ChartViewer, "COMBAT_PLAYER_ENTER")
+
+			_G._detalhes:RegisterEvent (ChartViewer, "COMBAT_CHARTTABLES_CREATING")
+			_G._detalhes:RegisterEvent (ChartViewer, "COMBAT_CHARTTABLES_CREATED")
+
+			create_segment_dropdown()
+			create_add_tab_panel()
+			create_add_tab_button()
+
+			ChartViewer.current_segment = 1
+
+			ChartViewer.NewTabPanel:Hide()
+
+			--> replace the built-in frame with the outside frame
+			ChartViewer.Frame = _G.ChartViewerWindowFrame
+
+			--> embed the plugin into the plugin window
+			DetailsPluginContainerWindow.EmbedPlugin (ChartViewer, ChartViewerWindowFrame)
+
+			C_Timer:After (5, function()
+				--> adjust the size of the chart frame
+				local height = ChartViewerWindowFrame:GetHeight()
+				ChartViewerWindowFrameChartFrame:SetSize (ChartViewerWindowFrame:GetWidth()-20, height-100)
+
+				ChartViewerWindowFrame:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
+				ChartViewerWindowFrame:SetBackdropColor (0.2, 0.2, 0.2, .6)
+				ChartViewerWindowFrame:SetBackdropBorderColor (0, 0, 0, 1)
+
+			--title bar
+				local titlebar = _detalhes:CreateWindowTitleBar (ChartViewerWindowFrame)
+
+				local name_bg_texture = ChartViewerWindowFrame:CreateTexture (nil, "background")
+				name_bg_texture:SetTexture ([[Interface\PetBattles\_PetBattleHorizTile]], true)
+				name_bg_texture:SetHorizTile (true)
+				name_bg_texture:SetTexCoord (0, 1, 126/256, 19/256)
+				name_bg_texture:SetPoint ("topleft", ChartViewerWindowFrame, "topleft", 2, -22)
+				name_bg_texture:SetPoint ("bottomright", ChartViewerWindowFrame, "bottomright")
+				name_bg_texture:SetHeight (54)
+				name_bg_texture:SetVertexColor (0, 0, 0, 0.2)
+
+			--window title
+				local titleLabel = _detalhes.gump:NewLabel (titlebar, titlebar, nil, "titulo", "Chart Viewer", "GameFontHighlightLeft", 12, {227/255, 186/255, 4/255})
+				titleLabel:SetPoint ("center", ChartViewerWindowFrame, "center")
+				titleLabel:SetPoint ("top", ChartViewerWindowFrame, "top", 0, -7)
+
+			--close button
+
+
+			end)
 		end
 
 	elseif (ChartViewer.CanShowOrHideButtonEvents [event]) then
@@ -1361,117 +1175,33 @@ local add_preset_raid_healind_done = function()
 	_detalhes:TimeDataRegister ("PRESET_RAID_HEAL~Raid Healing Done", code, nil, "Chart Viewer 2.0", "v1.0", [[Interface\Buttons\UI-GuildButton-PublicNote-Up]], true, true)
 end
 
-local add_preset_damage_same_class = function()
-	if (IsInRaid()) then
-		local _, class = UnitClass ("player")
-		for i = 1, GetNumGroupMembers() do
-			local name, rank, subgroup, level, class2, class1, zone, online, isDead, _, isML, role = GetRaidRosterInfo (i)
-			if (class == class1) then
+local raid_member_preset_code = [[
+				local current_combat = _detalhes:GetCombat ("current")
+				local my_self = current_combat (CONTAINER, "PLAYERNAME")
+				return my_self and my_self.FIELD or 0]]
 
+local add_raid_member_presets = function (presetName, container, field, matches)
+	if (IsInRaid()) then
+		for i = 1, GetNumGroupMembers() do
+			if (matches (i)) then
 				local playerName, realmName = UnitName ("raid" .. i)
 				if (realmName and realmName ~= "") then
 					playerName = playerName .. "-" .. realmName
 				end
-
-				--even my self
-				local code = [[
-				local current_combat = _detalhes:GetCombat ("current")
-				local my_self = current_combat (1, "PLAYERNAME")
-				return my_self and my_self.total or 0]]
-				code = code:gsub ("PLAYERNAME", playerName)
-				_detalhes:TimeDataRegister ("PRESET_DAMAGE_SAME_CLASS~" .. playerName, code, nil, "Chart Viewer 2.0", "v1.0", [[Interface\Buttons\UI-GuildButton-PublicNote-Up]], true, true)
+				local code = raid_member_preset_code:gsub ("CONTAINER", container):gsub ("FIELD", field):gsub ("PLAYERNAME", playerName)
+				_detalhes:TimeDataRegister (presetName .. "~" .. playerName, code, nil, "Chart Viewer 2.0", "v1.0", [[Interface\Buttons\UI-GuildButton-PublicNote-Up]], true, true)
 			end
 		end
 	end
 end
 
-local add_preset_heal_same_class = function()
-	if (IsInRaid()) then
-		local _, class = UnitClass ("player")
-		for i = 1, GetNumGroupMembers() do
-			local name, rank, subgroup, level, class2, class1, zone, online, isDead, _, isML, role = GetRaidRosterInfo (i)
-			if (class == class1) then
-				local playerName, realmName = UnitName ("raid" .. i)
-				if (realmName and realmName ~= "") then
-					playerName = playerName .. "-" .. realmName
-				end
-
-				--even my self
-				local code = [[
-				local current_combat = _detalhes:GetCombat ("current")
-				local my_self = current_combat (2, "PLAYERNAME")
-				return my_self and my_self.total or 0]]
-				code = code:gsub ("PLAYERNAME", playerName)
-				_detalhes:TimeDataRegister ("PRESET_HEAL_SAME_CLASS~" .. playerName, code, nil, "Chart Viewer 2.0", "v1.0", [[Interface\Buttons\UI-GuildButton-PublicNote-Up]], true, true)
-			end
-		end
-	end
+local same_class = function (i)
+	return select (6, GetRaidRosterInfo (i)) == select (2, UnitClass ("player"))
 end
 
-local add_preset_all_damagers = function()
-	if (IsInRaid()) then
-		for i = 1, GetNumGroupMembers() do
-			local name, rank, subgroup, level, class2, class1, zone, online, isDead, _, isML, role = GetRaidRosterInfo (i)
-			if (role == "DAMAGER") then
-				local playerName, realmName = UnitName ("raid" .. i)
-				if (realmName and realmName ~= "") then
-					playerName = playerName .. "-" .. realmName
-				end
-
-				--even my self
-				local code = [[
-				local current_combat = _detalhes:GetCombat ("current")
-				local my_self = current_combat (1, "PLAYERNAME")
-				return my_self and my_self.total or 0]]
-				code = code:gsub ("PLAYERNAME", playerName)
-				_detalhes:TimeDataRegister ("PRESET_ALL_DAMAGERS~" .. playerName, code, nil, "Chart Viewer 2.0", "v1.0", [[Interface\Buttons\UI-GuildButton-PublicNote-Up]], true, true)
-			end
-		end
-	end
-end
-
-local add_preset_all_healers = function()
-	if (IsInRaid()) then
-		for i = 1, GetNumGroupMembers() do
-			local name, rank, subgroup, level, class2, class1, zone, online, isDead, _, isML, role = GetRaidRosterInfo (i)
-			if (role == "HEALER") then
-				local playerName, realmName = UnitName ("raid" .. i)
-				if (realmName and realmName ~= "") then
-					playerName = playerName .. "-" .. realmName
-				end
-
-				--even my self
-				local code = [[
-				local current_combat = _detalhes:GetCombat ("current")
-				local my_self = current_combat (2, "PLAYERNAME")
-				return my_self and my_self.total or 0]]
-				code = code:gsub ("PLAYERNAME", playerName)
-				_detalhes:TimeDataRegister ("PRESET_ALL_HEALERS~" .. playerName, code, nil, "Chart Viewer 2.0", "v1.0", [[Interface\Buttons\UI-GuildButton-PublicNote-Up]], true, true)
-			end
-		end
-	end
-end
-
-local add_preset_tank_damage_taken = function()
-	if (IsInRaid()) then
-		for i = 1, GetNumGroupMembers() do
-			local name, rank, subgroup, level, class2, class1, zone, online, isDead, _, isML, role = GetRaidRosterInfo (i)
-
-			if (role == "TANK") then
-				local playerName, realmName = UnitName ("raid" .. i)
-				if (realmName and realmName ~= "") then
-					playerName = playerName .. "-" .. realmName
-				end
-
-				--even my self
-				local code = [[
-				local current_combat = _detalhes:GetCombat ("current")
-				local my_self = current_combat (1, "PLAYERNAME")
-				return my_self and my_self.damage_taken or 0]]
-				code = code:gsub ("PLAYERNAME", playerName)
-				_detalhes:TimeDataRegister ("PRESET_TANK_TAKEN~" .. playerName, code, nil, "Chart Viewer 2.0", "v1.0", [[Interface\Buttons\UI-GuildButton-PublicNote-Up]], true, true)
-			end
-		end
+local has_role = function (role)
+	return function (i)
+		return DetailsFramework.UnitGroupRolesAssigned ("raid" .. i) == role
 	end
 end
 
@@ -1484,19 +1214,19 @@ function ChartViewer:BuildAndAddPresetFunction (preset_name)
 		add_preset_raid_healind_done()
 
 	elseif (preset_name == "PRESET_DAMAGE_SAME_CLASS") then
-		add_preset_damage_same_class()
+		add_raid_member_presets ("PRESET_DAMAGE_SAME_CLASS", 1, "total", same_class)
 
 	elseif (preset_name == "PRESET_HEAL_SAME_CLASS") then
-		add_preset_heal_same_class()
+		add_raid_member_presets ("PRESET_HEAL_SAME_CLASS", 2, "total", same_class)
 
 	elseif (preset_name == "PRESET_ALL_DAMAGERS") then
-		add_preset_all_damagers()
+		add_raid_member_presets ("PRESET_ALL_DAMAGERS", 1, "total", has_role ("DAMAGER"))
 
 	elseif (preset_name == "PRESET_ALL_HEALERS") then
-		add_preset_all_healers()
+		add_raid_member_presets ("PRESET_ALL_HEALERS", 2, "total", has_role ("HEALER"))
 
 	elseif (preset_name == "PRESET_TANK_TAKEN") then
-		add_preset_tank_damage_taken()
+		add_raid_member_presets ("PRESET_TANK_TAKEN", 1, "damage_taken", has_role ("TANK"))
 
 	end
 
@@ -1533,66 +1263,4 @@ ChartViewer.PlayerDamageDoneChartCode = [[
 
 	return my_damage
 
-]]
-
-ChartViewer.DataFeedTemplatesByIndex = {
-	"Raid Damage Taken", "Raid Healing Done", "Raid Overheal"
-}
-
-ChartViewer.DataFeedTemplates = {
-["Raid Damage Taken"] = [[ -- this script takes the current combat and get the total of damage taken by the group.
-local damage_taken = 0
-
---get the raid players on current combat
-local players = _detalhes:GetActorsOnDamageCache()
-
---add the damage taken from each player
-for _, player in ipairs (players) do
-	damage_taken = damage_taken + player.damage_taken
-end
-
---return the value
-return damage_taken
-]],
-
-["Raid Healing Done"] = [[ -- this script takes the current combat and request the total of healing done by the group.
--- get the current combat
-local current_combat = _detalhes:GetCombat ("current")
-
--- get the total healing done from the combat
-local total_healing = current_combat:GetTotal ( DETAILS_ATTRIBUTE_HEAL, nil, DETAILS_TOTALS_ONLYGROUP )
-
--- check if the result is valid
-if (not total_healing) then
-	return 0
-else
-	-- return the value
-	return total_healing
-end
-]],
-
-["Raid Overheal"] = [[ -- this script get the total of overheal from the raid.
-local overheal = 0
-
---get the raid players on current combat
-local players = _detalhes:GetActorsOnHealingCache()
-
---add the overheal from each player
-for _, player in ipairs (players) do
-	overheal = overheal + player.totalover
-end
-
---return the value
-return overheal
-]]
-}
-
-ChartViewer.PlayerIndividualChartCode = [[
-	local current_combat = _detalhes:GetCombat ("current") --> getting the current combat
-	local my_self = current_combat (DETAILS_ATTRIBUTE_DAMAGE, UnitName ("player"))
-	if (not my_self) then
-		return 0
-	end
-	local my_damage = my_self.total
-	return my_damage or 0
 ]]

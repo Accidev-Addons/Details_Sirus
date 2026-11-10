@@ -2,8 +2,11 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	local _detalhes = 		_G._detalhes
-	local Loc = LibStub ("AceLocale-3.0"):GetLocale ( "Details" )
 	local _
+
+	local type = type
+	local pairs = pairs
+	local ipairs = ipairs
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> Profiles:
@@ -247,17 +250,6 @@ function _detalhes:ApplyProfile (profile_name, nosave, is_copy)
 				--> deploy only copy non existing data
 				_detalhes.table.deploy (profile [key], value)
 
-			--[=[
-				for key2, value2 in pairs (value) do
-					if (profile [key] [key2] == nil) then
-						if (type (value2) == "table") then
-							profile [key] [key2] = table_deepcopy (_detalhes.default_profile [key] [key2])
-						else
-							profile [key] [key2] = value2
-						end
-					end
-				end
-			--]=]
 			end
 		end
 
@@ -433,7 +425,7 @@ function _detalhes:ApplyProfile (profile_name, nosave, is_copy)
 					else
 						if (not instance.posicao) then
 							print ("|cFFFF2222Details!: Position for a window wasn't found! Moving it to the center of the screen.|r\nType '/details exitlog' to check for errors.")
-							instance.posicao = {normal = {x = 1, y = 1, w = 300, h = 200}, solo = {}}
+							instance.posicao = {normal = {x = 1, y = 1, w = 300, h = 200}}
 						elseif (not instance.posicao.normal) then
 							print ("|cFFFF2222Details!: Normal position for a window wasn't found! Moving it to the center of the screen.|r\nType '/details exitlog' to check for errors.")
 							instance.posicao.normal = {x = 1, y = 1, w = 300, h = 200}
@@ -446,7 +438,7 @@ function _detalhes:ApplyProfile (profile_name, nosave, is_copy)
 					instance.verticalSnap = skin.__snapV
 				else
 					if (not instance.posicao) then
-						instance.posicao = {normal = {x = 1, y = 1, w = 300, h = 200}, solo = {}}
+						instance.posicao = {normal = {x = 1, y = 1, w = 300, h = 200}}
 					elseif (not instance.posicao.normal) then
 						instance.posicao.normal = {x = 1, y = 1, w = 300, h = 200}
 					end
@@ -645,10 +637,6 @@ local default_profile = {
 			[63] = {192/512, 256/512, 64/512, 128/512}, --> mage fire
 			[64] = {256/512, 320/512, 64/512, 128/512}, --> mage frost
 
-			-- [268] = {320/512, 384/512, 64/512, 128/512}, --> monk bm
-			-- [269] = {448/512, 512/512, 64/512, 128/512}, --> monk ww
-			-- [270] = {384/512, 448/512, 64/512, 128/512}, --> monk mw
-
 			[65] = {0, 64/512, 128/512, 192/512}, --> paladin holy
 			[66] = {64/512, 128/512, 128/512, 192/512}, --> paladin protect
 			[70] = {(128/512) + 0.001953125, 192/512, 128/512, 192/512}, --> paladin ret
@@ -677,12 +665,6 @@ local default_profile = {
 	--> class icons and colors
 		class_icons_small = [[Interface\AddOns\Details\images\classes_small]],
 		class_coords = {
-			-- ["DEMONHUNTER"] = {
-			-- 	0.73828126, -- [1]
-			-- 	1, -- [2]
-			-- 	0.5, -- [3]
-			-- 	0.75, -- [4]
-			-- },
 			["HUNTER"] = {
 				0, -- [1]
 				0.25, -- [2]
@@ -719,12 +701,6 @@ local default_profile = {
 				0, -- [3]
 				0.25, -- [4]
 			},
-			-- ["MONK"] = {
-			-- 	0.5, -- [1]
-			-- 	0.73828125, -- [2]
-			-- 	0.5, -- [3]
-			-- 	0.75, -- [4]
-			-- },
 			["DEATHKNIGHT"] = {
 				0.25, -- [1]
 				0.5, -- [2]
@@ -794,11 +770,6 @@ local default_profile = {
 			},
 
 		class_colors = {
-			-- ["DEMONHUNTER"] = {
-			-- 	0.64,
-			-- 	0.19,
-			-- 	0.79,
-			-- },
 			["HUNTER"] = {
 				0.67, -- [1]
 				0.83, -- [2]
@@ -866,11 +837,6 @@ local default_profile = {
 				0.49, -- [2]
 				0.04, -- [3]
 			},
-			-- ["MONK"] = {
-			-- 	0, -- [1]
-			-- 	1, -- [2]
-			-- 	0.59, -- [3]
-			-- },
 			["DEATHKNIGHT"] = {
 				0.77, -- [1]
 				0.12, -- [2]
@@ -892,20 +858,10 @@ local default_profile = {
 				0, -- [3]
 			},
 		},
-		death_log_colors = {
-			damage = "red",
-			heal = "green",
-			friendlyfire = "darkorange",
-			cooldown = "yellow",
-			debuff = "purple",
-		},
 
 	--> minimap
-		minimap = {hide = false, radius = 160, minimapPos = 220, onclick_what_todo = 1, text_type = 1, text_format = 3},
+		minimap = {hide = false, minimapPos = 220, onclick_what_todo = 1, text_format = 3},
 		data_broker_text = "",
-
-	--> horcorner
-		hotcorner_topleft = {hide = false},
 
 	--> PvP
 		only_pvp_frags = false,
@@ -915,7 +871,6 @@ local default_profile = {
 	--> window settings
 		max_window_size = {width = 480, height = 450},
 		new_window_size = {width = 310, height = 158},
-		window_clamp = {-8, 0, 21, -14},
 		disable_window_groups = false,
 		disable_reset_button = false,
 		disable_lock_ungroup_buttons = false,
@@ -949,9 +904,6 @@ local default_profile = {
 		instances_no_libwindow = false,
 		instances_suppress_trash = 0,
 
-	--> if clear ungroup characters when logout
-		clear_ungrouped = true,
-
 	--> if clear graphic data when logout
 		clear_graphic = true,
 
@@ -962,9 +914,7 @@ local default_profile = {
 		font_sizes = {menus = 10},
 		font_faces = {menus = "Friz Quadrata TT"},
 		ps_abbreviation = 3,
-		total_abbreviation = 2,
 		numerical_system = 1,
-		numerical_system_symbols = "auto",
 
 	--> performance
 		use_row_animations = true,
@@ -983,15 +933,11 @@ local default_profile = {
 		update_speed = 0.20,
 		time_type = 2,
 		time_type_original = 2,
-		memory_threshold = 3,
-		memory_ram = 64,
 		remove_realm_from_name = true,
-		trash_concatenate = false,
 		trash_auto_remove = true,
 		world_combat_is_trash = false,
 
 	--> death log
-		deadlog_limit = 16,
 		deadlog_events = 32,
 
 	--> report
@@ -1002,14 +948,11 @@ local default_profile = {
 		deny_score_messages = false,
 
 	--> colors
-		default_bg_color = 0.0941,
 		default_bg_alpha = 0.5,
 
 	--> fades
 		row_fade_in = {"in", 0.2},
 		windows_fade_in = {"in", 0.2},
-		row_fade_out = {"out", 0.2},
-		windows_fade_out = {"out", 0.2},
 
 	--> captures
 		capture_real = {
@@ -1034,7 +977,6 @@ local default_profile = {
 		overall_clear_newboss = true,
 		overall_clear_logout = false,
 		data_cleanup_logout = false,
-		close_shields = false,
 		pvp_as_group = true,
 		use_battleground_server_parser = false,
 		force_activity_time_pvp = true,
@@ -1055,9 +997,6 @@ local default_profile = {
 			x_offset = 0,
 			y_offset = 0,
 		},
-
-	--> broadcaster options
-		broadcaster_enabled = false,
 
 	--> event tracker
 		event_tracker = {
@@ -1182,16 +1121,11 @@ local default_player_data = {
 		show3DModel = false,
 	--> plugin data
 		plugin_database = {},
-	--> information about this character
-		character_data = {logons = 0},
 	--> version
 		last_realversion = _detalhes.realversion,
 		last_version = "v1.0.0",
 	--> profile
 		active_profile = "",
-	--> plugins tables
-		SoloTablesSaved = {},
-		RaidTablesSaved = {},
 	--> saved skins
 		savedStyles = {},
 	--> instance config
@@ -1231,15 +1165,6 @@ local default_player_data = {
 			channel = "SELF",
 			EnterInCombatWhenHeal = false,
 		},
-		announce_damagerecord = {
-			enabled = true,
-			channel = "SELF",
-		},
-	--> benchmark
-		benchmark_db = {
-			frame = {},
-
-		},
 	--> rank
 		rank_window = {
 			last_difficulty = 1,
@@ -1256,7 +1181,6 @@ local default_global_data = {
 
 	--> profile pool
 		__profiles = {},
-		latest_news_saw = "",
 		always_use_profile = false,
 		always_use_profile_name = "",
 		always_use_profile_exception = {},
@@ -1264,12 +1188,9 @@ local default_global_data = {
 		savedStyles = {},
 		savedCustomSpells = {},
 		savedTimeCaptures = {},
-		lastUpdateWarning = 0,
 		update_warning_timeout = 10,
 		report_where = "SAY",
-		realm_sync = true,
 		spell_school_cache = {},
-		global_plugin_database = {},
 
 	--> death log
 		show_totalhitdamage_on_overkill = false,
@@ -1285,12 +1206,7 @@ local default_global_data = {
 
 	--> tutorial
 		tutorial = {
-			logons = 0,
 			unlock_button = 0,
-			version_announce = 0,
-			main_help_button = 0,
-			alert_frames = {false, false, false, false, false, false},
-			bookmark_tutorial = false,
 			ctrl_click_close_tutorial = false,
 		},
 
@@ -1302,9 +1218,6 @@ local default_global_data = {
 			["Arena"] = {enabled = false, update_speed = 1, use_row_animations = false, damage = true, heal = true, aura = true, energy = false, miscdata = true},
 			["Dungeon"] = {enabled = false, update_speed = 1, use_row_animations = false, damage = true, heal = true, aura = true, energy = false, miscdata = true},
 		},
-
-	--> auras (wa auras created from the aura panel)
-		details_auras = {},
 
 	--> ilvl
 		item_level_pool = {},
@@ -1346,53 +1259,22 @@ local default_global_data = {
 			["on_groupchange"] = "\n-- this code runs when the player enter or leave a group",
 		},
 
-	--> plater integration
-		plater = {
-			realtime_dps_enabled = false,
-			realtime_dps_size = 12,
-			realtime_dps_color = {1, 1, 0, 1},
-			realtime_dps_shadow = true,
-			realtime_dps_anchor = {side = 7, x = 0, y = 0},
-			--
-			realtime_dps_player_enabled = false,
-			realtime_dps_player_size = 12,
-			realtime_dps_player_color = {1, 1, 0, 1},
-			realtime_dps_player_shadow = true,
-			realtime_dps_player_anchor = {side = 7, x = 0, y = 0},
-			--
-			damage_taken_enabled = false,
-			damage_taken_size = 12,
-			damage_taken_color = {1, 1, 0, 1},
-			damage_taken_shadow = true,
-			damage_taken_anchor = {side = 7, x = 0, y = 0},
-
-		},
-
-	--> dungeon information - can be accessed by plugins and third party mods
-		dungeon_data = {},
-
 	--> raid information - can be accessed by plugins and third party mods
 		raid_data = {},
 
 	--> store all npcids blacklisted by the user
 		npcid_ignored = {},
-		spellid_ignored = {},
 }
 
 _detalhes.default_global_data = default_global_data
 
-function _detalhes:GetTutorialCVar (key, default)
+function _detalhes:GetTutorialCVar (key)
 	--> is disabling all popups from the streamer options
 	if (_detalhes.streamer_config.no_alerts) then
 		return true
 	end
 
-	local value = _detalhes.tutorial [key]
-	if (value == nil and default) then
-		_detalhes.tutorial [key] = default
-		value = default
-	end
-	return value
+	return _detalhes.tutorial [key]
 end
 function _detalhes:SetTutorialCVar (key, value)
 	_detalhes.tutorial [key] = value
@@ -1443,26 +1325,17 @@ local exportProfileBlacklist = {
 	combat_counter = true,
 	nick_tag_cache = true,
 	plugin_database = true,
-	character_data = true,
 	active_profile = true,
-	SoloTablesSaved = true,
-	RaidTablesSaved = true,
 	savedStyles = true,
-	benchmark_db = true,
 	rank_window = true,
 	last_realversion = true,
 	last_version = true,
 	__profiles = true,
-	latest_news_saw = true,
 	always_use_profile = true,
 	always_use_profile_name = true,
 	always_use_profile_exception = true,
-	savedStyles = true,
 	savedTimeCaptures = true,
-	lastUpdateWarning = true,
 	spell_school_cache = true,
-	global_plugin_database = true,
-	details_auras = true,
 	item_level_pool = true,
 	latest_report_table = true,
 	boss_mods_timers = true,

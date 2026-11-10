@@ -1,8 +1,6 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	local _detalhes = _G._detalhes
-	local Loc = LibStub ("AceLocale-3.0"):GetLocale ( "Details" )
-	local SharedMedia = LibStub:GetLibrary("LibSharedMedia-3.0")
 	local _
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -47,14 +45,6 @@
 		button.__icon = icon
 		button.__name = pluginname
 
-		--> blizzard built-in animation
-		local FourCornerAnimeFrame = CreateFrame ("Frame", framename.."Blink", button)
-		FourCornerAnimeFrame:SetPoint ("CENTER", button)
-		FourCornerAnimeFrame:SetWidth (w or 14)
-		FourCornerAnimeFrame:SetHeight (w or 14)
-		--FourCornerAnimeFrame.glow:SetScript ("OnFinished", nil)
-		button.blink = FourCornerAnimeFrame
-
 		_detalhes.ToolBar.AllButtons [#_detalhes.ToolBar.AllButtons+1] = button
 
 		return button
@@ -94,16 +84,8 @@
 			return
 		end
 
-		if (Effect) then
-			if (type (Effect) == "string") then
-				if (Effect == "blink") then
-			--		Button.blink.glow:Play()
-				elseif (Effect == "star") then
-					Button.StarAnim:Play()
-				end
-			elseif (Effect) then
-			--	Button.blink.glow:Play()
-			end
+		if (Effect == "star") then
+			Button.StarAnim:Play()
 		end
 
 		_detalhes.ToolBar:ReorganizeIcons (true)
@@ -185,9 +167,12 @@ end
 				end)
 
 				--disable the hider menu if the cooltip is required in another place
-				hooksecurefunc (GameCooltip2, "ShowCooltip", function()
-					button:SetScript ("OnUpdate", nil)
-				end)
+				if (not button.cooltip_hooked) then
+					button.cooltip_hooked = true
+					hooksecurefunc (GameCooltip2, "ShowCooltip", function()
+						button:SetScript ("OnUpdate", nil)
+					end)
+				end
 
 				return
 			end

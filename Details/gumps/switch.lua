@@ -129,7 +129,7 @@ do
 		window_color_texture:SetAlpha (1)
 		GameCooltip:Reset()
 		_detalhes:CooltipPreset (1)
-		GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, backgroundColor, _detalhes.tooltip_border_color)
+		GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, nil, _detalhes.tooltip_border_color)
 		GameCooltip:AddLine (Loc ["STRING_OPTIONS_INSTANCE_COLOR"])
 		GameCooltip:SetOwner (window_color.widget)
 		GameCooltip:SetType ("tooltip")
@@ -158,10 +158,6 @@ do
 	all_switch.wallpaper:SetPoint ("TOPLEFT", all_switch, "TOPLEFT", 4, -4)
 	all_switch.wallpaper:SetPoint ("BOTTOMRIGHT", all_switch, "BOTTOMRIGHT", -4, 4)
 	all_switch.buttons = {}
-
-	all_switch.ShowAnimation = _detalhes.gump:CreateAnimationHub (all_switch, function() all_switch:Show() end)
-	_detalhes.gump:CreateAnimation (all_switch.ShowAnimation, "scale", 1, 0.04, 1, 0, 1, 1, "BOTTOM", 0, 0)
-	_detalhes.gump:CreateAnimation (all_switch.ShowAnimation, "alpha", 1, 0.04, 0, 1)
 
 	all_switch:SetScript ("OnMouseDown", function (self, button)
 		if (button == "RightButton") then
@@ -204,10 +200,8 @@ do
 		all_switch.instance = self
 		GameTooltip:Hide()
 		GameCooltip:Hide()
-		all_switch:ClearAllPoints()
-		all_switch:SetPoint ("BOTTOM", self.baseframe.UPFrame, "TOP", 4)
+		all_switch:ClearAndSetPoint ("BOTTOM", self.baseframe.UPFrame, "TOP", 4)
 
-		--all_switch.ShowAnimation:Play()
 		all_switch:Show()
 
 		if (_detalhes.switch.frame:IsShown()) then
@@ -221,7 +215,7 @@ do
 			local sub_attribute = self.sub_attribute
 			local instance = all_switch.instance
 
-			if (instance.modo == _detalhes._detalhes_props["MODO_ALONE"] or instance.modo == _detalhes._detalhes_props["MODO_RAID"]) then
+			if (instance.modo == _detalhes._detalhes_props["MODO_RAID"]) then
 				instance:AlteraModo (instance, 2)
 			end
 			instance:TrocaTabela (instance, true, attribute, sub_attribute)
@@ -246,8 +240,7 @@ do
 		all_switch.last_up = GetTime()
 
 		hover_over_texture:SetSize (130, 18)
-		hover_over_texture:ClearAllPoints()
-		hover_over_texture:SetPoint ("TOPLEFT", self, "TOPLEFT", -2, 1)
+		hover_over_texture:ClearAndSetPoint ("TOPLEFT", self, "TOPLEFT", -2, 1)
 		hover_over_texture:Show()
 		--self.texture:SetSize (icon_size+1, icon_size+1)
 	end
@@ -344,7 +337,7 @@ do
 					all_switch.check_text_size (button.text)
 					button.texture:SetTexture (_detalhes.sub_atributos [attribute].icones [i] [1])
 					button.texture:SetTexCoord (unpack (_detalhes.sub_atributos [attribute].icones [i] [2]))
-					tinsert (all_switch.buttons [attribute], button)
+					all_switch.buttons[attribute][#all_switch.buttons[attribute]+1] = button
 					y = y - 17
 				end
 
@@ -372,7 +365,6 @@ do
 
 			title_icon:SetPoint ("TOPLEFT", all_switch.x, all_switch.y)
 			all_switch.y = all_switch.y - 20
-			all_switch.title_custom = title_icon
 
 			all_switch.already_built = true
 		end
@@ -388,7 +380,7 @@ do
 			local button = all_switch.buttons [custom_index] [button_index]
 			if (not button) then
 				button = create_all_switch_button (custom_index, i, all_switch.x, all_switch.y)
-				tinsert (all_switch.buttons [custom_index], button)
+				all_switch.buttons[custom_index][#all_switch.buttons[custom_index]+1] = button
 				all_switch.y = all_switch.y - 17
 			end
 
@@ -414,19 +406,6 @@ do
 		all_switch.cursor_x, all_switch.cursor_y = floor (cursor_x), floor (cursor_y)
 		all_switch:SetScript ("OnUpdate", on_update_all_switch)
 
-		--[=[
-		all_switch.wallpaper:SetTexture (_detalhes.tooltip.menus_bg_texture)
-		all_switch.wallpaper:SetTexCoord (unpack (_detalhes.tooltip.menus_bg_coords))
-		all_switch.wallpaper:SetVertexColor (unpack (_detalhes.tooltip.menus_bg_color))
-		all_switch.wallpaper:SetDesaturated (true)
-		--]=]
-
-		--[=[
-		all_switch:SetBackdrop (_detalhes.tooltip_backdrop)
-		all_switch:SetBackdropColor (0.09019, 0.09019, 0.18823, 1)
-		all_switch:SetBackdropBorderColor (unpack (_detalhes.tooltip_border_color))
-		--]=]
-
 		--updated colors (these colors are set inside the janela_principal file
 		all_switch:SetBackdrop (_detalhes.menu_backdrop_config.menus_backdrop)
 		all_switch:SetBackdropColor (unpack (_detalhes.menu_backdrop_config.menus_backdropcolor))
@@ -451,7 +430,7 @@ do
 		options_button_texture:SetAlpha (1)
 		GameCooltip:Reset()
 		_detalhes:CooltipPreset (1)
-		GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, backgroundColor, _detalhes.tooltip_border_color)
+		GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, nil, _detalhes.tooltip_border_color)
 		GameCooltip:AddLine (Loc ["STRING_INTERFACE_OPENOPTIONS"])
 		GameCooltip:SetOwner (window_color.widget)
 		GameCooltip:SetType ("tooltip")
@@ -479,7 +458,7 @@ do
 		forge_button_texture:SetAlpha (1)
 		GameCooltip:Reset()
 		_detalhes:CooltipPreset (1)
-		GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, backgroundColor, _detalhes.tooltip_border_color)
+		GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, nil, _detalhes.tooltip_border_color)
 		GameCooltip:AddLine ("Open Forge")
 		GameCooltip:SetOwner (window_color.widget)
 		GameCooltip:SetType ("tooltip")
@@ -507,7 +486,7 @@ do
 		history_button_texture:SetAlpha (1)
 		GameCooltip:Reset()
 		_detalhes:CooltipPreset (1)
-		GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, backgroundColor, _detalhes.tooltip_border_color)
+		GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, nil, _detalhes.tooltip_border_color)
 		GameCooltip:AddLine ("Open History Panel")
 		GameCooltip:SetOwner (window_color.widget)
 		GameCooltip:SetType ("tooltip")
@@ -525,31 +504,13 @@ do
 
 ---------------------------------------------------------------------------------------------------------------------------
 
-	--animation has been disabled (July 2019)
-	--they aren't called anymore on showing and hiding the bookmark frame
-	--show animation
-	local animHub = _detalhes.gump:CreateAnimationHub (frame, function() frame:Show() end)
-	_detalhes.gump:CreateAnimation (animHub, "scale", 1, 0.04, 0, 1, 1, 1, "LEFT", 0, 0)
-	_detalhes.gump:CreateAnimation (animHub, "alpha", 1, 0.04, 0, 1)
-	frame.ShowAnimation = animHub
-
-	--hide animation
-	local animHub = _detalhes.gump:CreateAnimationHub (frame, function() frame:Show() end, function() frame:Hide() end)
-	_detalhes.gump:CreateAnimation (animHub, "scale", 1, 0.04, 1, 1, 0, 1, "RIGHT", 0, 0)
-	_detalhes.gump:CreateAnimation (animHub, "alpha", 1, 0.04, 1, 0)
-	frame.HideAnimation = animHub
-
----------------------------------------------------------------------------------------------------------------------------
 
 	function _detalhes.switch:CloseMe()
 		_detalhes.switch.frame:Hide()
 		_detalhes.switch.frame:ClearAllPoints()
 
-		--_detalhes.switch.frame.HideAnimation:Play()
-
 		GameCooltip:Hide()
 		_detalhes.switch.frame:SetBackdropColor (0, 0, 0, .7)
-		_detalhes.switch.current_instancia:StatusBarAlert (nil)
 		_detalhes.switch.current_instancia = nil
 	end
 
@@ -569,11 +530,6 @@ _detalhes.switch.slots = _detalhes.switch.slots or 6
 _detalhes.switch.showing = 0
 _detalhes.switch.table = _detalhes.switch.table or {}
 _detalhes.switch.current_instancia = nil
-_detalhes.switch.current_button = nil
-_detalhes.switch.height_necessary = (_detalhes.switch.button_height * _detalhes.switch.slots) / 2
-
-local right_click_text = {text = Loc ["STRING_SHORTCUT_RIGHTCLICK"], size = 9, color = {.9, .9, .9}}
-local right_click_texture = {[[Interface\TUTORIALFRAME\UI-TUTORIAL-FRAME]], 14, 14, 0.0019531, 0.1484375, 0.6269531, 0.8222656}
 
 function _detalhes.switch:HideAllBookmarks()
 	for _, bookmark in ipairs (_detalhes.switch.buttons) do
@@ -719,7 +675,7 @@ function _detalhes.switch:ShowMe (instancia)
 				s.HideMe = hide_label
 				s.ShowMe = show_label
 
-				tinsert (_detalhes.switch.segments_blocks, s)
+				_detalhes.switch.segments_blocks[#_detalhes.switch.segments_blocks+1] = s
 				return s
 			end
 
@@ -892,55 +848,8 @@ function _detalhes.switch:ShowMe (instancia)
 
 	_detalhes.switch.frame:SetScale (instancia.window_scale)
 	_detalhes.switch.frame:Show()
-	--_detalhes.switch.frame.ShowAnimation:Play()
-
-	--[=[ --removed bookmark tutorials July 2019
-	if (not _detalhes.tutorial.bookmark_tutorial) then
-
-		if (not SwitchPanelTutorial) then
-			local tutorial_frame = CreateFrame ("Frame", "SwitchPanelTutorial", _detalhes.switch.frame)
-			tutorial_frame:SetFrameStrata ("FULLSCREEN_DIALOG")
-			tutorial_frame:SetAllPoints()
-			tutorial_frame:EnableMouse (true)
-			tutorial_frame:SetBackdrop ({bgFile = "Interface\\AddOns\\Details\\images\\background", tile = true, tileSize = 16 })
-			tutorial_frame:SetBackdropColor (0.05, 0.05, 0.05, 0.95)
-
-			tutorial_frame.info_label = tutorial_frame:CreateFontString (nil, "overlay", "GameFontNormal")
-			tutorial_frame.info_label:SetPoint ("TOPLEFT", tutorial_frame, "TOPLEFT", 10, -10)
-			tutorial_frame.info_label:SetText (Loc ["STRING_MINITUTORIAL_BOOKMARK2"])
-			tutorial_frame.info_label:SetJustifyH ("LEFT")
-
-			tutorial_frame.mouse = tutorial_frame:CreateTexture (nil, "overlay")
-			tutorial_frame.mouse:SetTexture ([[Interface\TUTORIALFRAME\UI-TUTORIAL-FRAME]])
-			tutorial_frame.mouse:SetTexCoord (0.0019531, 0.1484375, 0.6269531, 0.8222656)
-			tutorial_frame.mouse:SetSize (20, 22)
-			tutorial_frame.mouse:SetPoint ("TOPLEFT", tutorial_frame.info_label, "BOTTOMLEFT", -3, -10)
-
-			tutorial_frame.close_label = tutorial_frame:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-			tutorial_frame.close_label:SetPoint ("LEFT", tutorial_frame.mouse, "RIGHT", 4, 0)
-			tutorial_frame.close_label:SetText (Loc ["STRING_MINITUTORIAL_BOOKMARK3"])
-			tutorial_frame.close_label:SetJustifyH ("LEFT")
-
-			local checkbox = CreateFrame ("CheckButton", "SwitchPanelTutorialCheckBox", tutorial_frame, "ChatConfigCheckButtonTemplate")
-			checkbox:SetPoint ("TOPLEFT", tutorial_frame.mouse, "BOTTOMLEFT", -1, -5)
-			_G [checkbox:GetName().."Text"]:SetText (Loc ["STRING_MINITUTORIAL_BOOKMARK4"])
-
-			tutorial_frame:SetScript ("OnMouseDown", function()
-				if (checkbox:GetChecked()) then
-					_detalhes.tutorial.bookmark_tutorial = true
-				end
-				tutorial_frame:Hide()
-			end)
-		end
-
-		SwitchPanelTutorial:Show()
-		SwitchPanelTutorial.info_label:SetWidth (_detalhes.switch.frame:GetWidth()-30)
-		SwitchPanelTutorial.close_label:SetWidth (_detalhes.switch.frame:GetWidth()-30)
-	end
-	--]=]
 
 	_detalhes.switch:Resize (precisa_mostrar)
-	--instancia:StatusBarAlert (right_click_text, right_click_texture) --icon, color, time
 
 	if (DetailsSwitchPanel.all_switch:IsShown()) then
 		return DetailsSwitchPanel.all_switch:Hide()
@@ -994,7 +903,6 @@ end
 
 		_detalhes:FastSwitch (nil, bookmark, number)
 
-		--return _detalhes:FastSwitch (paramTable)
 	end
 
 end
@@ -1041,20 +949,6 @@ function _detalhes:FastSwitch (button, bookmark, bookmark_number, select_new)
 				end
 			end
 
-			--> build self plugins list
-			GameCooltip:AddLine (Loc ["STRING_MODE_SELF"])
-			GameCooltip:AddMenu (1, function() end, 1, true)
-			GameCooltip:AddIcon ([[Interface\AddOns\Details\images\modo_icones]], 1, 1, 20, 20, 0, 32/256, 0, 1)
-
-			if (#_detalhes.SoloTables.Menu > 0) then
-				for index, ptable in ipairs (_detalhes.SoloTables.Menu) do
-					if (ptable [3].__enabled) then
-						GameCooltip:AddMenu (2, _detalhes.switch.Config, _detalhes.switch.current_instancia, ptable [4], true, ptable [1], ptable [2], true)
-					end
-				end
-				GameCooltip:SetWallpaper (2, _detalhes.tooltip.menus_bg_texture, _detalhes.tooltip.menus_bg_coords, _detalhes.tooltip.menus_bg_color, true)
-			end
-
 		GameCooltip:SetColor (1, {.1, .1, .1, .3})
 		GameCooltip:SetColor (2, {.1, .1, .1, .3})
 		GameCooltip:SetOption ("HeightAnchorMod", -7)
@@ -1076,18 +970,13 @@ function _detalhes:FastSwitch (button, bookmark, bookmark_number, select_new)
 		_detalhes.switch.current_instancia = instance
 	end
 
-	if (_detalhes.switch.current_instancia.modo == _detalhes._detalhes_props["MODO_ALONE"]) then
-		_detalhes.switch.current_instancia:AlteraModo (_detalhes.switch.current_instancia, 2)
-	elseif (_detalhes.switch.current_instancia.modo == _detalhes._detalhes_props["MODO_RAID"]) then
+	if (_detalhes.switch.current_instancia.modo == _detalhes._detalhes_props["MODO_RAID"]) then
 		_detalhes.switch.current_instancia:AlteraModo (_detalhes.switch.current_instancia, 2)
 	end
 
 	if (bookmark.atributo == "plugin") then
-		--> is a plugin, check if is a raid or solo plugin
 		if (_detalhes.RaidTables.NameTable [bookmark.sub_atributo]) then
 			_detalhes.RaidTables:EnableRaidMode (_detalhes.switch.current_instancia, bookmark.sub_atributo)
-		elseif (_detalhes.SoloTables.NameTable [bookmark.sub_atributo]) then
-			_detalhes.SoloTables:EnableSoloMode (_detalhes.switch.current_instancia, bookmark.sub_atributo)
 		else
 			_detalhes:Msg ("Plugin not found.")
 		end
@@ -1098,15 +987,7 @@ function _detalhes:FastSwitch (button, bookmark, bookmark_number, select_new)
 	_detalhes.switch.CloseMe()
 end
 
--- nao tem suporte a solo mode tank mode
 -- nao tem suporte a custom at� agora, n�o sei como vai ficar
-
-function _detalhes.switch:InitSwitch()
-	local instancia = _detalhes.tabela_instancias [1]
-	_detalhes.switch:ShowMe (instancia)
-	_detalhes.switch:CloseMe()
-	--return _detalhes.switch:Update()
-end
 
 function _detalhes.switch:OnRemoveCustom (CustomIndex)
 	for i = 1, _detalhes.switch.slots do
@@ -1125,7 +1006,6 @@ function _detalhes.switch:OnRemoveCustom (CustomIndex)
 end
 
 local default_coords = {5/64, 59/64, 5/64, 59/64}
-local unknown_coords = {157/512, 206/512, 39/512,  89/512}
 local vertex_color_default = {1, 1, 1}
 local vertex_color_unknown = {1, 1, 1}
 local add_coords = {464/512, 473/512, 1/512, 11/512}
@@ -1137,11 +1017,9 @@ function _detalhes.switch:Update()
 		return
 	end
 
-	local slots = _detalhes.switch.slots
 	local x = 10
 	local y = 5
 	local jump = false
-	local hide_the_rest
 
 	local offset = FauxScrollFrame_GetOffset (DetailsSwitchPanelScroll)
 	local slots_shown = _detalhes.switch.slots
@@ -1360,46 +1238,6 @@ function _detalhes.switch:Resize (precisa_mostrar)
 
 end
 
-function _detalhes.switch:Resize2()
-
-	local x = 7
-	local y = 5
-	local xPlus = (_detalhes.switch.current_instancia:GetSize()/2)-5
-	local frame = _detalhes.switch.frame
-
-	for index, button in ipairs (_detalhes.switch.buttons) do
-
-		if (button.rightButton) then
-			button:SetPoint ("TOPLEFT", frame, "TOPLEFT", x, -y)
-			button.textureNormal:SetPoint ("TOPLEFT", frame, "TOPLEFT", x, -y)
-			button.texturePushed:SetPoint ("TOPLEFT", frame, "TOPLEFT", x, -y)
-			button.textureH:SetPoint ("TOPLEFT", frame, "TOPLEFT", x, -y)
-			button.button2.texto:SetSize (xPlus - 30, 12)
-			button.button2:SetPoint ("BOTTOMRIGHT", button, "BOTTOMRIGHT", xPlus - 30, 0)
-			button.line:SetWidth (xPlus - 15)
-			button.line2:SetWidth (xPlus - 15)
-
-			x = x - xPlus
-			y = y + _detalhes.switch.button_height
-			jump = false
-		else
-			button:SetPoint ("TOPLEFT", frame, "TOPLEFT", x, -y)
-			button.textureNormal:SetPoint ("TOPLEFT", frame, "TOPLEFT", x, -y)
-			button.texturePushed:SetPoint ("TOPLEFT", frame, "TOPLEFT", x, -y)
-			button.textureH:SetPoint ("TOPLEFT", frame, "TOPLEFT", x, -y)
-			button.button2.texto:SetSize (xPlus - 30, 12)
-			button.button2:SetPoint ("TOPLEFT", button, "TOPRIGHT", 1, 0)
-			button.button2:SetPoint ("BOTTOMRIGHT", button, "BOTTOMRIGHT", xPlus - 30, 0)
-			button.line:SetWidth (xPlus - 20)
-			button.line2:SetWidth (xPlus - 20)
-
-			x = x + xPlus
-			jump = true
-		end
-
-	end
-end
-
 local onenter = function (self)
 	if (not _detalhes.switch.table [self.id].atributo) then
 		GameCooltip:Reset()
@@ -1415,8 +1253,8 @@ local onenter = function (self)
 		GameCooltip:SetOption ("YSpacingMod", 0)
 		GameCooltip:SetOption ("IgnoreButtonAutoHeight", false)
 
-		GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, backgroundColor, _detalhes.tooltip_border_color)
-		GameCooltip:SetBackdrop (2, _detalhes.tooltip_backdrop, backgroundColor, _detalhes.tooltip_border_color)
+		GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, nil, _detalhes.tooltip_border_color)
+		GameCooltip:SetBackdrop (2, _detalhes.tooltip_backdrop, nil, _detalhes.tooltip_border_color)
 
 		GameCooltip:Show()
 	else
@@ -1428,8 +1266,7 @@ local onenter = function (self)
 	--self.button1_icon:SetBlendMode ("ADD")
 
 	DetailsSwitchPanel.hover_over_texture:SetSize (self:GetWidth(), self:GetHeight()) --size of button
-	DetailsSwitchPanel.hover_over_texture:ClearAllPoints()
-	DetailsSwitchPanel.hover_over_texture:SetPoint ("TOPLEFT", self, "TOPLEFT", -18, 1)
+	DetailsSwitchPanel.hover_over_texture:ClearAndSetPoint ("TOPLEFT", self, "TOPLEFT", -18, 1)
 	DetailsSwitchPanel.hover_over_texture:SetPoint ("BOTTOMRIGHT", self, "BOTTOMRIGHT", 8, -1)
 	DetailsSwitchPanel.hover_over_texture:Show()
 
@@ -1463,7 +1300,7 @@ local oniconenter = function (self)
 	GameCooltip:SetOption ("YSpacingMod", 0)
 	GameCooltip:SetOption ("IgnoreButtonAutoHeight", false)
 
-	GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, backgroundColor, _detalhes.tooltip_border_color)
+	GameCooltip:SetBackdrop (1, _detalhes.tooltip_backdrop, nil, _detalhes.tooltip_border_color)
 
 	_detalhes:SetFontColor (self.texto, "orange")
 
@@ -1518,13 +1355,6 @@ local change_icon = function (self, icon1, icon2, icon3, icon4)
 end
 
 function _detalhes.switch:NewSwitchButton (frame, index, x, y, rightButton)
-
-	local paramTable = {
-			["instancia"] = _detalhes.switch.current_instancia,
-			["button"] = index,
-			["atributo"] = nil,
-			["sub_atributo"] = nil
-		}
 
 	--botao dentro da caixa
 	local button = CreateFrame ("button", "DetailsSwitchPanelButton_1_"..index, frame) --botao com o icone
@@ -1594,8 +1424,6 @@ function _detalhes.switch:NewSwitchButton (frame, index, x, y, rightButton)
 	button.texto = button2.texto
 
 	button2.button1_icon = button.textureNormal
-	button2.button1_icon2 = button.texturePushed
-	button2.button1_icon3 = button.textureH
 	button2.border = button.fundo
 
 	button2.MouseOnEnterHook = onenter

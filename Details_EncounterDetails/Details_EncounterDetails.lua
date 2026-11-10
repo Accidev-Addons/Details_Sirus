@@ -1,25 +1,12 @@
 local AceLocale = LibStub ("AceLocale-3.0")
 local Loc = AceLocale:GetLocale ("Details_EncounterDetails")
-local Graphics = LibStub:GetLibrary("LibGraph-2.0")
 local _
-
-local isDebug = false
-local function DebugMessage (...)
-	if (isDebug) then
-		print ("|cFFFFFF00EBreakDown|r:", ...)
-	end
-end
 
 --> Needed locals
 local _GetTime = GetTime --> wow api local
-local _UFC = UnitAffectingCombat --> wow api local
-local _IsInRaid = IsInRaid --> wow api local
-local _IsInGroup = IsInGroup --> wow api local
-local _UnitAura = UnitAura --> wow api local
 local _GetSpellInfo = _detalhes.getspellinfo --> wow api local
 local _CreateFrame = CreateFrame --> wow api local
 local _GetCursorPosition = GetCursorPosition --> wow api local
-local _GameTooltip = GameTooltip --> wow api local
 
 local GameCooltip = GameCooltip2
 
@@ -27,9 +14,7 @@ local _math_floor = math.floor --> lua library local
 local _cstr = string.format --> lua library local
 local _ipairs = ipairs --> lua library local
 local _pairs = pairs --> lua library local
-local _next = next --> lua library local
 local _table_sort = table.sort --> lua library local
-local _table_insert = table.insert --> lua library local
 local _unpack = unpack --> lua library local
 local _bit_band = bit.band
 
@@ -52,12 +37,9 @@ local class_type_misc = _detalhes.atributos.misc --> misc
 --> main combat object
 local _combat_object
 
-local sort_by_name = function (t1, t2) return t1.nome < t2.nome end
 
-local CLASS_ICON_TCOORDS = _G.CLASS_ICON_TCOORDS
 
 EncounterDetails.name = "Encounter Breakdown"
-EncounterDetails.debugmode = true
 
 function EncounterDetails:FormatCooltipSettings()
 	GameCooltip:SetType ("tooltip")
@@ -73,38 +55,14 @@ end
 
 EncounterDetails.CooltipLineHeight = 18
 
-local ability_type_table = {
-	[0x1] = "|cFF00FF00"..Loc ["STRING_HEAL"].."|r",
-	[0x2] = "|cFF710000"..Loc ["STRING_LOWDPS"].."|r",
-	[0x4] = "|cFF057100"..Loc ["STRING_LOWHEAL"].."|r",
-	[0x8] = "|cFFd3acff"..Loc ["STRING_VOIDZONE"].."|r",
-	[0x10] = "|cFFbce3ff"..Loc ["STRING_DISPELL"].."|r",
-	[0x20] = "|cFFffdc72"..Loc ["STRING_INTERRUPT"].."|r",
-	[0x40] = "|cFFd9b77c"..Loc ["STRING_POSITIONING"].."|r",
-	[0x80] = "|cFFd7ff36"..Loc ["STRING_RUNAWAY"].."|r",
-	[0x100] = "|cFF9a7540"..Loc ["STRING_TANKSWITCH"] .."|r",
-	[0x200] = "|cFFff7800"..Loc ["STRING_MECHANIC"].."|r",
-	[0x400] = "|cFFbebebe"..Loc ["STRING_CROWDCONTROL"].."|r",
-	[0x800] = "|cFF6e4d13"..Loc ["STRING_TANKCOOLDOWN"].."|r",
-	[0x1000] = "|cFFffff00"..Loc ["STRING_KILLADD"].."|r",
-	[0x2000] = "|cFFff9999"..Loc ["STRING_SPREADOUT"].."|r",
-	[0x4000] = "|cFFffff99"..Loc ["STRING_STOPCAST"].."|r",
-	[0x8000] = "|cFFffff99"..Loc ["STRING_FACING"].."|r",
-	[0x10000] = "|cFFffff99"..Loc ["STRING_STACK"].."|r",
-
-}
-
 --> main object frame functions
 local function CreatePluginFrames ()
 
 	--> catch Details! main object
 	local _detalhes = _G._detalhes
-	local DetailsFrameWork = _detalhes.gump
 
 	--> record if button is shown
 	EncounterDetails.showing = false
-	--> record if boss window is open or not
-	EncounterDetails.window_open = false
 	EncounterDetails.combat_boss_found = false
 
 	--> OnEvent Table
@@ -117,7 +75,6 @@ local function CreatePluginFrames ()
 		--> when main frame is shown on screen
 		elseif (event == "SHOW") then --> plugin hidded, disabled
 			self.open = true
-			EncounterDetails:RefreshScale()
 
 		--> when details finish his startup and are ready to work
 		elseif (event == "DETAILS_STARTED") then
@@ -128,17 +85,6 @@ local function CreatePluginFrames ()
 				_combat_object = EncounterDetails:GetCombat()
 				--> check if was a boss fight
 				EncounterDetails:WasEncounter()
-			end
-
-			local damage_done_func = function (support_table, time_table, tick_second)
-				local current_total_damage = _detalhes.tabela_vigente.totals_grupo[1]
-				local current_damage = current_total_damage - support_table.last_damage
-				time_table [tick_second] = current_damage
-				if (current_damage > support_table.max_damage) then
-					support_table.max_damage = current_damage
-					time_table.max_damage = current_damage
-				end
-				support_table.last_damage = current_total_damage
 			end
 
 			local string_damage_done_func = [[
@@ -169,8 +115,6 @@ local function CreatePluginFrames ()
 				EncounterDetails:AutoShowIcon()
 			end
 
-			--EncounterDetails:CreateCallbackListeners()
-
 		elseif (event == "COMBAT_PLAYER_ENTER") then --> combat started
 			if (EncounterDetails.showing and EncounterDetails.db.hide_on_combat) then
 				--EncounterDetails:HideIcon()
@@ -181,7 +125,7 @@ local function CreatePluginFrames ()
 
 		elseif (event == "COMBAT_PLAYER_LEAVE") then
 			--> combat leave and enter always send current combat table
-			_combat_object = select (1, ...)
+			_combat_object = (...)
 			--> check if was a boss fight
 			EncounterDetails:WasEncounter()
 			if (EncounterDetails.combat_boss_found) then
@@ -239,7 +183,7 @@ local function CreatePluginFrames ()
 
 		elseif (event == "ZONE_TYPE_CHANGED") then
 			if (EncounterDetails.db.show_icon == 1) then
-				if (select (1, ...) == "raid") then
+				if ((...) == "raid") then
 					EncounterDetails:ShowIcon()
 				else
 					EncounterDetails:HideIcon()
@@ -260,108 +204,17 @@ local function CreatePluginFrames ()
 	end
 
 
-	--desativado, agora ele � gerenciado dentro do proprio details!
-	function EncounterDetails:CreateCallbackListeners()
-
-		EncounterDetails.DBM_timers = {}
-
-		local current_encounter = false
-
-		local current_table_dbm = {}
-		local current_table_bigwigs = {}
-
-		local event_frame = CreateFrame ("frame", nil, UIParent)
-		event_frame:SetScript ("OnEvent", function (self, event, ...)
-			if (event == "ENCOUNTER_START") then
-				local encounterID, encounterName, difficultyID, raidSize = select (1, ...)
-				current_encounter = encounterID
-
-			elseif (event == "ENCOUNTER_END" or event == "PLAYER_REGEN_ENABLED") then
-				if (current_encounter) then
-
-					if (_G.DBM) then
-						local db = _detalhes.global_plugin_database ["DETAILS_PLUGIN_ENCOUNTER_DETAILS"]
-						for spell, timer_table in pairs (current_table_dbm) do
-							if (not db.encounter_timers_dbm [timer_table[1]]) then
-								timer_table.id = current_encounter
-								db.encounter_timers_dbm [timer_table[1]] = timer_table
-							end
-						end
-					end
-					if (BigWigs) then
-						local db = _detalhes.global_plugin_database ["DETAILS_PLUGIN_ENCOUNTER_DETAILS"]
-						for timer_id, timer_table in pairs (current_table_bigwigs) do
-							if (not db.encounter_timers_bw [timer_id]) then
-								timer_table.id = current_encounter
-								db.encounter_timers_bw [timer_id] = timer_table
-							end
-						end
-					end
-
-				end
-
-				current_encounter = false
-				wipe (current_table_dbm)
-				wipe (current_table_bigwigs)
-			end
-		end)
-		event_frame:RegisterEvent ("ENCOUNTER_START")
-		event_frame:RegisterEvent ("ENCOUNTER_END")
-		event_frame:RegisterEvent ("PLAYER_REGEN_ENABLED")
-
---DBM_TimerStart Timer183828cdcount	2 Death Brand CD (2) 42.5 Interface\Icons\warlock_summon_doomguard cdcount 183828 1 1438
---DBM_TimerStart Timer183828cdcount	3 Death Brand CD (3) 42.5 Interface\Icons\warlock_summon_doomguard cdcount 183828 1 1438
-
-		--EncounterDetails.DBM_timers
-		if (_G.DBM) then
-			local dbm_timer_callback = function (bar_type, id, msg, timer, icon, bartype, spellId, colorId, modid)
-				--print (bar_type, id, msg, timer, icon, bartype, spellId, colorId, modid)
-				local spell = tostring (spellId)
-				if (spell and not current_table_dbm [spell]) then
-					current_table_dbm [spell] = {spell, id, msg, timer, icon, bartype, spellId, colorId, modid}
-				end
-			end
-			DBM:RegisterCallback ("DBM_TimerStart", dbm_timer_callback)
-		end
-		function EncounterDetails:RegisterBigWigsCallBack()
-			if (BigWigsLoader) then
-				function EncounterDetails:BigWigs_StartBar (event, module, spellid, bar_text, time, icon, ...)
-					--print (event, module, spellid, bar_text, time, icon, ...)
-					spellid = tostring (spellid)
-					if (not current_table_bigwigs [spellid]) then
-						current_table_bigwigs [spellid] = {(type (module) == "string" and module) or (module and module.moduleName) or "", spellid or "", bar_text or "", time or 0, icon or ""}
-					end
-				end
-				if (BigWigsLoader.RegisterMessage) then
-					BigWigsLoader.RegisterMessage (EncounterDetails, "BigWigs_StartBar")
-				end
-			end
-		end
-		EncounterDetails:ScheduleTimer ("RegisterBigWigsCallBack", 5)
-
---BigWigs_StartBar BigWigs_Bosses_Brackenspore mind_fungus Mind Fungus 51 Interface\Icons\inv_mushroom_10 true
---bigwigs startbar mind_fungus
-
---BigWigs_StartBar BigWigs_Bosses_Brackenspore 159996 Infesting Spores (2) 58 Interface\Icons\Ability_Creature_Disease_01
---bigwigs startbar 160013
-
-	end
-
 	function EncounterDetails:WasEncounter()
 
 		--> check if last combat was a boss encounter fight
-		if (not EncounterDetails.debugmode) then
+		if (not _combat_object.is_boss) then
+			return
+		elseif (_combat_object.is_boss.encounter == "pvp") then
+			return
+		end
 
-			if (not _combat_object.is_boss) then
-				return
-			elseif (_combat_object.is_boss.encounter == "pvp") then
-				return
-			end
-
-			if (_combat_object.instance_type ~= "raid") then
-				return
-			end
-
+		if (_combat_object.instance_type ~= "raid") then
+			return
 		end
 
 		--> boss found, we need to show the icon
@@ -381,62 +234,6 @@ local function CreatePluginFrames ()
 		EncounterDetails:HideToolbarIcon (EncounterDetails.ToolbarButton)
 	end
 
-	local re_ShowTutorialAlert = function()
-		EncounterDetails:ShowTutorial()
-	end
-	local hook_AlertCloseButton = function()
-		re_ShowTutorialAlert()
-	end
-
-	function EncounterDetails:ShowTutorial()
-	--EncounterDetails.db.AlertTutorialStep = 1
-		if (not EncounterDetails.Frame:IsShown()) then
-			return
-		end
-
-		local antTable = {
-			Throttle = 0.050,
-			AmountParts = 15,
-			TexturePartsWidth = 167.4,
-			TexturePartsHeight = 83.6,
-			TextureWidth = 512,
-			TextureHeight = 512,
-			BlendMode = "ADD",
-			Texture = [[Interface\AddOns\Plater\images\ants_rectangle]],
-		}
-
-		local left, right, top, bottom = 0, 0, 4, -6
-		local DF = DetailsFrameWork
-
-		if (not Details:GetTutorialCVar ("ENCOUNTER_BREAKDOWN_CHART")) then
-			local f = DF:CreateAnts (EncounterDetails.Frame.buttonSwitchGraphic.widget, antTable, -27 + (left or 0), 25 + (right or 0), 5 + (top or 0), -7 + (bottom or 0))
-			f:SetFrameLevel (EncounterDetails.Frame:GetFrameLevel() + 1)
-			f:SetAlpha (ALPHA_BLEND_AMOUNT - 0.549845)
-			EncounterDetails.Frame.buttonSwitchGraphic.AntsFrame = f
-		end
-
-		if (not Details:GetTutorialCVar ("ENCOUNTER_BREAKDOWN_PHASES")) then
-			local f = DF:CreateAnts (EncounterDetails.Frame.buttonSwitchPhases.widget, antTable, -27 + (left or 0), 25 + (right or 0), 5 + (top or 0), -7 + (bottom or 0))
-			f:SetFrameLevel (EncounterDetails.Frame:GetFrameLevel() + 1)
-			f:SetAlpha (ALPHA_BLEND_AMOUNT - 0.549845)
-			EncounterDetails.Frame.buttonSwitchPhases.AntsFrame = f
-		end
-
-		if (not Details:GetTutorialCVar ("ENCOUNTER_BREAKDOWN_EMOTES")) then
-			local f = DF:CreateAnts (EncounterDetails.Frame.buttonSwitchBossEmotes.widget, antTable, -27 + (left or 0), 25 + (right or 0), 5 + (top or 0), -7 + (bottom or 0))
-			f:SetFrameLevel (EncounterDetails.Frame:GetFrameLevel() + 1)
-			f:SetAlpha (ALPHA_BLEND_AMOUNT - 0.549845)
-			EncounterDetails.Frame.buttonSwitchBossEmotes.AntsFrame = f
-		end
-
-		if (not Details:GetTutorialCVar ("ENCOUNTER_BREAKDOWN_SPELLAURAS")) then
-			local f = DF:CreateAnts (EncounterDetails.Frame.buttonSwitchSpellsAuras.widget, antTable, -27 + (left or 0), 25 + (right or 0), 5 + (top or 0), -7 + (bottom or 0))
-			f:SetFrameLevel (EncounterDetails.Frame:GetFrameLevel() + 1)
-			f:SetAlpha (ALPHA_BLEND_AMOUNT - 0.549845)
-			EncounterDetails.Frame.buttonSwitchSpellsAuras.AntsFrame = f
-		end
-
-	end
 
 	EncounterDetailsFrame:HookScript ("OnShow", function()
 		C_Timer:After (0.1, function()
@@ -456,7 +253,6 @@ local function CreatePluginFrames ()
 		end
 
 		--> build all window data
-		EncounterDetails.db.opened = EncounterDetails.db.opened + 1
 		EncounterDetails:OpenAndRefresh()
 		--> show
 		EncounterDetailsFrame:Show()
@@ -479,8 +275,6 @@ local function CreatePluginFrames ()
 				widget:Hide()
 			end
 		end
-
-		EncounterDetails:ScheduleTimer ("ShowTutorial", 3)
 
 		DetailsPluginContainerWindow.OpenPlugin (EncounterDetails)
 
@@ -519,10 +313,6 @@ local function CreatePluginFrames ()
 
 		--build the header
 
---		CoolTip:AddLine (Loc ["STRING_PLUGIN_NAME"])
---		CoolTip:AddIcon (ENCOUNTERDETAILS_BUTTON.__icon, 1, 1, 20, 20)
---		CoolTip:AddMenu (1, EncounterDetails.Frame.switch, "main")
-
 --		GameCooltip:AddLine ("$div")
 
 		--build the menu options
@@ -559,7 +349,6 @@ local function CreatePluginFrames ()
 
 			--
 
-			local textPoint = {"left", "left", 4, 0}
 
 			local SharedMedia = LibStub:GetLibrary("LibSharedMedia-3.0")
 
@@ -966,7 +755,7 @@ function _detalhes:BossInfoRowClick (barra, param1)
 
 	local reportar
 
-	if (barra.TTT == "morte" or true) then --> deaths -- todos os boxes est�o usando cooltip, por isso o 'true'.
+	do
 
 		reportar = {barra.report_text .. " " .. (barra.texto_esquerdo and barra.texto_esquerdo:GetText() or barra:GetParent() and barra:GetParent().texto_esquerdo and barra:GetParent().texto_esquerdo:GetText() or "")}
 		local beginAt = 1
@@ -982,26 +771,6 @@ function _detalhes:BossInfoRowClick (barra, param1)
 				reportar [#reportar+1] = ""..texto_left.." "..texto_right..""
 			end
 		end
-	else
-
-		barra.report_text = barra.report_text or ""
-		reportar = {barra.report_text .. " " .. _G.GameTooltipTextLeft1:GetText()}
-		local numLines = _GameTooltip:NumLines()
-
-		for i = 1, numLines, 1 do
-			local nome_left = "GameTooltipTextLeft"..i
-			local texto_left = _G[nome_left]
-			texto_left = texto_left:GetText()
-
-			local nome_right = "GameTooltipTextRight"..i
-			local texto_right = _G[nome_right]
-			texto_right = texto_right:GetText()
-
-			if (texto_left and texto_right) then
-				texto_left = texto_left:gsub (("|T(.*)|t "), "")
-				reportar [#reportar+1] = ""..texto_left.." "..texto_right..""
-			end
-		end
 	end
 
 	return _detalhes:Reportar (reportar, {_no_current = true, _no_inverse = true, _custom = true})
@@ -1010,8 +779,6 @@ end
 
 --> custom tooltip that handle mouse enter and leave on customized rows ---------------------------------------------------------------------------------------------------------
 
-local backdrop_bar_onenter = {bgFile = [[Interface\AddOns\Details\images\background]], tile = true, tileSize = 16, edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", edgeSize = 8, insets = {left = 1, right = 1, top = 0, bottom = 1}}
-local backdrop_bar_onleave = {bgFile = [[Interface\AddOns\Details\images\background]], tile = true, tileSize = 16, insets = {left = 1, right = 1, top = 0, bottom = 1}}
 
 function EncounterDetails:SetRowScripts (barra, index, container)
 
@@ -1122,7 +889,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 	segment = segment or 1
 	local frame = EncounterDetailsFrame --alias
 
-	DebugMessage ("OpenAndRefresh() called")
 	_G [frame:GetName().."SegmentsDropdown"].MyObject:Refresh()
 
 	EncounterDetails.LastOpenedTime = GetTime()
@@ -1133,36 +899,22 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 		_combat_object = EncounterDetails:GetCombat(segment)
 		EncounterDetails._segment = segment
 
-		DebugMessage ("there's a segment to use:", segment, _combat_object, _combat_object and _combat_object.is_boss)
-
 	else
-		DebugMessage ("no segment has been passed, looping segments to find one.")
-
 		local historico = _detalhes.tabela_historico.tabelas
-		local foundABoss = false
 
 		for index, combate in ipairs (historico) do
 			if (combate.is_boss and combate.is_boss.index) then
 				EncounterDetails._segment = index
 				_combat_object = combate
-
-				DebugMessage ("segment found: ", index, combate:GetCombatName(), combate.is_trash)
 				--the first segment found here will be the first segment the dropdown found, so it can use the index 1 of the dropdown list
 				_G [frame:GetName().."SegmentsDropdown"].MyObject:Select (1, true)
-
-				foundABoss = index
 				break
 			end
-		end
-
-		if (not foundABoss) then
-			DebugMessage ("boss not found during the segment loop")
 		end
 	end
 
 	if (not _combat_object) then
 		--EncounterDetails:Msg ("no combat found.")
-		DebugMessage ("_combat_object is nil, EXIT")
 		return
 	end
 
@@ -1170,21 +922,8 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 
 	local ToK = _detalhes.ToKFunctions [_detalhes.ps_abbreviation]
 
-	if (EncounterDetails.debugmode and not _combat_object.is_boss) then
-		_combat_object.is_boss = {
-			index = 1,
-			name = "Immerseus",
-			zone = "Siege of Orggrimar",
-			mapid = 1136,
-			encounter = "Immerseus"
-		}
-	end
-
 	if (not _combat_object.is_boss) then
 
-		DebugMessage ("_combat_object is not a boss, trying another loop in the segments")
-
-		local foundSegment
 		for index, combat in _ipairs (EncounterDetails:GetCombatSegments()) do
 
 			if (combat.is_boss and EncounterDetails:GetBossDetails (combat.is_boss.mapid, combat.is_boss.index)) then
@@ -1192,32 +931,20 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 
 				--the first segment found here will be the first segment the dropdown found, so it can use the index 1 of the dropdown list
 				_G [frame:GetName().."SegmentsDropdown"].MyObject:Select (1, true)
-
-				DebugMessage ("found another segment during another loop", index, combat:GetCombatName(), combat.is_trash)
-				foundSegment = true
 				break
 			end
 		end
 
-		if (not foundSegment) then
-			DebugMessage ("boss not found during the second loop segment")
-		end
-
 		if (not _combat_object.is_boss) then
-			DebugMessage ("_combat_object still isn't a boss segment, trying to get the last segment shown.")
 			if (EncounterDetails.LastSegmentShown) then
 				_combat_object = EncounterDetails.LastSegmentShown
-				DebugMessage ("found the last segment shown, using it.")
 			else
-				DebugMessage ("the segment isn't a boss, EXIT.")
 				return
 			end
 		end
 	end
 
 	--> the segment is a boss
-
-	DebugMessage ("segment are OKAY, updating the panel")
 
 	boss_info = _detalhes:GetBossDetails (_combat_object.is_boss.mapid, _combat_object.is_boss.index)
 
@@ -1256,17 +983,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 		EncounterDetailsFrame.boss_icone:SetTexture ([[Interface\CHARACTERFRAME\TempPortrait]])
 		EncounterDetailsFrame.boss_icone:SetTexCoord (0, 1, 0, 1)
 	end
-
-	--[=[
-	local file, L, R, T, B = EncounterDetails:GetRaidBackground (_combat_object.is_boss.mapid)
-	if (file) then
-		EncounterDetailsFrame.raidbackground:SetTexture (file)
-		EncounterDetailsFrame.raidbackground:SetTexCoord (L, R, T, B)
-	else
-		EncounterDetailsFrame.raidbackground:SetTexture ([[Interface\Glues\LOADINGSCREENS\LoadScreenDungeon]])
-		EncounterDetailsFrame.raidbackground:SetTexCoord (0, 1, 120/512, 408/512)
-	end
-	--]=]
 
 	EncounterDetailsFrame.raidbackground:SetTexture (.3, .3, .3, .5)
 
@@ -1343,42 +1059,10 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 
 		EncounterDetails:JB_AtualizaContainer (container, quantidade)
 
-		if (quantidade < #container.barras) then
-			for i = quantidade+1, #container.barras, 1 do
-				local barra = container.barras [i]
-				if (barra) then
-					barra:Hide()
-				end
-			end
-		end
-
 	--> Fim do container Overall Damage Taken
 
 	--> Container Overall Habilidades Inimigas ~damage taken by spell
-		local habilidades_poll = {}
-
-		--> pega as magias cont�nuas presentes em todas as fases
-		--deprecated
-		if (boss_info and boss_info.continuo) then
-			for index, spellid in _ipairs (boss_info.continuo) do
-				habilidades_poll [spellid] = true
-			end
-		end
-
-		--> pega as habilidades que pertence especificamente a cada fase
-		--deprecated
-		if (boss_info and boss_info.phases) then
-			for fase_id, fase in _ipairs (boss_info.phases) do
-				if (fase.spells) then
-					for index, spellid in _ipairs (fase.spells) do
-						habilidades_poll [spellid] = true
-					end
-				end
-			end
-		end
-
 		local habilidades_usadas = {}
-		local have_pool = _next(habilidades_poll)
 
 		for index, jogador in _ipairs (DamageContainer._ActorTable) do
 
@@ -1425,45 +1109,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 							end
 						end
 					--end
-				end
-
-			elseif (have_pool) then
-				--> check if the spell id is in the spell poll.
-				local habilidades = jogador.spells._ActorTable
-
-				for id, habilidade in _pairs (habilidades) do
-					if (habilidades_poll [id]) then
-						--> esse jogador usou uma habilidade do boss
-						local esta_habilidade = habilidades_usadas [id] --> tabela n�o numerica, pq diferentes monstros podem castar a mesma magia
-						if (not esta_habilidade) then
-							esta_habilidade = {0, {}, {}, id} --> [1] total dano causado [2] jogadores que foram alvos [3] jogadores que castaram essa magia [4] ID da magia
-							habilidades_usadas [id] = esta_habilidade
-						end
-
-						--> adiciona ao [1] total de dano que esta habilidade causou
-						esta_habilidade[1] = esta_habilidade[1] + habilidade.total
-
-						 --> adiciona ao [3] total do jogador que castou
-						if (not esta_habilidade[3][jogador.nome]) then
-							esta_habilidade[3][jogador.nome] = 0
-						end
-
-						esta_habilidade[3][jogador.nome] = esta_habilidade[3][jogador.nome] + habilidade.total
-
-						--> pega os alvos e adiciona ao [2]
-						local alvos = habilidade.targets
-						for target_name, amount in _pairs (alvos) do
-
-							--> ele tem o nome do jogador, vamos ver se este alvo � realmente um jogador verificando na tabela do combate
-							local tabela_dano_do_jogador = DamageContainer._ActorTable [DamageContainer._NameIndexTable [target_name]]
-							if (tabela_dano_do_jogador and tabela_dano_do_jogador.grupo) then
-								if (not esta_habilidade[2] [target_name]) then
-									esta_habilidade[2] [target_name] = {0, tabela_dano_do_jogador.classe}
-								end
-								esta_habilidade[2] [target_name] [1] = esta_habilidade[2] [target_name] [1] + amount
-							end
-						end
-					end
 				end
 			end
 		end
@@ -1549,12 +1194,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 
 		EncounterDetails:JB_AtualizaContainer (container, quantidade)
 
-		if (quantidade < #container.barras) then
-			for i = quantidade+1, #container.barras, 1 do
-				container.barras [i]:Hide()
-			end
-		end
-
 	--> Fim do container Over Habilidades Inimigas
 
 	--> Identificar os ADDs da luta:
@@ -1628,7 +1267,7 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 					_table_sort (tabela.damage_from, sort_damage_from)
 
 					tabela [1] = tabela.damage_from_total
-					tinsert (adds, tabela)
+					adds[#adds+1] = tabela
 				end
 			end
 
@@ -1752,7 +1391,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 			end
 		end
 
-		local y = 10
 		local frame_adds = EncounterDetailsFrame.overall_adds
 		container = frame_adds.gump
 		local index = 1
@@ -1825,12 +1463,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 
 		EncounterDetails:JB_AtualizaContainer (container, quantidade, 4)
 
-		if (quantidade < #container.barras) then
-			for i = quantidade+1, #container.barras, 1 do
-				container.barras [i]:Hide()
-			end
-		end
-
 	--> Fim do container Over ADDS
 
 	--> Inicio do Container de Interrupts:
@@ -1843,7 +1475,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 		container = frame_interrupts.gump
 
 		quantidade = 0
-		local interrupt_do_primeiro = 0
 
 		local habilidades_interrompidas = {}
 
@@ -1935,12 +1566,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 
 		EncounterDetails:JB_AtualizaContainer (container, quantidade, 4)
 
-		if (quantidade < #container.barras) then
-			for i = quantidade+1, #container.barras, 1 do
-				container.barras[i]:Hide()
-			end
-		end
-
 	--> Fim do container dos Interrupts
 
 	--> Inicio do Container dos Dispells:
@@ -1952,7 +1577,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 		container = frame_dispell.gump
 
 		quantidade = 0
-		local dispell_do_primeiro = 0
 
 		local habilidades_dispeladas = {}
 
@@ -2038,12 +1662,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 
 		EncounterDetails:JB_AtualizaContainer (container, quantidade, 4)
 
-		if (quantidade < #container.barras) then
-			for i = quantidade+1, #container.barras, 1 do
-				container.barras [i]:Hide()
-			end
-		end
-
 	--> Fim do container dos Dispells
 
 	--> Inicio do Container das Mortes:
@@ -2102,12 +1720,6 @@ function EncounterDetails:OpenAndRefresh (_, segment)
 		end
 
 		EncounterDetails:JB_AtualizaContainer (container, quantidade, 10)
-
-		if (quantidade < #container.barras) then
-			for i = quantidade+1, #container.barras, 1 do
-				container.barras [i]:Hide()
-			end
-		end
 end
 
 local events_to_track = {
@@ -2156,14 +1768,10 @@ function EncounterDetails:OnEvent (_, event, ...)
 		EncounterDetails.CLEvents:UnregisterEvent ("COMBAT_LOG_EVENT_UNFILTERED")
 
 	elseif (event == "ADDON_LOADED") then
-		local AddonName = select (1, ...)
+		local AddonName = (...)
 		if (AddonName == "Details_EncounterDetails") then
 
 			if (_G._detalhes and _G._detalhes:InstallOkey()) then
-
-				if (DetailsFramework.IsClassicWow()) then
-				--	return
-				end
 
 				--> create widgets
 				CreatePluginFrames ()
@@ -2173,17 +1781,13 @@ function EncounterDetails:OnEvent (_, event, ...)
 				local PLUGIN_LOCALIZED_NAME = Loc ["STRING_PLUGIN_NAME"]
 				local PLUGIN_REAL_NAME = "DETAILS_PLUGIN_ENCOUNTER_DETAILS"
 				local PLUGIN_ICON = [[Interface\Scenarios\ScenarioIcon-Boss]]
-				local PLUGIN_AUTHOR = "Details! Team"
-				local PLUGIN_VERSION = "v1.06"
+				local PLUGIN_AUTHOR = "Accidev"
+				local PLUGIN_VERSION = "v1.07"
 
 				local default_settings = {
 					show_icon = 5, --automatic
 					hide_on_combat = false, --hide the window when a new combat start
 					max_emote_segments = 3,
-					opened = 0,
-					encounter_timers_dbm = {},
-					encounter_timers_bw = {},
-					window_scale = 1,
 				}
 
 				--> Install
@@ -2209,11 +1813,6 @@ function EncounterDetails:OnEvent (_, event, ...)
 				EncounterDetails.charsaved.encounter_spells = EncounterDetails.charsaved.encounter_spells or {}
 
 				EncounterDetails.boss_emotes_table = EncounterDetails.charsaved.emotes
-
-				--> build a table on global saved variables
-				if (not _detalhes.global_plugin_database ["DETAILS_PLUGIN_ENCOUNTER_DETAILS"]) then
-					_detalhes.global_plugin_database ["DETAILS_PLUGIN_ENCOUNTER_DETAILS"] = {encounter_timers_dbm = {}, encounter_timers_bw= {}}
-				end
 
 				--> Register needed events
 				_G._detalhes:RegisterEvent (EncounterDetails, "COMBAT_PLAYER_ENTER")
@@ -2245,9 +1844,7 @@ function EncounterDetails:OnEvent (_, event, ...)
 				}
 
 				--> embed the plugin into the plugin window
-				if (DetailsPluginContainerWindow) then
-					DetailsPluginContainerWindow.EmbedPlugin (EncounterDetails, EncounterDetails.Frame)
-				end
+				DetailsPluginContainerWindow.EmbedPlugin (EncounterDetails, EncounterDetails.Frame)
 
 			end
 		end

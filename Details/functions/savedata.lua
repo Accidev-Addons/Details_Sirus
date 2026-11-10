@@ -89,9 +89,6 @@ function _detalhes:SaveConfig()
 
 		xpcall (_detalhes.TimeDataCleanUpTemporary, _detalhes.saver_error_func)
 
-	--> buffs
-		xpcall (_detalhes.Buffs.SaveBuffs, _detalhes.saver_error_func)
-
 	--> date
 		_detalhes.last_day = date ("%d")
 
@@ -108,17 +105,6 @@ function _detalhes:SaveConfig()
 				_detalhes_global [key] = _detalhes [key]
 			end
 		end
-
-	--> solo e raid mode
-		if (_detalhes.SoloTables.Mode) then
-			_detalhes_database.SoloTablesSaved = {}
-			_detalhes_database.SoloTablesSaved.Mode = _detalhes.SoloTables.Mode
-			if (_detalhes.SoloTables.Plugins [_detalhes.SoloTables.Mode]) then
-				_detalhes_database.SoloTablesSaved.LastSelected = _detalhes.SoloTables.Plugins [_detalhes.SoloTables.Mode].real_name
-			end
-		end
-
-		_detalhes_database.RaidTablesSaved = nil
 
 	--> salva switch tables
 		_detalhes_global.switchSaved.slots = _detalhes.switch.slots

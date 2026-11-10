@@ -1,22 +1,13 @@
 ## Interface: 30300
-## Title: Details_ChartViewer (plugin)
+## Title: |cFF9B59B6D|cFFAA77CCe|cFFBB99DDt|cFFAA77CCa|cFF9B59B6i|cFFAA77CCl|cFFBB99DDs|cFFAA77CC!|cFFDDBBEE Chart Viewer|r
 ## Notes: Plugin for Details
 ## Notes-ruRU: Позволяет просматривать данные в графических диаграммах.
+## Author: Accidev
 ## RequiredDeps: Details
 ## OptionalDeps: Ace3
-## X-Sirus-Update: https://github.com/fxpw/Details_Sirus/tree/master/Details_ChartViewer
 
 locales\enUS.lua
-locales\deDE.lua
-locales\esES.lua
-locales\esMX.lua
-locales\frFR.lua
-locales\itIT.lua
-locales\koKR.lua
-locales\ptBR.lua
 locales\ruRU.lua
-locales\zhCN.lua
-locales\zhTW.lua
 
 Details_ChartViewer.xml
 Details_ChartViewer.lua

@@ -7,7 +7,6 @@
 
 	local _
 	local _detalhes = _G._detalhes
-	local Loc = LibStub ("AceLocale-3.0"):GetLocale ( "Details" )
 
 	--> mantain the enabled time captures
 	_detalhes.timeContainer = {}
@@ -18,7 +17,6 @@
 	local ipairs = ipairs
 	local _math_floor = math.floor
 	local _pcall = pcall
-	local time = time
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> constants
@@ -67,8 +65,6 @@
 
 		if (is_enabled ~= nil) then
 			this_capture [INDEX_ENABLED] = is_enabled
-		else
-			this_capture [INDEX_ENABLED] = this_capture [INDEX_ENABLED]
 		end
 
 		if (_G.DetailsOptionsWindow and _G.DetailsOptionsWindow:IsShown()) then
@@ -124,7 +120,7 @@
 		version = version or "v1.0"
 		icon = icon or [[Interface\InventoryItems\WoWUnknownItem01]]
 
-		tinsert (_detalhes.savedTimeCaptures, {name, func, matrix, author, version, icon, is_enabled, do_not_save = no_save})
+		_detalhes.savedTimeCaptures[#_detalhes.savedTimeCaptures+1] = {name, func, matrix, author, version, icon, is_enabled, do_not_save = no_save}
 
 		if (_G.DetailsOptionsWindow and _G.DetailsOptionsWindow:IsShown()) then
 			_G.DetailsOptionsWindow16UserTimeCapturesFillPanel.MyObject:Refresh()
@@ -160,7 +156,7 @@
 		local new_table = {}
 		for index, t in ipairs (_detalhes.savedTimeCaptures) do
 			if (not t.do_not_save) then
-				tinsert (new_table, t)
+				new_table[#new_table+1] = t
 			end
 		end
 		_detalhes.savedTimeCaptures = new_table
@@ -168,66 +164,7 @@
 
 	local tick_time = 0
 
-		--source https://github.com/WeakAuras/WeakAuras2/blob/520951a4b49b64cb49d88c1a8542d02bbcdbe412/WeakAuras/AuraEnvironment.lua#L66
-		local blockedFunctions = {
-			-- Lua functions that may allow breaking out of the environment
-			setfenv = true,
-			getfenv = true,
-			loadstring = true,
-			pcall = true,
-			xpcall = true,
-			getglobal = true,
-
-			-- blocked WoW API
-			SendMail = true,
-			SetTradeMoney = true,
-			AddTradeMoney = true,
-			PickupTradeMoney = true,
-			PickupPlayerMoney = true,
-			TradeFrame = true,
-			MailFrame = true,
-			EnumerateFrames = true,
-			RunScript = true,
-			AcceptTrade = true,
-			SetSendMailMoney = true,
-			EditMacro = true,
-			SlashCmdList = true,
-			DevTools_DumpCommand = true,
-			hash_SlashCmdList = true,
-			CreateMacro = true,
-			SetBindingMacro = true,
-			GuildDisband = true,
-			GuildUninvite = true,
-			securecall = true,
-			DeleteCursorItem = true,
-			ChatEdit_SendText = true,
-			CastSpellByName = true,
-			CastSpell = true,
-			CastSpellByID = true,
-
-			--additional
-			setmetatable = true,
-		}
-		local blockedTables = {
-			SlashCmdList = true,
-			SendMailMailButton = true,
-			SendMailMoneyGold = true,
-			MailFrameTab2 = true,
-			ChatFrame1 = true,
-			WeakAurasOptions = true,
-			WeakAurasOptionsSaved = true
-		}
-		local functionFilter = setmetatable({}, {__index = function(env, key)
-			if key == "_G" then
-				return env
-			elseif blockedFunctions[key] then
-				return nil
-			elseif blockedTables[key] then
-				return {}
-			else
-				return _G[key]
-			end
-		end})
+		local functionFilter = _detalhes:CreateScriptEnvironment()
 
 	--> starting a combat
 	function _detalhes:TimeDataCreateCombatTables()
@@ -253,7 +190,7 @@
 					local func, errortext = loadstring (t [INDEX_FUNCTION])
 					if (func) then
 						setfenv (func, functionFilter)
-						tinsert (exec, { func = func, data = data, attributes = table_deepcopy (t [INDEX_MATRIX]), is_user = true })
+						exec[#exec+1] = { func = func, data = data, attributes = table_deepcopy (t [INDEX_MATRIX]), is_user = true }
 					else
 						_detalhes:Msg ("|cFFFF9900error compiling script for time data (charts)|r: ", errortext)
 					end
@@ -261,7 +198,7 @@
 					--> plugin
 					local func = t [INDEX_FUNCTION]
 					setfenv (func, functionFilter)
-					tinsert (exec, { func = func, data = data, attributes = table_deepcopy (t [INDEX_MATRIX]) })
+					exec[#exec+1] = { func = func, data = data, attributes = table_deepcopy (t [INDEX_MATRIX]) }
 				end
 
 			end
@@ -299,18 +236,16 @@
 
 		tick_time = tick_time + 1
 
-		for index, t in ipairs (_detalhes.timeContainer.Exec) do
-
+		local execTable = _detalhes.timeContainer.Exec
+		for index = 1, #execTable do
+			local t = execTable[index]
 			if (t.is_user) then
 				--> by a user
 				exec_user_func (t.func, t.attributes, t.data, tick_time)
-
 			else
 				--> by a plugin
 				t.func (t.attributes, t.data, tick_time)
-
 			end
-
 		end
 
 	end
@@ -319,29 +254,6 @@
 --> broker dps stuff
 
 	local ToKFunctions = _detalhes.ToKFunctions
-
-	local broker_functions = {
-		-- raid dps [1]
-		function()
-			local combat = _detalhes.tabela_vigente
-			local time = combat:GetCombatTime()
-			if (not time or time == 0) then
-				return 0
-			else
-				return ToKFunctions [_detalhes.minimap.text_format] (_, combat.totals_grupo[1] / time)
-			end
-		end,
-		-- raid hps [2]
-		function()
-			local combat = _detalhes.tabela_vigente
-			local time = combat:GetCombatTime()
-			if (not time or time == 0) then
-				return 0
-			else
-				return ToKFunctions [_detalhes.minimap.text_format] (_, combat.totals_grupo[2] / time)
-			end
-		end
-	}
 
 
 	local get_combat_time = function()
@@ -353,12 +265,12 @@
 		return minutos .. "m " .. segundos .. "s"
 	end
 
-	local get_damage_position = function()
-		local damage_container = _detalhes.tabela_vigente [1]
-		damage_container:SortByKey ("total")
+	local get_position = function (attribute)
+		local container = _detalhes.tabela_vigente [attribute]
+		container:SortByKey ("total")
 
 		local pos = 1
-		for index, actor in ipairs (damage_container._ActorTable) do
+		for index, actor in ipairs (container._ActorTable) do
 			if (actor.grupo) then
 				if (actor.nome == _detalhes.playername) then
 					return pos
@@ -370,198 +282,96 @@
 		return 0
 	end
 
-	local get_heal_position = function()
-		local heal_container = _detalhes.tabela_vigente [2]
-		heal_container:SortByKey ("total")
+	local get_diff = function (attribute)
+		local container = _detalhes.tabela_vigente [attribute]
+		container:SortByKey ("total")
 
-		local pos = 1
-		for index, actor in ipairs (heal_container._ActorTable) do
+		local first
+		local first_index
+		for index, actor in ipairs (container._ActorTable) do
 			if (actor.grupo) then
-				if (actor.nome == _detalhes.playername) then
-					return pos
-				end
-				pos = pos + 1
+				first = actor
+				first_index = index
+				break
 			end
 		end
 
+		if (first) then
+			if (first.nome == _detalhes.playername) then
+				local second
+				local actors = container._ActorTable
+				for i = first_index+1, #actors do
+					if (actors[i].grupo) then
+						second = actors[i]
+						break
+					end
+				end
+
+				if (second) then
+					local diff = first.total - second.total
+					return "+" .. ToKFunctions [_detalhes.minimap.text_format] (_, diff)
+				else
+					return "0"
+				end
+			else
+				local player = container._NameIndexTable [_detalhes.playername]
+				if (player) then
+					player = container._ActorTable [player]
+					local diff = first.total - player.total
+					return "-" .. ToKFunctions [_detalhes.minimap.text_format] (_, diff)
+				else
+					return ToKFunctions [_detalhes.minimap.text_format] (_, first.total)
+				end
+			end
+		else
+			return "0"
+		end
+	end
+
+	local get_player_ps = function (attribute)
+		local player = _detalhes.tabela_vigente (attribute, _detalhes.playername)
+		if (player) then
+			local combat_time
+			if (_detalhes.time_type == 1) then --activity time
+				combat_time = player:Tempo()
+			else --effective time
+				combat_time = _detalhes.tabela_vigente:GetCombatTime()
+			end
+			if (combat_time > 0) then
+				return ToKFunctions [_detalhes.minimap.text_format] (_, player.total / combat_time)
+			end
+		end
 		return 0
 	end
 
-	local get_damage_diff = function()
-		local damage_container = _detalhes.tabela_vigente [1]
-		damage_container:SortByKey ("total")
-
-		local first
-		local first_index
-		for index, actor in ipairs (damage_container._ActorTable) do
-			if (actor.grupo) then
-				first = actor
-				first_index = index
-				break
-			end
-		end
-
-		if (first) then
-			if (first.nome == _detalhes.playername) then
-				local second
-				local container = damage_container._ActorTable
-				for i = first_index+1, #container do
-					if (container[i].grupo) then
-						second = container[i]
-						break
-					end
-				end
-
-				if (second) then
-					local diff = first.total - second.total
-					return "+" .. ToKFunctions [_detalhes.minimap.text_format] (_, diff)
-				else
-					return "0"
-				end
-			else
-				local player = damage_container._NameIndexTable [_detalhes.playername]
-				if (player) then
-					player = damage_container._ActorTable [player]
-					local diff = first.total - player.total
-					return "-" .. ToKFunctions [_detalhes.minimap.text_format] (_, diff)
-				else
-					return ToKFunctions [_detalhes.minimap.text_format] (_, first.total)
-				end
-			end
-		else
-			return "0"
-		end
-	end
-
-	local get_heal_diff = function()
-		local heal_container = _detalhes.tabela_vigente [2]
-		heal_container:SortByKey ("total")
-
-		local first
-		local first_index
-		for index, actor in ipairs (heal_container._ActorTable) do
-			if (actor.grupo) then
-				first = actor
-				first_index = index
-				break
-			end
-		end
-
-		if (first) then
-			if (first.nome == _detalhes.playername) then
-				local second
-				local container = heal_container._ActorTable
-				for i = first_index+1, #container do
-					if (container[i].grupo) then
-						second = container[i]
-						break
-					end
-				end
-
-				if (second) then
-					local diff = first.total - second.total
-					return "+" .. ToKFunctions [_detalhes.minimap.text_format] (_, diff)
-				else
-					return "0"
-				end
-			else
-				local player = heal_container._NameIndexTable [_detalhes.playername]
-				if (player) then
-					player = heal_container._ActorTable [player]
-					local diff = first.total - player.total
-					return "-" .. ToKFunctions [_detalhes.minimap.text_format] (_, diff)
-				else
-					return ToKFunctions [_detalhes.minimap.text_format] (_, first.total)
-				end
-			end
-		else
-			return "0"
-		end
-	end
-
-	local get_player_dps = function()
-		local damage_player = _detalhes.tabela_vigente (1, _detalhes.playername)
-		if (damage_player) then
-			if (_detalhes.time_type == 1) then --activity time
-				local combat_time = damage_player:Tempo()
-				if (combat_time > 0) then
-					return ToKFunctions [_detalhes.minimap.text_format] (_, damage_player.total / combat_time)
-				else
-					return 0
-				end
-			else --effective time
-				local combat_time = _detalhes.tabela_vigente:GetCombatTime()
-				if (combat_time > 0) then
-					return ToKFunctions [_detalhes.minimap.text_format] (_, damage_player.total / combat_time)
-				else
-					return 0
-				end
-			end
-			return 0
+	local get_raid_ps = function (attribute)
+		local raid_total = _detalhes.tabela_vigente.totals [attribute]
+		if (raid_total) then
+			return ToKFunctions [_detalhes.minimap.text_format] (_, raid_total / _detalhes.tabela_vigente:GetCombatTime())
 		else
 			return 0
 		end
 	end
 
-	local get_player_hps = function()
-		local heal_player = _detalhes.tabela_vigente (2, _detalhes.playername)
-		if (heal_player) then
-			if (_detalhes.time_type == 1) then --activity time
-				local combat_time = heal_player:Tempo()
-				if (combat_time > 0) then
-					return ToKFunctions [_detalhes.minimap.text_format] (_, heal_player.total / combat_time)
-				else
-					return 0
-				end
-			else --effective time
-				local combat_time = _detalhes.tabela_vigente:GetCombatTime()
-				if (combat_time > 0) then
-					return ToKFunctions [_detalhes.minimap.text_format] (_, heal_player.total / combat_time)
-				else
-					return 0
-				end
-			end
-			return 0
+	local get_player_total = function (attribute)
+		local player = _detalhes.tabela_vigente (attribute, _detalhes.playername)
+		if (player) then
+			return ToKFunctions [_detalhes.minimap.text_format] (_, player.total)
 		else
 			return 0
 		end
 	end
 
-	local get_raid_dps = function()
-		local damage_raid = _detalhes.tabela_vigente and _detalhes.tabela_vigente.totals [1]
-		if (damage_raid ) then
-			return ToKFunctions [_detalhes.minimap.text_format] (_, damage_raid / _detalhes.tabela_vigente:GetCombatTime())
-		else
-			return 0
-		end
-	end
-
-	local get_raid_hps = function()
-		local healing_raid = _detalhes.tabela_vigente and _detalhes.tabela_vigente.totals [2]
-		if (healing_raid ) then
-			return ToKFunctions [_detalhes.minimap.text_format] (_, healing_raid / _detalhes.tabela_vigente:GetCombatTime())
-		else
-			return 0
-		end
-	end
-
-	local get_player_damage = function()
-		local damage_player = _detalhes.tabela_vigente(1, _detalhes.playername)
-		if (damage_player) then
-			return ToKFunctions [_detalhes.minimap.text_format] (_, damage_player.total)
-		else
-			return 0
-		end
-	end
-
-	local get_player_heal = function()
-		local heal_player = _detalhes.tabela_vigente (2, _detalhes.playername)
-		if (heal_player) then
-			return ToKFunctions [_detalhes.minimap.text_format] (_, heal_player.total)
-		else
-			return 0
-		end
-	end
+	local get_damage_position = function() return get_position (1) end
+	local get_heal_position = function() return get_position (2) end
+	local get_damage_diff = function() return get_diff (1) end
+	local get_heal_diff = function() return get_diff (2) end
+	local get_player_dps = function() return get_player_ps (1) end
+	local get_player_hps = function() return get_player_ps (2) end
+	local get_raid_dps = function() return get_raid_ps (1) end
+	local get_raid_hps = function() return get_raid_ps (2) end
+	local get_player_damage = function() return get_player_total (1) end
+	local get_player_heal = function() return get_player_total (2) end
 
 	local parse_broker_text = function()
 		local text = _detalhes.data_broker_text

@@ -10,8 +10,6 @@
 	--[[global]] DETAILS_HOOK_BATTLERESS = "HOOK_BATTLERESS"
 	--[[global]] DETAILS_HOOK_INTERRUPT = "HOOK_INTERRUPT"
 
-	--[[global]] DETAILS_HOOK_BUFF = "HOOK_BUFF" --[[REMOVED--]]
-
 
 	local _detalhes = _G._detalhes
 	local _
@@ -20,8 +18,6 @@
 	_detalhes.hooks ["HOOK_DEATH"] = {}
 	_detalhes.hooks ["HOOK_BATTLERESS"] = {}
 	_detalhes.hooks ["HOOK_INTERRUPT"] = {}
-
-	_detalhes.hooks ["HOOK_BUFF"] = {} --[[REMOVED--]]
 
 	function _detalhes:InstallHook (hook_type, func)
 
@@ -54,7 +50,7 @@
 
 			if (this_func == func) then
 
-				table.remove (_detalhes.hooks [hook_type], index)
+				tremove (_detalhes.hooks [hook_type], index)
 
 				if (#_detalhes.hooks [hook_type] == 0) then
 					_detalhes.hooks [hook_type].enabled = false

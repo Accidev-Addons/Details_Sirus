@@ -1,6 +1,11 @@
 	local _detalhes = _G._detalhes
 	local L = LibStub ("AceLocale-3.0"):GetLocale ( "Details" )
-	local LBB = LibStub("LibBabble-Boss-3.0"):GetLookupTable()
+
+	--lua locals
+	local pairs = pairs
+	local ipairs = ipairs
+	local type = type
+	local tonumber = tonumber
 
 	--templates
 
@@ -60,6 +65,17 @@
 	end
 
 	function _detalhes:BossModsLink()
+		local set_encounter_phase = function (phase)
+			_detalhes:OnCombatPhaseChanged()
+			_detalhes.encounter_table.phase = phase
+			local cur_combat = _detalhes:GetCurrentCombat()
+			local time = cur_combat:GetCombatTime()
+			if (time > 5) then
+				cur_combat.PhaseData[#cur_combat.PhaseData+1] = {phase, time}
+			end
+			_detalhes:SendEvent ("COMBAT_ENCOUNTER_PHASE_CHANGED", nil, phase)
+		end
+
 		if (_G.DBM) then
 			local dbm_callback_phase = function (event, msg, ...)
 
@@ -77,19 +93,7 @@
 
 				local phase = mod and mod.vb and mod.vb.phase
 				if (phase and _detalhes.encounter_table.phase ~= phase) then
-					--_detalhes:Msg ("Current phase:", phase)
-
-					_detalhes:OnCombatPhaseChanged()
-
-					_detalhes.encounter_table.phase = phase
-
-					local cur_combat = _detalhes:GetCurrentCombat()
-					local time = cur_combat:GetCombatTime()
-					if (time > 5) then
-						tinsert (cur_combat.PhaseData, {phase, time})
-					end
-
-					_detalhes:SendEvent ("COMBAT_ENCOUNTER_PHASE_CHANGED", nil, phase)
+					set_encounter_phase (phase)
 				end
 			end
 
@@ -97,25 +101,8 @@
 				_detalhes.encounter_table.DBM_Mod = mod
 				_detalhes.encounter_table.DBM_ModTime = time()
 			end
-			local dbm_callback_start = function(event, encounterID, encounterName)
-				local _, _, _, _, maxPlayers = GetInstanceInfo()
-				local difficulty = GetInstanceDifficulty()
-				if encounterID == 34497 or encounterID == 34496 or encounterID == 33293 or encounterID == 37813 then return end
-				_detalhes.parser_functions:ENCOUNTER_START(encounterID, LBB[encounterName], difficulty, maxPlayers)
-			end
-
-			local dbm_callback_end = function(event, encounterID, encounterName, endStatus)
-				local _, _, difficultyID, _, maxPlayers = GetInstanceInfo()
-				local difficulty = GetInstanceDifficulty()
-				if encounterID == 34497 or encounterID == 34496 or encounterID == 33293 or encounterID == 37813 then return end
-				_detalhes.parser_functions:ENCOUNTER_END(encounterID, LBB[encounterName], difficulty, maxPlayers, endStatus)
-			end
-
-			DBM:RegisterCallback("DBM_EncounterStart", dbm_callback_start)
-			DBM:RegisterCallback("DBM_EncounterEnd", dbm_callback_end)
-
 			DBM:RegisterCallback("DBM_Announce", dbm_callback_phase)
-			DBM:RegisterCallback("pull", dbm_callback_pull)
+			DBM:RegisterCallback("DBM_Pull", dbm_callback_pull)
 		end
 
 		if (BigWigsLoader and not _G.DBM) then
@@ -126,17 +113,7 @@
 					phase = tonumber (phase)
 
 					if (phase and type (phase) == "number" and _detalhes.encounter_table.phase ~= phase) then
-						_detalhes:OnCombatPhaseChanged()
-
-						_detalhes.encounter_table.phase = phase
-
-						local cur_combat = _detalhes:GetCurrentCombat()
-						local time = cur_combat:GetCombatTime()
-						if (time > 5) then
-							tinsert (cur_combat.PhaseData, {phase, time})
-						end
-
-						_detalhes:SendEvent ("COMBAT_ENCOUNTER_PHASE_CHANGED", nil, phase)
+						set_encounter_phase (phase)
 					end
 
 				end
@@ -154,8 +131,6 @@
 	--removido do plugin Encounter Details
 	function _detalhes:CreateCallbackListeners()
 
-		_detalhes.DBM_timers = {}
-
 		local current_encounter = false
 		local current_table_dbm = {}
 		local current_table_bigwigs = {}
@@ -164,7 +139,7 @@
 		
 		function event_frame:OnDetailsEvent (event, ...)
 			if (event == "COMBAT_ENCOUNTER_START") then
-				local encounterID, encounterName, difficultyID, raidSize = select (1, ...)
+				local encounterID, encounterName, difficultyID, raidSize = ...
 				current_encounter = encounterID
 			elseif event == "COMBAT_ENCOUNTER_END" or event == "COMBAT_PLAYER_LEAVE" then
 				if (current_encounter) then
@@ -237,7 +212,7 @@
 	}
 	local SplitLoadFunc = function (self, deltaTime)
 		--which container it will iterate on this tick
-		local container = _detalhes.tabela_vigente and _detalhes.tabela_vigente [SplitLoadFrame.NextActorContainer] and _detalhes.tabela_vigente [SplitLoadFrame.NextActorContainer]._ActorTable
+		local container = _detalhes.tabela_vigente [SplitLoadFrame.NextActorContainer] and _detalhes.tabela_vigente [SplitLoadFrame.NextActorContainer]._ActorTable
 
 		if (not container) then
 			if (_detalhes.debug) then
@@ -248,7 +223,7 @@
 		end
 
 		local inInstance = IsInInstance()
-		local isEncounter = _detalhes.tabela_vigente and _detalhes.tabela_vigente.is_boss
+		local isEncounter = _detalhes.tabela_vigente.is_boss
 		local encounterID = isEncounter and isEncounter.id
 
 		--get the actor
@@ -357,66 +332,6 @@
 		SplitLoadFrame.NextActorIndex = 1
 	end
 
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
---> details auras
-
-	local aura_prototype = {
-		name = "",
-		type = "DEBUFF",
-		target = "player",
-		boss = "0",
-		icon = "",
-		stack = 0,
-		sound = "",
-		sound_channel = "",
-		chat = "",
-		chat_where = "SAY",
-		chat_extra = "",
-	}
-
-	function _detalhes:CreateDetailsAura (name, auratype, target, boss, icon, stack, sound, chat)
-
-		local aura_container = _detalhes.details_auras
-
-		--already exists
-		if (aura_container [name]) then
-			_detalhes:Msg ("Aura name already exists.")
-			return
-		end
-
-		--create the new aura
-		local new_aura = _detalhes.table.copy ({}, aura_prototype)
-		new_aura.type = auratype or new_aura.type
-		new_aura.target = auratype or new_aura.target
-		new_aura.boss = boss or new_aura.boss
-		new_aura.icon = icon or new_aura.icon
-		new_aura.stack = math.max (stack or 0, new_aura.stack)
-		new_aura.sound = sound or new_aura.sound
-		new_aura.chat = chat or new_aura.chat
-
-		_detalhes.details_auras [name] = new_aura
-
-		return new_aura
-	end
-
-	function _detalhes:CreateAuraListener()
-
-		local listener = _detalhes:CreateEventListener()
-
-		function listener:on_enter_combat (event, combat, encounterId)
-
-		end
-
-		function listener:on_leave_combat (event, combat)
-
-		end
-
-		listener:RegisterEvent ("COMBAT_PLAYER_ENTER", "on_enter_combat")
-		listener:RegisterEvent ("COMBAT_PLAYER_LEAVE", "on_leave_combat")
-
-	end
-
-
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> forge
 
@@ -450,25 +365,6 @@
 			f:SetMovable (true)
 			f.Title:SetTextColor (1, .8, .2)
 
-			local have_plugins_enabled
-
-			for id, instanceTable in pairs (_detalhes.EncounterInformation) do
-				if (_detalhes.InstancesToStoreData [id]) then
-					have_plugins_enabled = true
-					break
-				end
-			end
-
-			if (not have_plugins_enabled and false) then
-				local nopluginLabel = f:CreateFontString (nil, "overlay", "GameFontNormal")
-				local nopluginIcon = f:CreateTexture (nil, "overlay")
-				nopluginIcon:SetPoint ("BOTTOMLEFT", f, "BOTTOMLEFT", 10, 10)
-				nopluginIcon:SetSize (16, 16)
-				nopluginIcon:SetTexture ([[Interface\AddOns\Details\textures\DialogFrame\UI-Dialog-Icon-AlertNew]])
-				nopluginLabel:SetPoint ("LEFT", nopluginIcon, "RIGHT", 5, 0)
-				nopluginLabel:SetText (L["STRING_FORGE_ENABLEPLUGINS"])
-			end
-
 			if (not _detalhes:GetTutorialCVar ("FORGE_TUTORIAL")) then
 				local tutorialFrame = CreateFrame ("Frame", "$parentTutorialFrame", f)
 				tutorialFrame:SetPoint ("CENTER", f, "CENTER")
@@ -487,7 +383,7 @@
 				tutorialFrame.Desc:SetPoint ("TOPLEFT", tutorialFrame, "TOPLEFT", 10, -45)
 				tutorialFrame.Example:SetPoint ("TOPLEFT", tutorialFrame, "TOPLEFT", 10, -110)
 
-				local editBox = _detalhes.gump:CreateTextEntry (tutorialFrame, function()end, 375, 20, nil, nil, nil, entry_template, label_template)
+				local editBox = _detalhes.gump:CreateTextEntry (tutorialFrame, function()end, 375, 20, nil, nil, nil)
 				editBox:SetPoint ("TOPLEFT", tutorialFrame.Example, "BOTTOMLEFT", 0, -10)
 				editBox:SetText ([[https://www.youtube.com/watch?v=om0k1Yj2pEw]])
 				editBox:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
@@ -510,47 +406,30 @@
 				wipe (spell_already_added)
 			end)
 
-			f.bg1 = f:CreateTexture (nil, "background")
-			f.bg1:SetTexture ([[Interface\AddOns\Details\images\background]], true)
-			f.bg1:SetAlpha (0.7)
-			f.bg1:SetVertexColor (0.27, 0.27, 0.27)
-			f.bg1:SetVertTile (true)
-			f.bg1:SetHorizTile (true)
-			f.bg1:SetSize (790, 454)
-			f.bg1:SetAllPoints()
-
-			f:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-			f:SetBackdropColor (.5, .5, .5, .5)
-			f:SetBackdropBorderColor (0, 0, 0, 1)
-
-			--[=[
-			--scroll gradient
-			local blackdiv = f:CreateTexture (nil, "artwork")
-			blackdiv:SetTexture ([[Interface\ACHIEVEMENTFRAME\UI-Achievement-HorizontalShadow]])
-			blackdiv:SetVertexColor (0, 0, 0)
-			blackdiv:SetAlpha (1)
-			blackdiv:SetPoint ("TOPLEFT", f, "TOPLEFT", 170, -100)
-			blackdiv:SetHeight (461)
-			blackdiv:SetWidth (200)
-
-			--big gradient
-			local blackdiv = f:CreateTexture (nil, "artwork")
-			blackdiv:SetTexture ([[Interface\ACHIEVEMENTFRAME\UI-Achievement-HorizontalShadow]])
-			blackdiv:SetVertexColor (0, 0, 0)
-			blackdiv:SetAlpha (0.7)
-			blackdiv:SetPoint ("TOPLEFT", f, "TOPLEFT", 0, 0)
-			blackdiv:SetPoint ("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 0)
-			blackdiv:SetWidth (200)
-			--]=]
+			_detalhes:FormatBackground (f)
 
 			local no_func = function()end
 			local nothing_to_show = {}
+			local add_filter_box = function (w, previousEntry, labelText, entryName)
+				local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
+				label:SetText (labelText .. ": ")
+				if (previousEntry) then
+					label:SetPoint ("LEFT", previousEntry.widget, "RIGHT", 20, 0)
+				else
+					label:SetPoint ("LEFT", w, "LEFT", 5, 0)
+				end
+				local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", entryName)
+				entry:SetHook ("OnTextChanged", function() f:refresh() end)
+				entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
+				entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
+				return entry
+			end
 			local current_module
 			local buttons = {}
 
 			function f:InstallModule (module)
 				if (module and type (module) == "table") then
-					tinsert (all_modules, module)
+					all_modules[#all_modules+1] = module
 				end
 			end
 
@@ -562,14 +441,7 @@
 						local w = CreateFrame ("Frame", "DetailsForgeAllPlayersFilterPanel", f)
 						w:SetSize (600, 20)
 						w:SetPoint ("TOPLEFT", f, "TOPLEFT", 164, -40)
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_PLAYERNAME"] .. ": ")
-						label:SetPoint ("LEFT", w, "LEFT", 5, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeAllPlayersNameFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
+						add_filter_box (w, nil, L["STRING_FORGE_FILTER_PLAYERNAME"], "DetailsForgeAllPlayersNameFilter")
 					end
 					return DetailsForgeAllPlayersFilterPanel
 				end,
@@ -626,22 +498,8 @@
 						local w = CreateFrame ("Frame", "DetailsForgeAllPetsFilterPanel", f)
 						w:SetSize (600, 20)
 						w:SetPoint ("TOPLEFT", f, "TOPLEFT", 164, -40)
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_PETNAME"] .. ": ")
-						label:SetPoint ("LEFT", w, "LEFT", 5, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeAllPetsNameFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_OWNERNAME"] .. ": ")
-						label:SetPoint ("LEFT", entry.widget, "RIGHT", 20, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeAllPetsOwnerFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
+						local entry = add_filter_box (w, nil, L["STRING_FORGE_FILTER_PETNAME"], "DetailsForgeAllPetsNameFilter")
+						entry = add_filter_box (w, entry, L["STRING_FORGE_FILTER_OWNERNAME"], "DetailsForgeAllPetsOwnerFilter")
 					end
 					return DetailsForgeAllPetsFilterPanel
 				end,
@@ -713,14 +571,7 @@
 						local w = CreateFrame ("Frame", "DetailsForgeAllEnemiesFilterPanel", f)
 						w:SetSize (600, 20)
 						w:SetPoint ("TOPLEFT", f, "TOPLEFT", 164, -40)
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_ENEMYNAME"] .. ": ")
-						label:SetPoint ("LEFT", w, "LEFT", 5, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeAllEnemiesNameFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
+						add_filter_box (w, nil, L["STRING_FORGE_FILTER_ENEMYNAME"], "DetailsForgeAllEnemiesNameFilter")
 					end
 					return DetailsForgeAllEnemiesFilterPanel
 				end,
@@ -781,15 +632,11 @@
 				local data = all_modules [1].data [row]
 				local spellID = data[1]
 				local encounterID  = data [2]
-				local enemyName = data [3]
-				local encounterName = data [4]
 
 				local spellname, _, spellicon = GetSpellInfo (spellID)
 
 				_detalhes:OpenAuraPanel (spellID, spellname, spellicon, encounterID)
 			end
-
-			local EncounterSpellEvents = EncounterDetailsDB and EncounterDetailsDB.encounter_spells
 
 			local all_spells_module = {
 				name = L["STRING_FORGE_BUTTON_ALLSPELLS"],
@@ -799,22 +646,8 @@
 						local w = CreateFrame ("Frame", "DetailsForgeAllSpellsFilterPanel", f)
 						w:SetSize (600, 20)
 						w:SetPoint ("TOPLEFT", f, "TOPLEFT", 164, -40)
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_SPELLNAME"] .. ": ")
-						label:SetPoint ("LEFT", w, "LEFT", 5, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeAllSpellsNameFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_CASTERNAME"] .. ": ")
-						label:SetPoint ("LEFT", entry.widget, "RIGHT", 20, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeAllSpellsCasterFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
+						local entry = add_filter_box (w, nil, L["STRING_FORGE_FILTER_SPELLNAME"], "DetailsForgeAllSpellsNameFilter")
+						entry = add_filter_box (w, entry, L["STRING_FORGE_FILTER_CASTERNAME"], "DetailsForgeAllSpellsCasterFilter")
 					end
 					return DetailsForgeAllSpellsFilterPanel
 				end,
@@ -865,7 +698,7 @@
 							end
 
 							if (can_add) then
-								tinsert (t, {spellID, _detalhes.classid_to_classstring [className] or className})
+								t[#t+1] = {spellID, _detalhes.classid_to_classstring [className] or className}
 							end
 
 						end
@@ -888,14 +721,6 @@
 				fill_fillrows = function (index, self)
 					local data = self.module.data [index]
 					if (data) then
-						local events = ""
-						if (EncounterSpellEvents and EncounterSpellEvents [data[1]]) then
-							for token, _ in pairs (EncounterSpellEvents [data[1]].token) do
-								token = token:gsub ("SPELL_", "")
-								events = events .. token .. ",  "
-							end
-							events = events:sub (1, #events - 3)
-						end
 						local spellName, _, spellIcon = GetSpellInfo (data[1])
 						local classColor = RAID_CLASS_COLORS [data[2]] and RAID_CLASS_COLORS [data[2]].colorStr or "FFFFFFFF"
 						return {
@@ -905,7 +730,7 @@
 							data[1] or "",
 							_detalhes:GetSpellSchoolFormatedName (_detalhes.spell_school_cache [spellName]) or "",
 							"|c" .. classColor .. data[2] .. "|r",
-							events
+							""
 						}
 					else
 						return nothing_to_show
@@ -927,30 +752,9 @@
 						local w = CreateFrame ("Frame", "DetailsForgeEncounterBossSpellsFilterPanel", f)
 						w:SetSize (600, 20)
 						w:SetPoint ("TOPLEFT", f, "TOPLEFT", 164, -40)
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_SPELLNAME"] .. ": ")
-						label:SetPoint ("LEFT", w, "LEFT", 5, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeEncounterSpellsNameFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_CASTERNAME"] .. ": ")
-						label:SetPoint ("LEFT", entry.widget, "RIGHT", 20, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeEncounterSpellsCasterFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_ENCOUNTERNAME"] .. ": ")
-						label:SetPoint ("LEFT", entry.widget, "RIGHT", 20, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeEncounterSpellsEncounterFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
+						local entry = add_filter_box (w, nil, L["STRING_FORGE_FILTER_SPELLNAME"], "DetailsForgeEncounterSpellsNameFilter")
+						entry = add_filter_box (w, entry, L["STRING_FORGE_FILTER_CASTERNAME"], "DetailsForgeEncounterSpellsCasterFilter")
+						entry = add_filter_box (w, entry, L["STRING_FORGE_FILTER_ENCOUNTERNAME"], "DetailsForgeEncounterSpellsEncounterFilter")
 					end
 					return DetailsForgeEncounterBossSpellsFilterPanel
 				end,
@@ -1008,7 +812,7 @@
 							end
 
 							if (can_add) then
-								tinsert (t, {spellID, encounterID, enemyName, bossDetails and bossDetails.boss or "--x--x--"})
+								t[#t+1] = {spellID, encounterID, enemyName, bossDetails and bossDetails.boss or "--x--x--"}
 							end
 						end
 					end
@@ -1034,14 +838,6 @@
 					local data = self.module.data [index]
 					if (data) then
 
-						local events = ""
-						if (EncounterSpellEvents and EncounterSpellEvents [data[1]]) then
-							for token, _ in pairs (EncounterSpellEvents [data[1]].token) do
-								token = token:gsub ("SPELL_", "")
-								events = events .. token .. ",  "
-							end
-							events = events:sub (1, #events - 3)
-						end
 
 						local spellName, _, spellIcon = GetSpellInfo (data[1])
 
@@ -1052,7 +848,7 @@
 							data[1] or "",
 							_detalhes:GetSpellSchoolFormatedName (_detalhes.spell_school_cache [spellName]) or "",
 							data[3] .. "|r",
-							events,
+							"",
 							data[4],
 						}
 					else
@@ -1075,14 +871,7 @@
 						w:SetSize (600, 20)
 						w:SetPoint ("TOPLEFT", f, "TOPLEFT", 164, -40)
 						--npc name filter
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText ("Npc Name" .. ": ")
-						label:SetPoint ("LEFT", w, "LEFT", 5, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeEncounterNpcIDsFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
-						--
+						add_filter_box (w, nil, "Npc Name", "DetailsForgeEncounterNpcIDsFilter")
 					end
 					return DetailsForgeEncounterNpcIDsFilterPanel
 				end,
@@ -1103,11 +892,10 @@
 						end
 
 						if (can_add) then
-							tinsert (t, {npcID, npcName})
+							t[#t+1] = {npcID, npcName}
 						end
-
-						table.sort (t, DetailsFramework.SortOrder2R)
 					end
+					table.sort (t, DetailsFramework.SortOrder2R)
 
 					return t
 				end,
@@ -1123,14 +911,6 @@
 				fill_fillrows = function (index, self)
 					local data = self.module.data [index]
 					if (data) then
-						local events = ""
-						if (EncounterSpellEvents and EncounterSpellEvents [data[1]]) then
-							for token, _ in pairs (EncounterSpellEvents [data[1]].token) do
-								token = token:gsub ("SPELL_", "")
-								events = events .. token .. ",  "
-							end
-							events = events:sub (1, #events - 3)
-						end
 
 						return {
 							index,
@@ -1174,22 +954,8 @@
 						local w = CreateFrame ("Frame", "DetailsForgeDBMBarsFilterPanel", f)
 						w:SetSize (600, 20)
 						w:SetPoint ("TOPLEFT", f, "TOPLEFT", 164, -40)
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_BARTEXT"] .. ": ")
-						label:SetPoint ("LEFT", w, "LEFT", 5, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeDBMBarsTextFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
-						--
-						local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-						label:SetText (L["STRING_FORGE_FILTER_ENCOUNTERNAME"] .. ": ")
-						label:SetPoint ("LEFT", entry.widget, "RIGHT", 20, 0)
-						local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeDBMBarsEncounterFilter")
-						entry:SetHook ("OnTextChanged", function() f:refresh() end)
-						entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-						entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
+						local entry = add_filter_box (w, nil, L["STRING_FORGE_FILTER_BARTEXT"], "DetailsForgeDBMBarsTextFilter")
+						entry = add_filter_box (w, entry, L["STRING_FORGE_FILTER_ENCOUNTERNAME"], "DetailsForgeDBMBarsEncounterFilter")
 					end
 					return DetailsForgeDBMBarsFilterPanel
 				end,
@@ -1275,136 +1041,6 @@
 
 			-----------------------------------------------
 
-			local bw_open_aura_creator = function (row)
-
-				local data = all_modules [5].data [row]
-
-				local spellname, spellicon, _
-				local spellid = tonumber (data [2])
-
-				if (type (spellid) == "number") then
-					if (spellid < 0) then
-						local title, description, depth, abilityIcon, displayInfo, siblingID, nextSectionID, filteredByDifficulty, link, startsOpen, flag1, flag2, flag3, flag4 = DetailsFramework.EncounterJournal.EJ_GetSectionInfo (abs (spellid))
-						spellname, spellicon = title, abilityIcon
-					else
-						spellname, _, spellicon = GetSpellInfo (spellid)
-					end
-					_detalhes:OpenAuraPanel (data [2], spellname, spellicon, data.id, DETAILS_WA_TRIGGER_BW_TIMER, DETAILS_WA_AURATYPE_TEXT, {bw_timer_id = data [2], text = "Next " .. spellname .. " In", text_size = 72, icon = spellicon})
-
-				elseif (type (data [2]) == "string") then
-					--> "Xhul'horac" Imps
-					_detalhes:OpenAuraPanel (data [2], data[3], data[5], data.id, DETAILS_WA_TRIGGER_BW_TIMER, DETAILS_WA_AURATYPE_TEXT, {bw_timer_id = data [2], text = "Next " .. (data[3] or "") .. " In", text_size = 72, icon = data[5]})
-				end
-			end
-
-			-- local bigwigs_timers_module = {
-			-- 	name = L["STRING_FORGE_BUTTON_BWTIMERS"],
-			-- 	desc = L["STRING_FORGE_BUTTON_BWTIMERS_DESC"],
-			-- 	filters_widgets = function()
-			-- 		if (not DetailsForgeBigWigsBarsFilterPanel) then
-			-- 			local w = CreateFrame ("Frame", "DetailsForgeBigWigsBarsFilterPanel", f)
-			-- 			w:SetSize (600, 20)
-			-- 			w:SetPoint ("TOPLEFT", f, "TOPLEFT", 164, -40)
-			-- 			--
-			-- 			local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-			-- 			label:SetText (L["STRING_FORGE_FILTER_BARTEXT"] .. ": ")
-			-- 			label:SetPoint ("LEFT", w, "LEFT", 5, 0)
-			-- 			local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeBigWigsBarsTextFilter")
-			-- 			entry:SetHook ("OnTextChanged", function() f:refresh() end)
-			-- 			entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-			-- 			entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
-			-- 			--
-			-- 			local label = w:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-			-- 			label:SetText (L["STRING_FORGE_FILTER_ENCOUNTERNAME"] .. ": ")
-			-- 			label:SetPoint ("LEFT", entry.widget, "RIGHT", 20, 0)
-			-- 			local entry = fw:CreateTextEntry (w, nil, 120, 20, "entry", "DetailsForgeBWBarsEncounterFilter")
-			-- 			entry:SetHook ("OnTextChanged", function() f:refresh() end)
-			-- 			entry:SetPoint ("LEFT", label, "RIGHT", 2, 0)
-			-- 			entry:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
-			-- 			--
-			-- 		end
-			-- 		return DetailsForgeBigWigsBarsFilterPanel
-			-- 	end,
-			-- 	search = function()
-			-- 		local t = {}
-
-			-- 		local filter_barname = DetailsForgeBigWigsBarsTextFilter:GetText()
-			-- 		local filter_encounter = DetailsForgeBWBarsEncounterFilter:GetText()
-
-			-- 		local lower_FilterBarName = lower (filter_barname)
-			-- 		local lower_FilterEncounterName = lower (filter_encounter)
-
-
-			-- 		local source = _detalhes.boss_mods_timers.encounter_timers_bw or {}
-			-- 		for key, timer in pairs (source) do
-			-- 			local can_add = true
-			-- 			if (lower_FilterBarName ~= "") then
-			-- 				if (not lower (timer [3]):find (lower_FilterBarName)) then
-			-- 					can_add = false
-			-- 				end
-			-- 			end
-			-- 			if (lower_FilterEncounterName ~= "") then
-			-- 				local bossDetails, bossIndex = _detalhes:GetBossEncounterDetailsFromEncounterId (nil, timer.id)
-			-- 				local encounterName = bossDetails and bossDetails.boss
-			-- 				if (encounterName and encounterName ~= "") then
-			-- 					encounterName = lower (encounterName)
-			-- 					if (not encounterName:find (lower_FilterEncounterName)) then
-			-- 						can_add = false
-			-- 					end
-			-- 				end
-			-- 			end
-
-			-- 			if (can_add) then
-			-- 				t [#t+1] = timer
-			-- 			end
-			-- 		end
-			-- 		return t
-			-- 	end,
-			-- 	header = {
-			-- 		{name = L["STRING_FORGE_HEADER_INDEX"], width = 40, type = "text", func = no_func},
-			-- 		{name = L["STRING_FORGE_HEADER_ICON"], width = 40, type = "texture"},
-			-- 		{name = L["STRING_FORGE_HEADER_BARTEXT"], width = 200, type = "entry", func = no_func, onenter = function(self) GameTooltip:SetOwner (self.widget, "ANCHOR_TOPLEFT"); _detalhes:GameTooltipSetSpellByID (self.id); GameTooltip:Show() end, onleave = function(self) GameTooltip:Hide() end},
-			-- 		{name = L["STRING_FORGE_HEADER_SPELLID"], width = 50, type = "entry", func = no_func},
-			-- 		{name = L["STRING_FORGE_HEADER_TIMER"], width = 40, type = "entry", func = no_func},
-			-- 		{name = L["STRING_FORGE_HEADER_ENCOUNTERID"], width = 80, type = "entry", func = no_func},
-			-- 		{name = L["STRING_FORGE_HEADER_ENCOUNTERNAME"], width = 120, type = "entry", func = no_func},
-			-- 		{name = L["STRING_FORGE_HEADER_CREATEAURA"], width = 120, type = "button", func = bw_open_aura_creator, icon = [[Interface\AddOns\WeakAuras\Media\Textures\icon]], notext = true, iconalign = "center"},
-			-- 	},
-			-- 	fill_panel = false,
-			-- 	fill_gettotal = function (self) return #self.module.data end,
-			-- 	fill_fillrows = function (index, self)
-			-- 		local data = self.module.data [index]
-			-- 		if (data) then
-			-- 			local encounter_id = data.id
-			-- 			local bossDetails, bossIndex = _detalhes:GetBossEncounterDetailsFromEncounterId (nil, data.id)
-			-- 			local bossName = bossDetails and bossDetails.boss or "--x--x--"
-
-			-- 			local abilityID = tonumber (data[2])
-			-- 			local spellName, _, spellIcon
-			-- 			if (abilityID) then
-			-- 				if (abilityID > 0) then
-			-- 					spellName, _, spellIcon = GetSpellInfo (abilityID)
-			-- 				end
-			-- 			end
-
-			-- 			return {
-			-- 				index,
-			-- 				spellIcon,
-			-- 				{text = data[3] or "", id = abilityID and abilityID > 0 and abilityID or 0},
-			-- 				data[2] or "",
-			-- 				data[4] or "",
-			-- 				tostring (encounter_id) or "0",
-			-- 				bossName
-			-- 			}
-			-- 		else
-			-- 			return nothing_to_show
-			-- 		end
-			-- 	end,
-			-- 	fill_name = "DetailsForgeBigWigsBarsFillPanel",
-			-- }
-
-			-----------------------------------------------
-
 
 
 			local select_module = function (a, b, module_number)
@@ -1464,7 +1100,6 @@
 			end
 
 			f.SelectModule = select_module
-			f.AllModules = all_modules
 
 			f:InstallModule (encounter_spells_module)
 			f:InstallModule (all_spells_module)
@@ -1472,7 +1107,6 @@
 			f:InstallModule (npc_ids_module)
 
 			f:InstallModule (dbm_timers_module)
-			-- f:InstallModule (bigwigs_timers_module)
 
 			f:InstallModule (all_players_module)
 			f:InstallModule (all_enemies_module)
@@ -1504,7 +1138,7 @@
 				end
 
 				lastButton = b
-				tinsert (buttons, b)
+				buttons[#buttons+1] = b
 			end
 
 			select_module (nil, nil, 1)
@@ -1626,18 +1260,12 @@ local create_deathrecap_line = function (parent, n)
 	lifePercent:SetWidth (42)
 	lifePercent:SetJustifyH ("RIGHT")
 
-	--background
-	--backgroundTexture:SetTexture ([[Interface\AdventureMap\AdventureMap]])
-	--backgroundTexture:SetTexCoord (460/1024, 659/1024, 330/1024, 350/1024)
-
-	backgroundTexture:SetTexture ([[Interface\AddOns\Details\images\deathrecap_background]])
 	backgroundTexture:SetTexCoord (0, 1, 0, 1)
 	backgroundTexture:SetVertexColor (.1, .1, .1, .3)
 
 
 	--top border
 	local TopFader = line:CreateTexture (nil, "border")
-	TopFader:SetTexture ([[Interface\AddOns\Details\images\deathrecap_background_top]])
 	TopFader:SetTexCoord (0, 1, 0, 1)
 	TopFader:SetVertexColor (.1, .1, .1, .3)
 	TopFader:SetPoint ("BOTTOMLEFT", backgroundTexture, "TOPLEFT", 0, -0)
@@ -1649,7 +1277,6 @@ local create_deathrecap_line = function (parent, n)
 	if (n == 10) then
 		--bottom fader
 		local backgroundTexture2 = line:CreateTexture (nil, "border")
-		backgroundTexture2:SetTexture ([[Interface\AddOns\Details\images\deathrecap_background_bottom]])
 		backgroundTexture2:SetTexCoord (0, 1, 0, 1)
 		backgroundTexture2:SetVertexColor (.1, .1, .1, .3)
 		backgroundTexture2:SetPoint ("TOPLEFT", backgroundTexture, "BOTTOMLEFT", 0, 0)
@@ -1694,11 +1321,11 @@ local create_deathrecap_line = function (parent, n)
 end
 
 local OpenDetailsDeathRecapAtSegment = function (segment)
-	_detalhes.OpenDetailsDeathRecap (segment, RecapID)
+	_detalhes.OpenDetailsDeathRecap (segment)
 end
 
 function _detalhes.BuildDeathTableFromRecap (recapID)
-	local events = DeathRecapMixin.deathRecapStorage(recapID)
+	local events = C_DeathRecap.GetRecapEvents(recapID)
 
 	--check if it is a valid recap
 	if (not events or #events <= 0) then
@@ -1707,11 +1334,12 @@ function _detalhes.BuildDeathTableFromRecap (recapID)
 	end
 
 	--build an death log using details format
+	local _, playerClass = UnitClass("player")
 	ArtificialDeathLog = {
 		{}, --deathlog events
 		(events [1] and events [1].timestamp) or (DeathRecapFrame and DeathRecapFrame.DeathTimeStamp) or 0, --time of death
 		UnitName ("player"),
-		select (2, UnitClass ("player")),
+		playerClass,
 		UnitHealthMax ("player"),
 		"0m 0s", --formated fight time
 		["dead"] = true,
@@ -1722,23 +1350,22 @@ function _detalhes.BuildDeathTableFromRecap (recapID)
 
 	for i = 1, #events do
 		local evtData = events [i]
-		local spellId, spellName, texture = DeathRecapFrame_GetEventInfo ( evtData )
 
 		local ev = {
 			true,
-			spellId or 0,
-			evtData.amount or 0,
-			evtData.timestamp or 0, --?
-			evtData.currentHP or 0,
-			evtData.sourceName or "--x--x--",
-			evtData.absorbed or 0,
-			evtData.school or 0,
-			false,
-			evtData.overkill,
-			not spellId and {spellId, spellName, texture},
+			evtData.spellID or 0,
+			evtData.damage or 0,
+			evtData.timestamp or 0,
+			evtData.unitHealth or 0,
+			evtData.casterName or "--x--x--",
+			0, --absorbed (not in C_DeathRecap)
+			0, --school (not in C_DeathRecap)
+			evtData.critical or false,
+			nil, --overkill (not in C_DeathRecap)
+			not evtData.spellID and {nil, evtData.spellName, evtData.texture},
 		}
 
-		tinsert (ArtificialDeathLog[1], ev)
+		ArtificialDeathLog[1][#ArtificialDeathLog[1]+1] = ev
 		ArtificialDeathLog.n = ArtificialDeathLog.n + 1
 	end
 
@@ -1857,14 +1484,12 @@ function _detalhes.OpenDetailsDeathRecap (segment, RecapID, fromChat)
 
 		--segments
 		if (_detalhes.death_recap.show_segments) then
-			local last_index = 0
 			local buttonsInUse = {}
 			for i, button in ipairs (Details.DeathRecap.Segments) do
 				if (_detalhes.tabela_historico.tabelas [i]) then
 					button:Show()
-					tinsert (buttonsInUse, button)
+					buttonsInUse[#buttonsInUse+1] = button
 					_detalhes.gump:SetFontColor (button.text, "silver")
-					last_index = i
 				else
 					button:Hide()
 				end
@@ -1872,12 +1497,11 @@ function _detalhes.OpenDetailsDeathRecap (segment, RecapID, fromChat)
 
 			local buttonsInUse2 = {}
 			for i = #buttonsInUse, 1, -1 do
-				tinsert (buttonsInUse2, buttonsInUse[i])
+				buttonsInUse2[#buttonsInUse2+1] = buttonsInUse[i]
 			end
 			for i = 1, #buttonsInUse2 do
 				local button = buttonsInUse2 [i]
-				button:ClearAllPoints()
-				button:SetPoint ("TOPRIGHT", DeathRecapFrame, "TOPRIGHT", (-i * 22) - 10, -5)
+				button:ClearAndSetPoint ("TOPRIGHT", DeathRecapFrame, "TOPRIGHT", (-i * 22) - 10, -5)
 			end
 
 			if (not segment) then
@@ -1930,7 +1554,7 @@ function _detalhes.OpenDetailsDeathRecap (segment, RecapID, fromChat)
 
 			local BiggestDamageHits = {}
 			for i = #events, 1, -1 do
-				tinsert (BiggestDamageHits, events [i])
+				BiggestDamageHits[#BiggestDamageHits+1] = events[i]
 			end
 			table.sort (BiggestDamageHits, function (t1, t2)
 				return t1[3] > t2[3]
@@ -1982,7 +1606,7 @@ function _detalhes.OpenDetailsDeathRecap (segment, RecapID, fromChat)
 							end
 						end
 						if (not alreadyHave) then
-							tinsert (BiggestDamageHits, event)
+							BiggestDamageHits[#BiggestDamageHits+1] = event
 							if (#BiggestDamageHits == 10) then
 								break
 							end
@@ -2022,7 +1646,6 @@ function _detalhes.OpenDetailsDeathRecap (segment, RecapID, fromChat)
 				local amount = event [3]
 				local eventTime = event [4]
 				local source = event [6]
-				local overkill = event [10] or 0
 
 				local customSpellInfo = event [11]
 
@@ -2140,183 +1763,14 @@ function _detalhes.OpenDetailsDeathRecap (segment, RecapID, fromChat)
 
 end
 
---[[
-hooksecurefunc (_G, "DeathRecap_LoadUI", function()
-	hooksecurefunc (_G, "DeathRecapFrame_OpenRecap", function (RecapID)
-		_detalhes.OpenDetailsDeathRecap (nil, RecapID)
-	end)
+
+hooksecurefunc(DeathRecapFrame, "OpenRecap", function(self, recapID)
+	if self:IsShown() then
+		_detalhes.OpenDetailsDeathRecap(nil, recapID)
+	end
 end)
-]]
-
-if DeathRecapMixin then
-	hooksecurefunc(DeathRecapMixin, "OnHyperlinkClick", function(_, link)
-		local RecapID = tonumber(string.match(link, "death:(%d+)"))
-		_detalhes.OpenDetailsDeathRecap(RecapID)
-	end)
-
-	hooksecurefunc(DeathRecapMixin, "OpenDeathRecap", function(_, deathRecapDataString, recapID)
-
-		_detalhes.OpenDetailsDeathRecap(recapID)
-	end)
-end
 
 
-
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
---> plater integration
-
--- local plater_integration_frame = CreateFrame ("Frame", "DetailsPlaterFrame", UIParent)
--- plater_integration_frame.DamageTaken = {}
-
--- --> aprox. 6 updates per second
--- local CONST_REALTIME_UPDATE_TIME = 0.166
--- --> how many samples to store, 30 x .166 aprox 5 seconds buffer
--- local CONST_BUFFER_SIZE = 30
--- --> Dps division factor
--- PLATER_DPS_SAMPLE_SIZE = CONST_BUFFER_SIZE * CONST_REALTIME_UPDATE_TIME
-
--- --> separate CLEU events from the Tick event for performance
--- plater_integration_frame.OnTickFrame = CreateFrame ("Frame", "DetailsPlaterFrameOnTicker", UIParent)
-
--- --> on tick function
--- plater_integration_frame.OnTickFrameFunc = function (self, deltaTime)
--- 	if (self.NextUpdate < 0) then
--- 		for targetGUID, damageTable in pairs (plater_integration_frame.DamageTaken) do
-
--- 			--> total damage
--- 			local totalDamage = damageTable.TotalDamageTaken
--- 			local totalDamageFromPlayer = damageTable.TotalDamageTakenFromPlayer
-
--- 			--> damage on this update
--- 			local damageOnThisUpdate = totalDamage - damageTable.LastTotalDamageTaken
--- 			local damageOnThisUpdateFromPlayer = totalDamageFromPlayer - damageTable.LastTotalDamageTakenFromPlayer
-
--- 			--> update the last damage taken
--- 			damageTable.LastTotalDamageTaken = totalDamage
--- 			damageTable.LastTotalDamageTakenFromPlayer = totalDamageFromPlayer
-
--- 			--> sum the current damage
--- 			damageTable.CurrentDamage = damageTable.CurrentDamage + damageOnThisUpdate
--- 			damageTable.CurrentDamageFromPlayer = damageTable.CurrentDamageFromPlayer + damageOnThisUpdateFromPlayer
-
--- 			--> add to the buffer the damage added
--- 			tinsert (damageTable.RealTimeBuffer, 1, damageOnThisUpdate)
--- 			tinsert (damageTable.RealTimeBufferFromPlayer, 1, damageOnThisUpdateFromPlayer)
-
--- 			--> remove the damage from the buffer
--- 			local damageRemoved = tremove (damageTable.RealTimeBuffer, CONST_BUFFER_SIZE + 1)
--- 			if (damageRemoved) then
--- 				damageTable.CurrentDamage = max (damageTable.CurrentDamage - damageRemoved, 0)
--- 			end
-
--- 			local damageRemovedFromPlayer = tremove (damageTable.RealTimeBufferFromPlayer, CONST_BUFFER_SIZE + 1)
--- 			if (damageRemovedFromPlayer) then
--- 				damageTable.CurrentDamageFromPlayer = max (damageTable.CurrentDamageFromPlayer - damageRemovedFromPlayer, 0)
--- 			end
--- 		end
-
--- 		--update time
--- 		self.NextUpdate = CONST_REALTIME_UPDATE_TIME
--- 	else
--- 		self.NextUpdate = self.NextUpdate - deltaTime
--- 	end
--- end
-
-
--- --> parse the damage taken by unit
--- function plater_integration_frame.AddDamageToGUID (sourceGUID, targetGUID, time, amount)
--- 	local damageTable = plater_integration_frame.DamageTaken [targetGUID]
-
--- 	if (not damageTable) then
--- 		plater_integration_frame.DamageTaken [targetGUID] = {
--- 			LastEvent = time,
-
--- 			TotalDamageTaken = amount,
--- 			TotalDamageTakenFromPlayer = 0,
-
--- 			--for real time
--- 				RealTimeBuffer = {},
--- 				RealTimeBufferFromPlayer = {},
--- 				LastTotalDamageTaken = 0,
--- 				LastTotalDamageTakenFromPlayer = 0,
--- 				CurrentDamage = 0,
--- 				CurrentDamageFromPlayer = 0,
--- 		}
-
--- 		--> is the damage from the player it self?
--- 		if (sourceGUID == plater_integration_frame.PlayerGUID) then
--- 			plater_integration_frame.DamageTaken [targetGUID].TotalDamageTakenFromPlayer = amount
--- 		end
--- 	else
--- 		damageTable.LastEvent = time
--- 		damageTable.TotalDamageTaken = damageTable.TotalDamageTaken + amount
-
--- 		if (sourceGUID == plater_integration_frame.PlayerGUID) then
--- 			damageTable.TotalDamageTakenFromPlayer = damageTable.TotalDamageTakenFromPlayer + amount
--- 		end
--- 	end
--- end
-
--- plater_integration_frame:SetScript ("OnEvent", function (self, _, time, token, sourceGUID, sourceName, sourceFlag, targetGUID, targetName, targetFlag, spellID, spellName, spellType, amount, overKill, school, resisted, blocked, absorbed, isCritical)
--- 	--> tamage taken by the GUID unit
--- 	if (token == "SPELL_DAMAGE" or token == "SPELL_PERIODIC_DAMAGE" or token == "RANGE_DAMAGE" or token == "DAMAGE_SHIELD") then
--- 		plater_integration_frame.AddDamageToGUID (sourceGUID, targetGUID, time, amount)
-
--- 	elseif (token == "SWING_DAMAGE") then
--- 		--the damage is passed in the spellID argument position
--- 		plater_integration_frame.AddDamageToGUID (sourceGUID, targetGUID, time, spellID)
--- 	end
--- end)
-
--- function Details:RefreshPlaterIntegration()
-
--- 	if (Plater and Details.plater.realtime_dps_enabled or Details.plater.realtime_dps_player_enabled or Details.plater.damage_taken_enabled) then
-
--- 		--> wipe the cache
--- 		wipe (plater_integration_frame.DamageTaken)
-
--- 		--> read cleu events
--- 		plater_integration_frame:RegisterEvent ("COMBAT_LOG_EVENT_UNFILTERED")
-
--- 		--> start the real time dps updater
--- 		plater_integration_frame.OnTickFrame.NextUpdate = CONST_REALTIME_UPDATE_TIME
--- 		plater_integration_frame.OnTickFrame:SetScript ("OnUpdate", plater_integration_frame.OnTickFrameFunc)
-
--- 		--> cache the player serial
--- 		plater_integration_frame.PlayerGUID = UnitGUID ("player")
-
--- 		--> cancel the timer if already have one
--- 		if (plater_integration_frame.CleanUpTimer and not plater_integration_frame.CleanUpTimer._cancelled) then
--- 			plater_integration_frame.CleanUpTimer:Cancel()
--- 		end
-
--- 		--> cleanup the old tables
--- 		plater_integration_frame.CleanUpTimer = C_Timer:NewTicker (10, function()
--- 			local now = time()
--- 			for GUID, damageTable in pairs (plater_integration_frame.DamageTaken) do
--- 				if (damageTable.LastEvent + 9.9 < now) then
--- 					plater_integration_frame.DamageTaken [GUID] = nil
--- 				end
--- 			end
--- 		end)
-
--- 	else
--- 		--> unregister the cleu
--- 		plater_integration_frame:UnregisterEvent ("COMBAT_LOG_EVENT_UNFILTERED")
-
--- 		--> stop the real time updater
--- 		plater_integration_frame.OnTickFrame:SetScript ("OnUpdate", nil)
-
--- 		--> stop the cleanup process
--- 		if (plater_integration_frame.CleanUpTimer and not plater_integration_frame.CleanUpTimer._cancelled) then
--- 			plater_integration_frame.CleanUpTimer:Cancel()
--- 		end
--- 	end
-
-
-
--- end
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2342,10 +1796,8 @@ end
 
 local detailsOnDeathMenu = CreateFrame ("Frame", "DetailsOnDeathMenu", UIParent)
 detailsOnDeathMenu:SetHeight (30)
-detailsOnDeathMenu.Debug = false
 
 detailsOnDeathMenu:RegisterEvent ("PLAYER_REGEN_ENABLED")
-detailsOnDeathMenu:RegisterEvent ("ENCOUNTER_END")
 DetailsFramework:ApplyStandardBackdrop (detailsOnDeathMenu)
 detailsOnDeathMenu:SetAlpha (0.75)
 
@@ -2446,6 +1898,15 @@ detailsOnDeathMenu.breakdownButton:SetTemplate (_detalhes.gump:GetTemplate ("but
 detailsOnDeathMenu.breakdownButton:SetPoint ("TOPLEFT", detailsOnDeathMenu, "TOPLEFT", 5, -5)
 detailsOnDeathMenu.breakdownButton:Hide()
 
+local on_death_button_options = function()
+	GameCooltip:SetOption ("MyAnchor", "TOP")
+	GameCooltip:SetOption ("RelativeAnchor", "BOTTOM")
+	GameCooltip:SetOption ("WidthAnchorMod", 0)
+	GameCooltip:SetOption ("HeightAnchorMod", -13)
+	GameCooltip:SetOption ("TextSize", 10)
+	GameCooltip:SetOption ("FixedWidth", 220)
+end
+
 detailsOnDeathMenu.breakdownButton.CoolTip = {
 	Type = "tooltip",
 	BuildFunc = function()
@@ -2465,22 +1926,9 @@ detailsOnDeathMenu.breakdownButton.CoolTip = {
 		end
 
 	end, --> called when user mouse over the frame
-	OnEnterFunc = function (self)
-		detailsOnDeathMenu.button_mouse_over = true
-	end,
-	OnLeaveFunc = function (self)
-		detailsOnDeathMenu.button_mouse_over = false
-	end,
 	FixedValue = "none",
 	ShowSpeed = .5,
-	Options = function()
-		GameCooltip:SetOption ("MyAnchor", "TOP")
-		GameCooltip:SetOption ("RelativeAnchor", "BOTTOM")
-		GameCooltip:SetOption ("WidthAnchorMod", 0)
-		GameCooltip:SetOption ("HeightAnchorMod", -13)
-		GameCooltip:SetOption ("TextSize", 10)
-		GameCooltip:SetOption ("FixedWidth", 220)
-	end
+	Options = on_death_button_options,
 }
 GameCooltip2:CoolTipInject (detailsOnDeathMenu.breakdownButton)
 
@@ -2506,22 +1954,9 @@ detailsOnDeathMenu.enduranceButton.CoolTip = {
 		end
 
 	end, --> called when user mouse over the frame
-	OnEnterFunc = function (self)
-		detailsOnDeathMenu.button_mouse_over = true
-	end,
-	OnLeaveFunc = function (self)
-		detailsOnDeathMenu.button_mouse_over = false
-	end,
 	FixedValue = "none",
 	ShowSpeed = .5,
-	Options = function()
-		GameCooltip:SetOption ("MyAnchor", "TOP")
-		GameCooltip:SetOption ("RelativeAnchor", "BOTTOM")
-		GameCooltip:SetOption ("WidthAnchorMod", 0)
-		GameCooltip:SetOption ("HeightAnchorMod", -13)
-		GameCooltip:SetOption ("TextSize", 10)
-		GameCooltip:SetOption ("FixedWidth", 220)
-	end
+	Options = on_death_button_options,
 }
 GameCooltip2:CoolTipInject (detailsOnDeathMenu.enduranceButton)
 
@@ -2538,22 +1973,9 @@ detailsOnDeathMenu.spellsButton.CoolTip = {
 		GameCooltip2:AddLine ("Open your player Details! breakdown.")
 
 	end, --> called when user mouse over the frame
-	OnEnterFunc = function (self)
-		detailsOnDeathMenu.button_mouse_over = true
-	end,
-	OnLeaveFunc = function (self)
-		detailsOnDeathMenu.button_mouse_over = false
-	end,
 	FixedValue = "none",
 	ShowSpeed = .5,
-	Options = function()
-		GameCooltip:SetOption ("MyAnchor", "TOP")
-		GameCooltip:SetOption ("RelativeAnchor", "BOTTOM")
-		GameCooltip:SetOption ("WidthAnchorMod", 0)
-		GameCooltip:SetOption ("HeightAnchorMod", -13)
-		GameCooltip:SetOption ("TextSize", 10)
-		GameCooltip:SetOption ("FixedWidth", 220)
-	end
+	Options = on_death_button_options,
 }
 GameCooltip2:CoolTipInject (detailsOnDeathMenu.spellsButton)
 
@@ -2563,23 +1985,11 @@ function detailsOnDeathMenu.CanShowPanel()
 			return
 		end
 
-		if (detailsOnDeathMenu.Debug) then
-			return true
-		end
-
 		--> check if the player just wiped in an encounter
 		if (IsInRaid()) then
 			local isInInstance = IsInInstance()
 			if (isInInstance) then
-				--> check if all players in the raid are out of combat
-				for i = 1, GetNumGroupMembers() do
-					if (UnitAffectingCombat ("raid" .. i)) then
-						C_Timer:After (0.5, detailsOnDeathMenu.ShowPanel)
-						return false
-					end
-				end
-
-				if (_detalhes.in_combat) then
+				if (_detalhes.in_combat or _detalhes:IsGroupInCombat()) then
 					C_Timer:After (0.5, detailsOnDeathMenu.ShowPanel)
 					return false
 				end
@@ -2624,24 +2034,7 @@ function detailsOnDeathMenu.ShowPanel()
 	end
 end
 
-hooksecurefunc ("StaticPopup_Show", function (which, text_arg1, text_arg2, data, insertedFrame)
-	--print (which, text_arg1, text_arg2, data, insertedFrame)
-	--print ("popup Show:", which)
-	if (which == "DEATH") then
-		--StaticPopup1
-		if (detailsOnDeathMenu.Debug) then
-			C_Timer:After (0.5, detailsOnDeathMenu.ShowPanel)
-		end
-	end
-end)
-
 hooksecurefunc ("StaticPopup_Hide", function (which, data)
---	if (which and which:find ("EQUIP")) then
---		return
---	end
-
-	--print ("popup Hide:", which)
-
 	if (which == "DEATH") then
 		detailsOnDeathMenu:Hide()
 	end

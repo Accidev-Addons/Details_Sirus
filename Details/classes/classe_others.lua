@@ -3,16 +3,11 @@ local _cstr = string.format
 local _math_floor = math.floor
 local _table_sort = table.sort
 local _table_insert = table.insert
-local _table_size = table.getn
 local _setmetatable = setmetatable
 local _getmetatable = getmetatable
 local _ipairs = ipairs
 local _pairs = pairs
-local _rawget= rawget
 local _math_min = math.min
-local _math_max = math.max
-local _math_abs = math.abs
-local _bit_band = bit.band
 local _unpack = unpack
 local _type = type
 --api locals
@@ -21,7 +16,6 @@ local GameTooltip = GameTooltip
 local _IsInRaid = IsInRaid
 local _IsInGroup = IsInGroup
 local _GetNumGroupMembers = GetNumGroupMembers
-local _GetNumSubgroupMembers = GetNumSubgroupMembers
 local _UnitAura = UnitAura
 local _UnitGUID = UnitGUID
 local _UnitName = UnitName
@@ -36,42 +30,26 @@ local Loc = AceLocale:GetLocale ( "Details" )
 
 local gump = 			_detalhes.gump
 local _
-local alvo_da_habilidade = 	_detalhes.alvo_da_habilidade
 local container_habilidades = 	_detalhes.container_habilidades
-local container_combatentes = _detalhes.container_combatentes
-local container_pets =		_detalhes.container_pets
 local atributo_misc =		_detalhes.atributo_misc
-local habilidade_misc = 	_detalhes.habilidade_misc
 
-local container_damage_target = _detalhes.container_type.CONTAINER_DAMAGETARGET_CLASS
-local container_playernpc = _detalhes.container_type.CONTAINER_PLAYERNPC
-local container_misc = _detalhes.container_type.CONTAINER_MISC_CLASS
-local container_misc_target = _detalhes.container_type.CONTAINER_ENERGYTARGET_CLASS
 --local container_friendlyfire = _detalhes.container_type.CONTAINER_FRIENDLYFIRE
 
---local modo_ALONE = _detalhes.modos.alone
 local modo_GROUP = _detalhes.modos.group
 local modo_ALL = _detalhes.modos.all
 
 local class_type = _detalhes.atributos.misc
 
-local DATA_TYPE_START = _detalhes._detalhes_props.DATA_TYPE_START
-local DATA_TYPE_END = _detalhes._detalhes_props.DATA_TYPE_END
 
-local div_abre = _detalhes.divisores.abre
-local div_fecha = _detalhes.divisores.fecha
-local div_lugar = _detalhes.divisores.colocacao
 
-local ToKFunctions = _detalhes.ToKFunctions
-local SelectedToKFunction = ToKFunctions [1]
 local UsingCustomLeftText = false
 local UsingCustomRightText = false
 
-local FormatTooltipNumber = ToKFunctions [8]
 local TooltipMaximizedMethod = 1
 
 local info = _detalhes.janela_info
 local keyName
+local sub_attribute_keys = _detalhes.sub_atributos [class_type].internal
 
 local headerColor = "yellow"
 
@@ -106,68 +84,6 @@ function _detalhes.SortGroupIfHaveKey (table1, table2)
 		else
 			return false
 		end
-	end
-end
-
-function _detalhes.SortGroupMisc (container, keyName2)
-	keyName = keyName2
-	return _table_sort (container, _detalhes.SortKeyGroupMisc)
-end
-
-function _detalhes.SortKeyGroupMisc (table1, table2)
-	if (table1.grupo and table2.grupo) then
-		return table1 [keyName] > table2 [keyName]
-	elseif (table1.grupo and not table2.grupo) then
-		return true
-	elseif (not table1.grupo and table2.grupo) then
-		return false
-	else
-		return table1 [keyName] > table2 [keyName]
-	end
-end
-
-function _detalhes.SortKeySimpleMisc (table1, table2)
-	return table1 [keyName] > table2 [keyName]
-end
-
-function _detalhes:ContainerSortMisc (container, amount, keyName2)
-	keyName = keyName2
-	_table_sort (container,  _detalhes.SortKeySimpleMisc)
-
-	if (amount) then
-		for i = amount, 1, -1 do --> de tr�s pra frente
-			if (container[i][keyName] < 1) then
-				amount = amount-1
-			else
-				break
-			end
-		end
-
-		return amount
-	end
-end
-
---[[exported]] function _detalhes:GetSpellCastAmount (combat, actorName, spellId)
-	local misc_actor = combat:GetActor (4, actorName)
-	if (misc_actor) then
-		local spell_cast = misc_actor.spell_cast and misc_actor.spell_cast [spellId]
-
-		--try to find a spell with the same name and get the amount of casts of that spell object
-		if (not spell_cast and misc_actor.spell_cast) then
-			local spellname = GetSpellInfo (spellId)
-			for casted_spellid, amount in _pairs (misc_actor.spell_cast) do
-				local casted_spellname = GetSpellInfo (casted_spellid)
-				if (casted_spellname == spellname) then
-					return amount, true
-				end
-			end
-		end
-
-		if (not spell_cast) then
-			return false
-		end
-
-		return spell_cast
 	end
 end
 
@@ -244,11 +160,11 @@ function _detalhes:ToolTipDead (instancia, morte, esta_barra, keydown)
 							amount = amount - overkill
 						end
 
-						overkill = " (" .. _detalhes:ToK (overkill) .. " |cFFFF8800overkill|r)"
-						GameCooltip:AddLine ("" .. _cstr ("%.1f", time - hora_da_morte) .. "s |cFFFFFF00" .. spellname .. "|r (|cFFC6B0D9" .. source .. "|r)", "-" .. _detalhes:ToK (amount) .. overkill .. " (" .. hp .. "%)", 1, "white", "white")
+						overkill = _cstr (" (%s |cFFFF8800overkill|r)", _detalhes:ToK (overkill))
+						GameCooltip:AddLine (_cstr ("%.1fs |cFFFFFF00%s|r (|cFFC6B0D9%s|r)", time - hora_da_morte, spellname, source), _cstr ("-%s%s (%s%%)", _detalhes:ToK (amount), overkill, hp), 1, "white", "white")
 					else
 						overkill = ""
-						GameCooltip:AddLine ("" .. _cstr ("%.1f", time - hora_da_morte) .. "s " .. spellname .. " (|cFFC6B0D9" .. source .. "|r)", "-" .. _detalhes:ToK (amount) .. overkill .. " (" .. hp .. "%)", 1, "white", "white")
+						GameCooltip:AddLine (_cstr ("%.1fs %s (|cFFC6B0D9%s|r)", time - hora_da_morte, spellname, source), _cstr ("-%s%s (%s%%)", _detalhes:ToK (amount), overkill, hp), 1, "white", "white")
 					end
 
 					GameCooltip:AddIcon (spellicon)
@@ -264,7 +180,7 @@ function _detalhes:ToolTipDead (instancia, morte, esta_barra, keydown)
 					--> heal
 					-- print(_detalhes.deathlog_healingdone_min)
 					if (amount > _detalhes.deathlog_healingdone_min) then
-						GameCooltip:AddLine ("" .. _cstr ("%.1f", time - hora_da_morte) .. "s " .. spellname .. " (|cFFC6B0D9" .. source .. "|r)", "+" .. _detalhes:ToK (amount) .. " (" .. hp .. "%)", 1, "white", "white")
+						GameCooltip:AddLine (_cstr ("%.1fs %s (|cFFC6B0D9%s|r)", time - hora_da_morte, spellname, source), _cstr ("+%s (%s%%)", _detalhes:ToK (amount), hp), 1, "white", "white")
 						GameCooltip:AddIcon (spellicon)
 						GameCooltip:AddStatusBar (hp, 1, "green", true) --, backgroud_bar_heal
 					end
@@ -273,7 +189,7 @@ function _detalhes:ToolTipDead (instancia, morte, esta_barra, keydown)
 			elseif (type (evtype) == "number") then
 				if (evtype == 1) then
 					--> cooldown
-					GameCooltip:AddLine ("" .. _cstr ("%.1f", time - hora_da_morte) .. "s " .. spellname .. " (" .. source .. ")", "cooldown (" .. hp .. "%)", 1, "white", "white")
+					GameCooltip:AddLine (_cstr ("%.1fs %s (%s)", time - hora_da_morte, spellname, source), _cstr ("cooldown (%s%%)", hp), 1, "white", "white")
 					GameCooltip:AddIcon (spellicon)
 					GameCooltip:AddStatusBar (100, 1, "yellow", true)
 
@@ -287,7 +203,7 @@ function _detalhes:ToolTipDead (instancia, morte, esta_barra, keydown)
 
 				elseif (evtype == 4) then
 					--> debuff
-					GameCooltip:AddLine ("" .. _cstr ("%.1f", time - hora_da_morte) .. "s [x" .. amount .. "] " .. spellname .. " (" .. source .. ")", "debuff (" .. hp .. "%)", 1, "white", "white")
+					GameCooltip:AddLine (_cstr ("%.1fs [x%s] %s (%s)", time - hora_da_morte, amount, spellname, source), _cstr ("debuff (%s%%)", hp), 1, "white", "white")
 					GameCooltip:AddIcon (spellicon)
 					GameCooltip:AddStatusBar (100, 1, "purple", true)
 
@@ -302,7 +218,7 @@ function _detalhes:ToolTipDead (instancia, morte, esta_barra, keydown)
 
 	if (battleress) then
 		local nome_magia, _, icone_magia = _GetSpellInfo (battleress [2])
-		GameCooltip:AddLine ("+" .. _cstr ("%.1f", battleress[4] - hora_da_morte) .. "s " .. nome_magia .. " (" .. battleress[6] .. ")", "", 1, "white")
+		GameCooltip:AddLine (_cstr ("+%.1fs %s (%s)", battleress[4] - hora_da_morte, nome_magia, battleress[6]), "", 1, "white")
 		GameCooltip:AddIcon ("Interface\\Glues\\CharacterSelect\\Glues-AddOn-Icons", 1, 1, nil, nil, .75, 1, 0, 1)
 		GameCooltip:AddStatusBar (0, 1, .5, .5, .5, .5, false, {value = 100, color = {.5, .5, .5, 1}, specialSpark = false, texture = [[Interface\AddOns\Details\images\bar4_vidro]]})
 	end
@@ -310,7 +226,7 @@ function _detalhes:ToolTipDead (instancia, morte, esta_barra, keydown)
 	if (lastcooldown) then
 		if (lastcooldown[3] == 1) then
 			local nome_magia, _, icone_magia = _GetSpellInfo (lastcooldown [2])
-			GameCooltip:AddLine (_cstr ("%.1f", lastcooldown[4] - hora_da_morte) .. "s " .. nome_magia .. " (" .. Loc ["STRING_LAST_COOLDOWN"] .. ")")
+			GameCooltip:AddLine (_cstr ("%.1fs %s (%s)", lastcooldown[4] - hora_da_morte, nome_magia, Loc ["STRING_LAST_COOLDOWN"]))
 			GameCooltip:AddIcon (icone_magia)
 		else
 			GameCooltip:AddLine (Loc ["STRING_NOLAST_COOLDOWN"])
@@ -349,7 +265,7 @@ function _detalhes:ToolTipDead (instancia, morte, esta_barra, keydown)
 end
 
 local function RefreshBarraMorte (morte, barra, instancia)
-	atributo_misc:DeadAtualizarBarra (morte, morte.minha_barra, barra.colocacao, instancia)
+	atributo_misc:DeadAtualizarBarra (morte, morte.minha_barra, barra.colocacao, instancia, true)
 end
 
 --objeto death:
@@ -377,28 +293,14 @@ end
 
 function atributo_misc:ReportSingleDeadLine (morte, instancia)
 
-	local barra = instancia.barras [morte.minha_barra]
 
 	local max_health = morte [5]
 	local time_of_death = morte [2]
 
-	do
-		if (not _detalhes.fontstring_len) then
-			_detalhes.fontstring_len = _detalhes.listener:CreateFontString (nil, "background", "GameFontNormal")
-		end
-		local _, fontSize = FCF_GetChatWindowInfo (1)
-		if (fontSize < 1) then
-			fontSize = 10
-		end
-		local fonte, _, flags = _detalhes.fontstring_len:GetFont()
-		_detalhes.fontstring_len:SetFont (fonte, fontSize, flags)
-		_detalhes.fontstring_len:SetText ("thisisspacement")
-	end
-	local default_len = _detalhes.fontstring_len:GetStringWidth()
 
 	wipe (report_table)
 	local report_array = report_table
-	report_array[1] = {"Details! " .. Loc ["STRING_REPORT_SINGLE_DEATH"] .. " " .. morte [3] .. " " .. Loc ["STRING_ACTORFRAME_REPORTAT"] .. " " .. morte [6], "", "", ""}
+	report_array[1] = {_cstr ("Details! %s %s %s %s", Loc ["STRING_REPORT_SINGLE_DEATH"], morte [3], Loc ["STRING_ACTORFRAME_REPORTAT"], morte [6]), "", "", ""}
 
 	for index, evento in _ipairs (_detalhes.table.reverse (morte [1])) do
 		if (evento [1] and type (evento [1]) == "boolean") then --> damage
@@ -422,7 +324,7 @@ function atributo_misc:ReportSingleDeadLine (morte, instancia)
 					hp = 100
 				end
 
-				tinsert (report_array, {elapsed .. " ", spelllink, " (" .. source .. ")", "-" .. _detalhes:ToK (amount) .. " (" .. hp .. "%) "})
+				report_array[#report_array+1] = {elapsed .. " ", spelllink, " (" .. source .. ")", _cstr ("-%s (%s%%) ", _detalhes:ToK (amount), hp)}
 			end
 
 		elseif (not evento [1] and type (evento [1]) == "boolean") then --> heal
@@ -441,9 +343,9 @@ function atributo_misc:ReportSingleDeadLine (morte, instancia)
 				end
 
 				if (_detalhes.report_heal_links) then
-					tinsert (report_array, {elapsed .. " ", spelllink, " (" .. source .. ")", "+" .. _detalhes:ToK (amount) .. " (" .. hp .. "%) "})
+					report_array[#report_array+1] = {elapsed .. " ", spelllink, " (" .. source .. ")", _cstr ("+%s (%s%%) ", _detalhes:ToK (amount), hp)}
 				else
-					tinsert (report_array, {elapsed .. " ", spellname, " (" .. source .. ")", "+" .. _detalhes:ToK (amount) .. " (" .. hp .. "%) "})
+					report_array[#report_array+1] = {elapsed .. " ", spellname, " (" .. source .. ")", _cstr ("+%s (%s%%) ", _detalhes:ToK (amount), hp)}
 				end
 			end
 
@@ -452,14 +354,13 @@ function atributo_misc:ReportSingleDeadLine (morte, instancia)
 			local elapsed = _cstr ("%.1f", evento [4] - time_of_death) .."s"
 			local spelllink = GetSpellLink (evento [2])
 			local source = _detalhes:GetOnlyName (evento [6])
-			local spellname, _, spellicon = _GetSpellInfo (evento [2])
 			local stacks = evento [3]
 			local hp = _math_floor (evento [5] / max_health * 100)
 			if (hp > 100) then
 				hp = 100
 			end
 
-			tinsert (report_array, {elapsed .. " ", "x" .. stacks .. "" .. spelllink, " (" .. source .. ")", "(" .. hp .. "%) "})
+			report_array[#report_array+1] = {elapsed .. " ", "x" .. stacks .. "" .. spelllink, " (" .. source .. ")", "(" .. hp .. "%) "}
 		end
 	end
 
@@ -471,12 +372,11 @@ function atributo_misc:ReportSingleCooldownLine (misc_actor, instancia)
 	local reportar
 
 	if (instancia.segmento == -1) then --overall
-		reportar = {"Details!: " .. misc_actor.nome .. " - " .. Loc ["STRING_OVERALL"] .. " " .. Loc ["STRING_ATTRIBUTE_MISC_DEFENSIVE_COOLDOWNS"]}
+		reportar = {_cstr ("Details!: %s - %s %s", misc_actor.nome, Loc ["STRING_OVERALL"], Loc ["STRING_ATTRIBUTE_MISC_DEFENSIVE_COOLDOWNS"])}
 	else
-		reportar = {"Details!: " .. misc_actor.nome .. " - " .. Loc ["STRING_ATTRIBUTE_MISC_DEFENSIVE_COOLDOWNS"]}
+		reportar = {_cstr ("Details!: %s - %s", misc_actor.nome, Loc ["STRING_ATTRIBUTE_MISC_DEFENSIVE_COOLDOWNS"])}
 	end
 
-	local meu_total = _math_floor (misc_actor.cooldowns_defensive)
 	local cooldowns = misc_actor.cooldowns_defensive_spells._ActorTable
 	local cooldowns_used = {}
 
@@ -510,14 +410,14 @@ end
 local buff_format_amount = function (t)
 	local total, percent = unpack (t)
 	local m, s = _math_floor (total / 60), _math_floor (total % 60)
-	return _cstr ("%.1f", percent) .. "% (" .. m .. "m " .. s .. "s)"
+	return _cstr ("%.1f%% (%dm %ds)", percent, m, s)
 end
 local sort_buff_report = function (t1, t2)
 	return t1[2][1] > t2[2][1]
 end
 
 function atributo_misc:ReportSingleBuffUptimeLine (misc_actor, instance)
-	local report_table = {"Details!: " .. misc_actor.nome .. " - " .. Loc ["STRING_ATTRIBUTE_MISC_BUFF_UPTIME"]}
+	local report_table = {_cstr ("Details!: %s - %s", misc_actor.nome, Loc ["STRING_ATTRIBUTE_MISC_BUFF_UPTIME"])}
 
 	local buffs = {}
 	local combat_time = instance.showing:GetCombatTime()
@@ -535,7 +435,7 @@ function atributo_misc:ReportSingleBuffUptimeLine (misc_actor, instance)
 end
 
 function atributo_misc:ReportSingleDebuffUptimeLine (misc_actor, instance)
-	local report_table = {"Details!: " .. misc_actor.nome .. " - " .. Loc ["STRING_ATTRIBUTE_MISC_DEBUFF_UPTIME"]}
+	local report_table = {_cstr ("Details!: %s - %s", misc_actor.nome, Loc ["STRING_ATTRIBUTE_MISC_DEBUFF_UPTIME"])}
 
 	local debuffs = {}
 	local combat_time = instance.showing:GetCombatTime()
@@ -551,7 +451,7 @@ function atributo_misc:ReportSingleDebuffUptimeLine (misc_actor, instance)
 	return _detalhes:Reportar (report_table, {_no_current = true, _no_inverse = true, _custom = true})
 end
 
-function atributo_misc:DeadAtualizarBarra (morte, qual_barra, colocacao, instancia)
+function atributo_misc:DeadAtualizarBarra (morte, qual_barra, colocacao, instancia, forcar)
 
 	morte ["dead"] = true --> marca que esta tabela � uma tabela de mortes, usado no controla na hora de montar o tooltip
 	local esta_barra = instancia.barras[qual_barra] --> pega a refer�ncia da barra na janela
@@ -561,7 +461,12 @@ function atributo_misc:DeadAtualizarBarra (morte, qual_barra, colocacao, instanc
 		return
 	end
 
-	local tabela_anterior = esta_barra.minha_tabela
+	if (not forcar and esta_barra.minha_tabela == morte and esta_barra.colocacao == colocacao and not (esta_barra.hidden or esta_barra.fading_in or esta_barra.faded)) then
+		if (esta_barra.mouse_over and not instancia.baseframe.isMoving) then
+			gump:UpdateTooltip (qual_barra, esta_barra, instancia)
+		end
+		return
+	end
 
 	esta_barra.minha_tabela = morte
 
@@ -626,55 +531,11 @@ function atributo_misc:RefreshWindow (instancia, tabela_do_combate, forcar, expo
 	local amount = #conteudo
 	local modo = instancia.modo
 
-	if (exportar) then
-		if (_type (exportar) == "boolean") then
-			if (sub_atributo == 1) then --> CC BREAKS
-				keyName = "cc_break"
-			elseif (sub_atributo == 2) then --> RESS
-				keyName = "ress"
-			elseif (sub_atributo == 3) then --> INTERRUPT
-				keyName = "interrupt"
-			elseif (sub_atributo == 4) then --> DISPELLS
-				keyName = "dispell"
-			elseif (sub_atributo == 5) then --> DEATHS
-				keyName = "dead"
-			elseif (sub_atributo == 6) then --> DEFENSIVE COOLDOWNS
-				keyName = "cooldowns_defensive"
-			elseif (sub_atributo == 7) then --> BUFF UPTIME
-				keyName = "buff_uptime"
-			elseif (sub_atributo == 8) then --> DEBUFF UPTIME
-				keyName = "debuff_uptime"
-			end
-		else
-			keyName = exportar.key
-			modo = exportar.modo
-		end
-
-	elseif (instancia.atributo == 5) then --> custom
-		keyName = "custom"
-		total = tabela_do_combate.totals [instancia.customName]
-
+	if (exportar and _type (exportar) ~= "boolean") then
+		keyName = exportar.key
+		modo = exportar.modo
 	else
-
-		--> pega qual a sub key que ser� usada
-		if (sub_atributo == 1) then --> CC BREAKS
-			keyName = "cc_break"
-		elseif (sub_atributo == 2) then --> RESS
-			keyName = "ress"
-		elseif (sub_atributo == 3) then --> INTERRUPT
-			keyName = "interrupt"
-		elseif (sub_atributo == 4) then --> DISPELLS
-			keyName = "dispell"
-		elseif (sub_atributo == 5) then --> DEATHS
-			keyName = "dead"
-		elseif (sub_atributo == 6) then --> DEFENSIVE COOLDOWNS
-			keyName = "cooldowns_defensive"
-		elseif (sub_atributo == 7) then --> BUFF UPTIME
-			keyName = "buff_uptime"
-		elseif (sub_atributo == 8) then --> DEBUFF UPTIME
-			keyName = "debuff_uptime"
-		end
-
+		keyName = sub_attribute_keys [sub_atributo]
 	end
 
 	if (keyName == "dead") then
@@ -698,12 +559,10 @@ function atributo_misc:RefreshWindow (instancia, tabela_do_combate, forcar, expo
 
 		--depois faz a atualiza��o normal dele atrav�s dos_ iterators
 		local qual_barra = 1
-		local barras_container = instancia.barras
-		local percentage_type = instancia.row_info.percent_type
 
 		for i = instancia.barraS[1], instancia.barraS[2], 1 do --> vai atualizar s� o range que esta sendo mostrado
 			if (mortes[i]) then --> corre��o para um raro e desconhecido problema onde mortes[i] � nil
-				atributo_misc:DeadAtualizarBarra (mortes[i], qual_barra, i, instancia)
+				atributo_misc:DeadAtualizarBarra (mortes[i], qual_barra, i, instancia, forcar)
 				qual_barra = qual_barra+1
 			end
 		end
@@ -712,26 +571,7 @@ function atributo_misc:RefreshWindow (instancia, tabela_do_combate, forcar, expo
 
 	else
 
-		if (instancia.atributo == 5) then --> custom
-			--> faz o sort da categoria e retorna o amount corrigido
-			_table_sort (conteudo, _detalhes.SortIfHaveKey)
-
-			--> n�o mostrar resultados com zero
-			for i = amount, 1, -1 do --> de tr�s pra frente
-				if (not conteudo[i][keyName] or conteudo[i][keyName] < 1) then
-					amount = amount - 1
-				else
-					break
-				end
-			end
-
-			--> pega o total ja aplicado na tabela do combate
-			total = tabela_do_combate.totals [class_type] [keyName]
-
-			--> grava o total
-			instancia.top = conteudo[1][keyName]
-
-		elseif (modo == modo_ALL) then --> mostrando ALL
+		if (modo == modo_ALL) then --> mostrando ALL
 
 			_table_sort (conteudo, _detalhes.SortIfHaveKey)
 
@@ -825,17 +665,6 @@ function atributo_misc:RefreshWindow (instancia, tabela_do_combate, forcar, expo
 		instancia:fazer_animacoes (qual_barra-1)
 	end
 
-	if (instancia.atributo == 5) then --> custom
-		--> zerar o .custom dos_ Actors
-		for index, player in _ipairs (conteudo) do
-			if (player.custom > 0) then
-				player.custom = 0
-			else
-				break
-			end
-		end
-	end
-
 	--> beta, hidar barras n�o usadas durante um refresh for�ado
 	if (forcar) then
 		if (instancia.modo == 2) then --> group
@@ -853,7 +682,7 @@ local actor_class_color_r, actor_class_color_g, actor_class_color_b
 
 function atributo_misc:AtualizaBarra (instancia, barras_container, qual_barra, lugar, total, sub_atributo, forcar, keyName, is_dead, percentage_type, use_animations, bars_show_data, bars_brackets, bars_separator)
 
-	local esta_barra = instancia.barras[qual_barra] --> pega a refer�ncia da barra na janela
+	local esta_barra = barras_container [qual_barra] --> pega a refer�ncia da barra na janela
 
 	if (not esta_barra) then
 		print ("DEBUG: problema com <instancia.esta_barra> "..qual_barra.." "..lugar)
@@ -873,14 +702,15 @@ function atributo_misc:AtualizaBarra (instancia, barras_container, qual_barra, l
 		return
 	end
 
+	local instancia_top = instancia.top
 	local porcentagem = meu_total / total * 100
 	if (not percentage_type or percentage_type == 1) then
 		porcentagem = _cstr ("%.1f", meu_total / total * 100)
 	elseif (percentage_type == 2) then
-		porcentagem = _cstr ("%.1f", meu_total / instancia.top * 100)
+		porcentagem = _cstr ("%.1f", meu_total / instancia_top * 100)
 	end
 
-	local esta_porcentagem = _math_floor ((meu_total/instancia.top) * 100)
+	local esta_porcentagem = _math_floor ((meu_total/instancia_top) * 100)
 
 	if (not bars_show_data [1]) then
 		meu_total = ""
@@ -907,74 +737,7 @@ function atributo_misc:AtualizaBarra (instancia, barras_container, qual_barra, l
 	return self:RefreshBarra2 (esta_barra, instancia, tabela_anterior, forcar, esta_porcentagem, qual_barra, barras_container, use_animations)
 end
 
-function atributo_misc:RefreshBarra2 (esta_barra, instancia, tabela_anterior, forcar, esta_porcentagem, qual_barra, barras_container, use_animations)
-
-	--> primeiro colocado
-	if (esta_barra.colocacao == 1) then
-		if (not tabela_anterior or tabela_anterior ~= esta_barra.minha_tabela or forcar) then
-			esta_barra:SetValue (100)
-
-			if (esta_barra.hidden or esta_barra.fading_in or esta_barra.faded) then
-				gump:Fade (esta_barra, "out")
-			end
-
-			return self:RefreshBarra (esta_barra, instancia)
-		else
-			return
-		end
-	else
-
-		if (esta_barra.hidden or esta_barra.fading_in or esta_barra.faded) then
-
-			if (use_animations) then
-				esta_barra.animacao_fim = esta_porcentagem
-			else
-				esta_barra:SetValue (esta_porcentagem)
-				esta_barra.animacao_ignorar = true
-			end
-
-			gump:Fade (esta_barra, "out")
-
-			if (instancia.row_info.texture_class_colors) then
-				esta_barra.textura:SetVertexColor (actor_class_color_r, actor_class_color_g, actor_class_color_b)
-			end
-			if (instancia.row_info.texture_background_class_color) then
-				esta_barra.background:SetVertexColor (actor_class_color_r, actor_class_color_g, actor_class_color_b)
-			end
-
-			return self:RefreshBarra (esta_barra, instancia)
-
-		else
-			--> agora esta comparando se a tabela da barra � diferente da tabela na atualiza��o anterior
-			if (not tabela_anterior or tabela_anterior ~= esta_barra.minha_tabela or forcar) then --> aqui diz se a barra do jogador mudou de posi��o ou se ela apenas ser� atualizada
-
-				if (use_animations) then
-					esta_barra.animacao_fim = esta_porcentagem
-				else
-					esta_barra:SetValue (esta_porcentagem)
-					esta_barra.animacao_ignorar = true
-				end
-
-				esta_barra.last_value = esta_porcentagem --> reseta o ultimo valor da barra
-
-				return self:RefreshBarra (esta_barra, instancia)
-
-			elseif (esta_porcentagem ~= esta_barra.last_value) then --> continua mostrando a mesma tabela ent�o compara a porcentagem
-				--> apenas atualizar
-				if (use_animations) then
-					esta_barra.animacao_fim = esta_porcentagem
-				else
-					esta_barra:SetValue (esta_porcentagem)
-				end
-				esta_barra.last_value = esta_porcentagem
-
-				return self:RefreshBarra (esta_barra, instancia)
-			end
-		end
-
-	end
-
-end
+atributo_misc.RefreshBarra2 = _detalhes.atributo_energy.RefreshBarra2
 
 function atributo_misc:RefreshBarra (esta_barra, instancia, from_resize)
 	local class, enemy, arena_enemy, arena_ally = self.classe, self.enemy, self.arena_enemy, self.arena_ally
@@ -1027,7 +790,6 @@ local barAlha = .6
 
 function atributo_misc:ToolTipDead (instancia, numero, barra, keydown)
 
-	local last_dead = self.dead_log [#self.dead_log]
 
 end
 
@@ -1045,7 +807,6 @@ function atributo_misc:ToolTipCC (instancia, numero, barra, keydown)
 
 	--> habilidade usada para tirar o CC
 	local icon_size = _detalhes.tooltip.icon_size
-	local icon_border = _detalhes.tooltip.icon_border_texcoord
 	local lineHeight = _detalhes.tooltip.line_height
 	local icon_border = _detalhes.tooltip.icon_border_texcoord
 
@@ -1058,7 +819,6 @@ function atributo_misc:ToolTipCC (instancia, numero, barra, keydown)
 		_detalhes:AddTooltipHeaderStatusbar (r, g, b, barAlha)
 
 		--> o que quebrou
-		local quebrou_oque = _tabela.cc_break_oque
 		for spellid_quebrada, amt_quebrada in _pairs (_tabela.cc_break_oque) do
 			local nome_magia, _, icone_magia = _GetSpellInfo (spellid_quebrada)
 			GameCooltip:AddLine (nome_magia, amt_quebrada .. "  ")
@@ -1121,7 +881,7 @@ function atributo_misc:ToolTipDispell (instancia, numero, barra, keydown)
 			_detalhes:AddTooltipBackgroundStatusbar()
 		end
 	else
-		GameTooltip:AddLine (Loc ["STRING_NO_SPELL"])
+		GameCooltip:AddLine (Loc ["STRING_NO_SPELL"])
 	end
 
 --> quais habilidades foram dispaladas
@@ -1183,8 +943,6 @@ function atributo_misc:ToolTipDispell (instancia, numero, barra, keydown)
 	if (#meus_pets > 0) then --> teve ajudantes
 
 		local quantidade = {} --> armazena a quantidade de pets iguais
-		local interrupts = {} --> armazena as habilidades
-		local alvos = {} --> armazena os alvos
 		local totais = {} --> armazena o dano total de cada objeto
 
 		for index, nome in _ipairs (meus_pets) do
@@ -1200,7 +958,6 @@ function atributo_misc:ToolTipDispell (instancia, numero, barra, keydown)
 			end
 		end
 
-		local _quantidade = 0
 		local added_logo = false
 
 		_table_sort (totais, _detalhes.Sort2)
@@ -1242,7 +999,7 @@ function _detalhes:CloseEnemyDebuffsUptime()
 
 	for _, actor in _ipairs (misc_container) do
 		if (actor.boss_debuff) then
-			for target_name, target in _ipairs (actor.debuff_uptime_targets) do
+			for target_name, target in _pairs (actor.debuff_uptime_targets) do
 				if (target.actived and target.actived_at) then
 					target.uptime = target.uptime + _detalhes._tempo - target.actived_at
 					actor.debuff_uptime = actor.debuff_uptime + _detalhes._tempo - target.actived_at
@@ -1318,7 +1075,7 @@ function _detalhes:CatchRaidDebuffUptime (in_or_out) -- "DEBUFF_UPTIME_IN"
 
 		local checked = {}
 
-		for raidIndex = 1, _GetNumGroupMembers()-1 do
+		for raidIndex = 1, GetNumPartyMembers() do
 			local his_target = _UnitGUID ("party"..raidIndex.."target")
 			local rect = UnitReaction ("party"..raidIndex.."target", "player")
 			if (his_target and not checked [his_target] and rect and rect <= 4) then
@@ -1335,7 +1092,7 @@ function _detalhes:CatchRaidDebuffUptime (in_or_out) -- "DEBUFF_UPTIME_IN"
 								playerName = playerName .. "-" .. realmName
 							end
 
-							_detalhes.parser:add_debuff_uptime (nil, GetTime(), playerGUID, playerName, 0x00000417, his_target, _UnitName ("party"..raidIndex.."target"), 0x842, spellid, name, in_or_out)
+							_detalhes.parser:add_debuff_uptime (nil, cacheGetTime, playerGUID, playerName, 0x00000417, his_target, _UnitName ("party"..raidIndex.."target"), 0x842, spellid, name, in_or_out)
 						end
 					end
 				end
@@ -1354,7 +1111,7 @@ function _detalhes:CatchRaidDebuffUptime (in_or_out) -- "DEBUFF_UPTIME_IN"
 						if (realmName and realmName ~= "") then
 							playerName = playerName .. "-" .. realmName
 						end
-						_detalhes.parser:add_debuff_uptime (nil, GetTime(), playerGUID, playerName, 0x00000417, his_target, _UnitName ("playertarget"), 0x842, spellid, name, in_or_out)
+						_detalhes.parser:add_debuff_uptime (nil, cacheGetTime, playerGUID, playerName, 0x00000417, his_target, _UnitName ("playertarget"), 0x842, spellid, name, in_or_out)
 					end
 				end
 			end
@@ -1374,7 +1131,7 @@ function _detalhes:CatchRaidDebuffUptime (in_or_out) -- "DEBUFF_UPTIME_IN"
 							if (realmName and realmName ~= "") then
 								playerName = playerName .. "-" .. realmName
 							end
-							_detalhes.parser:add_debuff_uptime (nil, GetTime(), playerGUID, playerName, 0x00000417, his_target, _UnitName ("playertarget"), 0x842, spellid, name, in_or_out)
+							_detalhes.parser:add_debuff_uptime (nil, cacheGetTime, playerGUID, playerName, 0x00000417, his_target, _UnitName ("playertarget"), 0x842, spellid, name, in_or_out)
 						end
 					end
 				end
@@ -1383,20 +1140,12 @@ function _detalhes:CatchRaidDebuffUptime (in_or_out) -- "DEBUFF_UPTIME_IN"
 	end
 end
 
---> this shouldn't be hardcoded
-local runes_id = {
-	[175457] = true, -- focus
-	[175456] = true, --hyper
-	[175439] = true, --stout
-}
-
 --called from control on leave / enter combat
 function _detalhes:CatchRaidBuffUptime (in_or_out)
 
 	if (_IsInRaid()) then
 
 		local pot_usage = {}
-		local focus_augmentation = {}
 
 		--> raid groups
 		local cacheGetTime = GetTime()
@@ -1422,8 +1171,6 @@ function _detalhes:CatchRaidBuffUptime (in_or_out)
 								pot_usage [playerName] = spellid
 								--
 							-- print(spellid,1423)
-							elseif (runes_id [spellid]) then
-								focus_augmentation [playerName] = true
 							end
 						end
 					end
@@ -1441,21 +1188,19 @@ function _detalhes:CatchRaidBuffUptime (in_or_out)
 				if (class and RAID_CLASS_COLORS [class]) then
 					class_color = RAID_CLASS_COLORS [class].colorStr
 				end
-				string_output = string_output .. "|c" .. class_color .. playername .. "|r |T" .. icon .. ":14:14:0:0:64:64:0:64:0:64|t "
+				string_output = string_output .. _cstr ("|c%s%s|r |T%s:14:14:0:0:64:64:0:64:0:64|t ", class_color, playername, icon)
 			end
 
 			_detalhes.pre_pot_used = string_output
-
-			_detalhes:SendEvent ("COMBAT_PREPOTION_UPDATED", nil, pot_usage, focus_augmentation)
 		end
 
 	elseif (_IsInGroup()) then
 
 		local pot_usage = {}
-		local focus_augmentation = {}
+		local cacheGetTime = GetTime()
 
 		--party members
-		for groupIndex = 1, _GetNumGroupMembers() - 1 do
+		for groupIndex = 1, GetNumPartyMembers() do
 			for buffIndex = 1, 41 do
 				local name, _, _, _, _, _, _, unitCaster, _, _, spellid  = _UnitAura ("party"..groupIndex, buffIndex, nil, "HELPFUL")
 				if (name and unitCaster and UnitExists (unitCaster) and UnitExists ("party" .. groupIndex) and UnitIsUnit (unitCaster, "party" .. groupIndex)) then
@@ -1473,12 +1218,10 @@ function _detalhes:CatchRaidBuffUptime (in_or_out)
 								pot_usage [playerName] = spellid
 								--
 								-- print(spellid,1474)
-							elseif (runes_id [spellid]) then
-								focus_augmentation [playerName] = true
 							end
 						end
 
-						_detalhes.parser:add_buff_uptime (nil, GetTime(), playerGUID, playerName, 0x00000417, playerGUID, playerName, 0x00000417, spellid, name, in_or_out)
+						_detalhes.parser:add_buff_uptime (nil, cacheGetTime, playerGUID, playerName, 0x00000417, playerGUID, playerName, 0x00000417, spellid, name, in_or_out)
 					end
 				end
 			end
@@ -1496,12 +1239,10 @@ function _detalhes:CatchRaidBuffUptime (in_or_out)
 							--
 							-- print(spellid,1496)
 							pot_usage [playerName] = spellid
-						elseif (runes_id [spellid]) then
-							focus_augmentation [playerName] = true
 						end
 					end
 
-					_detalhes.parser:add_buff_uptime (nil, GetTime(), playerGUID, playerName, 0x00000417, playerGUID, playerName, 0x00000417, spellid, name, in_or_out)
+					_detalhes.parser:add_buff_uptime (nil, cacheGetTime, playerGUID, playerName, 0x00000417, playerGUID, playerName, 0x00000417, spellid, name, in_or_out)
 				end
 			end
 		end
@@ -1516,17 +1257,15 @@ function _detalhes:CatchRaidBuffUptime (in_or_out)
 				if (class and RAID_CLASS_COLORS [class]) then
 					class_color = RAID_CLASS_COLORS [class].colorStr
 				end
-				string_output = string_output .. "|c" .. class_color .. playername .. "|r |T" .. icon .. ":14:14:0:0:64:64:0:64:0:64|t "
+				string_output = string_output .. _cstr ("|c%s%s|r |T%s:14:14:0:0:64:64:0:64:0:64|t ", class_color, playername, icon)
 			end
 
 			_detalhes.pre_pot_used = string_output
-			_detalhes:SendEvent ("COMBAT_PREPOTION_UPDATED", nil, pot_usage, focus_augmentation)
 		end
 
 	else
 
 		local pot_usage = {}
-		local focus_augmentation = {}
 
 		for buffIndex = 1, 41 do
 			local name, _, _, _, _, _, _, unitCaster, _, _, spellid  = _UnitAura ("player", buffIndex, nil, "HELPFUL")
@@ -1540,8 +1279,6 @@ function _detalhes:CatchRaidBuffUptime (in_or_out)
 							pot_usage [playerName] = spellid
 							--
 							-- print(spellid,1537)
-						elseif (runes_id [spellid]) then
-							focus_augmentation [playerName] = true
 						end
 					end
 					_detalhes.parser:add_buff_uptime (nil, GetTime(), playerGUID, playerName, 0x00000417, playerGUID, playerName, 0x00000417, spellid, name, in_or_out)
@@ -1559,21 +1296,16 @@ function _detalhes:CatchRaidBuffUptime (in_or_out)
 				if (class and RAID_CLASS_COLORS [class]) then
 					class_color = RAID_CLASS_COLORS [class].colorStr
 				end
-				string_output = string_output .. "|c" .. class_color .. playername .. "|r |T" .. icon .. ":14:14:0:0:64:64:0:64:0:64|t "
+				string_output = string_output .. _cstr ("|c%s%s|r |T%s:14:14:0:0:64:64:0:64:0:64|t ", class_color, playername, icon)
 			end
 
 			_detalhes.pre_pot_used = string_output
-			_detalhes:SendEvent ("COMBAT_PREPOTION_UPDATED", nil, pot_usage, focus_augmentation)
 		end
 
 		--]]
 		-- _detalhes:Msg (string_output)
 
 	end
-end
-
-local Sort2Reverse = function (a, b)
-	return a[2] < b[2]
 end
 
 function atributo_misc:ToolTipDebuffUptime (instancia, numero, barra)
@@ -1585,7 +1317,6 @@ function atributo_misc:ToolTipDebuffUptime (instancia, numero, barra)
 		r, g, b = unpack (_detalhes.class_colors [self.classe])
 	end
 
-	local meu_total = self ["debuff_uptime"]
 	local minha_tabela = self.debuff_uptime_spells._ActorTable
 
 --> habilidade usada para interromper
@@ -1617,10 +1348,10 @@ function atributo_misc:ToolTipDebuffUptime (instancia, numero, barra)
 					--GameCooltip:AddLine (nome_magia, minutos .. "m " .. segundos .. "s" .. " (" .. _cstr ("%.1f", esta_habilidade[2] / _combat_time * 100) .. "%)", nil, "gray", "gray")
 					--GameCooltip:AddStatusBar (100, nil, 1, 0, 1, .3, false)
 				elseif (minutos > 0) then
-					GameCooltip:AddLine (nome_magia, minutos .. "m " .. segundos .. "s" .. " (" .. _cstr ("%.1f", esta_habilidade[2] / _combat_time * 100) .. "%)")
+					GameCooltip:AddLine (nome_magia, _cstr ("%dm %ds (%.1f%%)", minutos, segundos, esta_habilidade[2] / _combat_time * 100))
 					_detalhes:AddTooltipBackgroundStatusbar (false, esta_habilidade[2] / _combat_time * 100)
 				else
-					GameCooltip:AddLine (nome_magia, segundos .. "s" .. " (" .. _cstr ("%.1f", esta_habilidade[2] / _combat_time * 100) .. "%)")
+					GameCooltip:AddLine (nome_magia, _cstr ("%ds (%.1f%%)", segundos, esta_habilidade[2] / _combat_time * 100))
 					_detalhes:AddTooltipBackgroundStatusbar (false, esta_habilidade[2] / _combat_time * 100)
 				end
 
@@ -1644,7 +1375,6 @@ function atributo_misc:ToolTipBuffUptime (instancia, numero, barra)
 		r, g, b = unpack (_detalhes.class_colors [self.classe])
 	end
 
-	local meu_total = self ["buff_uptime"]
 	local minha_tabela = self.buff_uptime_spells._ActorTable
 
 --> habilidade usada para interromper
@@ -1678,10 +1408,10 @@ function atributo_misc:ToolTipBuffUptime (instancia, numero, barra)
 					--GameCooltip:AddLine (nome_magia, minutos .. "m " .. segundos .. "s" .. " (" .. _cstr ("%.1f", esta_habilidade[2] / _combat_time * 100) .. "%)", nil, "gray", "gray")
 					--GameCooltip:AddStatusBar (100, nil, 1, 0, 1, .3, false)
 				elseif (minutos > 0) then
-					GameCooltip:AddLine (nome_magia, minutos .. "m " .. segundos .. "s" .. " (" .. _cstr ("%.1f", percent) .. "%)")
+					GameCooltip:AddLine (nome_magia, _cstr ("%dm %ds (%.1f%%)", minutos, segundos, percent))
 					_detalhes:AddTooltipBackgroundStatusbar (false, percent)
 				else
-					GameCooltip:AddLine (nome_magia, segundos .. "s" .. " (" .. _cstr ("%.1f", percent) .. "%)")
+					GameCooltip:AddLine (nome_magia, _cstr ("%ds (%.1f%%)", segundos, percent))
 					_detalhes:AddTooltipBackgroundStatusbar (false, percent)
 				end
 
@@ -1874,7 +1604,6 @@ function atributo_misc:ToolTipInterrupt (instancia, numero, barra,keydown)
 
 	local icon_size = _detalhes.tooltip.icon_size
 	local icon_border = _detalhes.tooltip.icon_border_texcoord
-	local lineHeight = _detalhes.tooltip.line_height
 
 --> habilidade usada para interromper
 	local meus_interrupts = {}
@@ -1896,7 +1625,7 @@ function atributo_misc:ToolTipInterrupt (instancia, numero, barra,keydown)
 			_detalhes:AddTooltipBackgroundStatusbar()
 		end
 	else
-		GameTooltip:AddLine (Loc ["STRING_NO_SPELL"])
+		GameCooltip:AddLine (Loc ["STRING_NO_SPELL"])
 	end
 
 --> quais habilidades foram interrompidas
@@ -1925,8 +1654,6 @@ function atributo_misc:ToolTipInterrupt (instancia, numero, barra,keydown)
 	if (#meus_pets > 0) then --> teve ajudantes
 
 		local quantidade = {} --> armazena a quantidade de pets iguais
-		local interrupts = {} --> armazena as habilidades
-		local alvos = {} --> armazena os alvos
 		local totais = {} --> armazena o dano total de cada objeto
 
 		for index, nome in _ipairs (meus_pets) do
@@ -1942,7 +1669,6 @@ function atributo_misc:ToolTipInterrupt (instancia, numero, barra,keydown)
 			end
 		end
 
-		local _quantidade = 0
 		local added_logo = false
 
 		_table_sort (totais, _detalhes.Sort2)
@@ -1979,34 +1705,26 @@ end
 --------------------------------------------- // JANELA DETALHES // ---------------------------------------------
 
 
+local breakdown_keys = {
+	[3] = {total = "interrupt", spells = "interrupt_spells", targets = "interrupt_targets", what = "interrompeu_oque"},
+	[4] = {total = "dispell", spells = "dispell_spells", targets = "dispell_targets", what = "dispell_oque"},
+}
+
 ---------> DETALHES BIFURCA��O
 function atributo_misc:MontaInfo()
-	if (info.sub_atributo == 3) then --> interrupt
-		return self:MontaInfoInterrupt()
-	elseif (info.sub_atributo == 4) then
-		return self:MontaInfoDispell()
-	end
-end
-
----------> DETALHES bloco da direita BIFURCA��O
-function atributo_misc:MontaDetalhes (spellid, barra)
-	if (info.sub_atributo == 3) then --> interrupt
-		return self:MontaDetalhesInterrupt (spellid, barra)
-	elseif (info.sub_atributo == 4) then
-		return self:MontaDetalhesDispell(spellid, barra)
-	end
-end
-
------- Interrupt
-function atributo_misc:MontaInfoInterrupt()
-
-	local meu_total = self ["interrupt"]
-
-	if (not self.interrupt_spells) then
+	local keys = breakdown_keys [info.sub_atributo]
+	if (not keys) then
 		return
 	end
 
-	local minha_tabela = self.interrupt_spells._ActorTable
+
+	local meu_total = self [keys.total]
+
+	if (not self [keys.spells]) then
+		return
+	end
+
+	local minha_tabela = self [keys.spells]._ActorTable
 
 	local barras = info.barras1
 	local instancia = info.instancia
@@ -2014,20 +1732,31 @@ function atributo_misc:MontaInfoInterrupt()
 	local meus_interrupts = {}
 
 	--player
+	local spell_cache_int = {}
 	for _spellid, _tabela in _pairs (minha_tabela) do --> da foreach em cada spellid do container
-		local nome, _, icone = _GetSpellInfo (_spellid)
-		_table_insert (meus_interrupts, {_spellid, _tabela.counter, _tabela.counter/meu_total*100, nome, icone})
+		local cached = spell_cache_int[_spellid]
+		if not cached then
+			local _nome, _, _icone = _GetSpellInfo (_spellid)
+			cached = {name = _nome, icon = _icone}
+			spell_cache_int[_spellid] = cached
+		end
+		_table_insert (meus_interrupts, {_spellid, _tabela.counter, _tabela.counter/meu_total*100, cached.name, cached.icon})
 	end
 	--pet
 	local ActorPets = self.pets
 	local class_color = "FFDDDDDD"
 	for _, PetName in _ipairs (ActorPets) do
 		local PetActor = instancia.showing (class_type, PetName)
-		if (PetActor and PetActor.interrupt and PetActor.interrupt > 0) then
-			local PetSkillsContainer = PetActor.interrupt_spells._ActorTable
+		if (PetActor and PetActor [keys.spells]) then
+			local PetSkillsContainer = PetActor [keys.spells]._ActorTable
 			for _spellid, _skill in _pairs (PetSkillsContainer) do --> da foreach em cada spellid do container
-				local nome, _, icone = _GetSpellInfo (_spellid)
-				_table_insert (meus_interrupts, {_spellid, _skill.counter, _skill.counter/meu_total*100, nome .. " (|c" .. class_color .. PetName:gsub ((" <.*"), "") .. "|r)", icone, PetActor})
+				local cached = spell_cache_int[_spellid]
+				if not cached then
+					local _nome, _, _icone = _GetSpellInfo (_spellid)
+					cached = {name = _nome, icon = _icone}
+					spell_cache_int[_spellid] = cached
+				end
+				_table_insert (meus_interrupts, {_spellid, _skill.counter, _skill.counter/meu_total*100, cached.name .. " (|c" .. class_color .. PetName:gsub ((" <.*"), "") .. "|r)", cached.icon, PetActor})
 			end
 		end
 	end
@@ -2053,23 +1782,7 @@ function atributo_misc:MontaInfoInterrupt()
 
 		--> isso aqui � tudo da sele��o e descele��o das barras
 
-		if (not info.mostrando_mouse_over) then
-			if (tabela[1] == self.detalhes) then --> tabela [1] = spellid = spellid que esta na caixa da direita
-				if (not barra.on_focus) then --> se a barra n�o tiver no foco
-					barra.textura:SetStatusBarColor (129/255, 125/255, 69/255, 1)
-					barra.on_focus = true
-					if (not info.mostrando) then
-						info.mostrando = barra
-					end
-				end
-			else
-				if (barra.on_focus) then
-					barra.textura:SetStatusBarColor (1, 1, 1, 1) --> volta a cor antiga
-					barra:SetAlpha (.9) --> volta a alfa antiga
-					barra.on_focus = false
-				end
-			end
-		end
+		self:FocusLock (barra, tabela[1])
 
 		if (index == 1) then
 			barra.textura:SetValue (100)
@@ -2078,7 +1791,7 @@ function atributo_misc:MontaInfoInterrupt()
 		end
 
 		barra.texto_esquerdo:SetText (index..instancia.divisores.colocacao..tabela[4]) --seta o texto da esqueda
-		barra.texto_direita:SetText (tabela[2] .." ".. instancia.divisores.abre .._cstr("%.1f", tabela[3]) .."%".. instancia.divisores.fecha) --seta o texto da direita
+		barra.texto_direita:SetText (_cstr ("%s %s%.1f%%%s", tabela[2], instancia.divisores.abre, tabela[3], instancia.divisores.fecha)) --seta o texto da direita
 
 		barra.icone:SetTexture (tabela[5])
 
@@ -2093,7 +1806,7 @@ function atributo_misc:MontaInfoInterrupt()
 
 	--> Alvos do interrupt
 	local meus_alvos = {}
-	for target_name, amount in _pairs (self.interrupt_targets) do
+	for target_name, amount in _pairs (self [keys.targets]) do
 		meus_alvos [#meus_alvos+1] = {target_name, amount}
 	end
 	_table_sort (meus_alvos, _detalhes.Sort2)
@@ -2123,7 +1836,7 @@ function atributo_misc:MontaInfoInterrupt()
 		end
 
 		barra.texto_esquerdo:SetText (index..instancia.divisores.colocacao..tabela[1]) --seta o texto da esqueda
-		barra.texto_direita:SetText (tabela[2] .." ".. instancia.divisores.abre .._cstr("%.1f", tabela[2]/meu_total*100) .. instancia.divisores.fecha) --seta o texto da direita
+		barra.texto_direita:SetText (_cstr ("%s %s%.1f%s", tabela[2], instancia.divisores.abre, tabela[2]/meu_total*100, instancia.divisores.fecha)) --seta o texto da direita
 
 		if (barra.mouse_over) then --> atualizar o tooltip
 			if (barra.isAlvo) then
@@ -2144,169 +1857,19 @@ function atributo_misc:MontaInfoInterrupt()
 
 end
 
-
------- dispell
-function atributo_misc:MontaInfoDispell()
-
--- 	- Dispel (members has 2 "L" instead of 1)
--- actor.dispell = amount of dispels done.
--- actor.dispell_targets = hash table telling who got dispel from this actor {[targetName] = amount}.
--- actor.dispell_spells = spell container.
--- actor.dispell_oque = hash table with the ids of the spells dispelled by this actor {[spellid of the spell dispelled] = amount}
-
-local meu_total = self["dispell"]
-
-	if (not self.dispell_spells) then
-		return
-	end
-
-
-	local minha_tabela = self.dispell_spells._ActorTable
-
-	local barras = info.barras1
-	local instancia = info.instancia
-
-	local meus_dispells = {}
-	--player
-	for _spellid, _tabela in _pairs (minha_tabela) do --> da foreach em cada spellid do container
-		local nome, _, icone = _GetSpellInfo(_spellid)
-		-- print(_spellid, _tabela.counter, _tabela.counter/meu_total*100, nome, icone)
-		_table_insert (meus_dispells, {_spellid, _tabela.counter, _tabela.counter/meu_total*100, nome, icone})
-	end
-	--pet
-	local ActorPets = self.pets
-	local class_color = "FFDDDDDD"
-	for _, PetName in _ipairs (ActorPets) do
-		local PetActor = instancia.showing (class_type, PetName)
-		if (PetActor and PetActor.interrupt and PetActor.interrupt > 0) then
-			local PetSkillsContainer = PetActor.dispell_spells._ActorTable
-			for _spellid, _skill in _pairs (PetSkillsContainer) do --> da foreach em cada spellid do container
-				local nome, _, icone = _GetSpellInfo (_spellid)
-				_table_insert (meus_dispells, {_spellid, _skill.counter, _skill.counter/meu_total*100, nome .. " (|c" .. class_color .. PetName:gsub ((" <.*"), "") .. "|r)", icone, PetActor})
-			end
-		end
-	end
-
-	_table_sort (meus_dispells, _detalhes.Sort2)
-
-	local amt = #meus_dispells
-	gump:JI_AtualizaContainerBarras (amt)
-
-	local max_ = meus_dispells [1][2] --> dano que a primeiro magia vez
-
-	local barra
-	for index, tabela in _ipairs (meus_dispells) do
-
-		barra = barras [index]
-
-		if (not barra) then --> se a barra n�o existir, criar ela ent�o
-			barra = gump:CriaNovaBarraInfo1 (instancia, index)
-
-			barra.textura:SetStatusBarColor (1, 1, 1, 1) --> isso aqui � a parte da sele��o e descele��o
-			barra.on_focus = false --> isso aqui � a parte da sele��o e descele��o
-		end
-
-		--> isso aqui � tudo da sele��o e descele��o das barras
-
-		if (not info.mostrando_mouse_over) then
-			if (tabela[1] == self.detalhes) then --> tabela [1] = spellid = spellid que esta na caixa da direita
-				if (not barra.on_focus) then --> se a barra n�o tiver no foco
-					barra.textura:SetStatusBarColor (129/255, 125/255, 69/255, 1)
-					barra.on_focus = true
-					if (not info.mostrando) then
-						info.mostrando = barra
-					end
-				end
-			else
-				if (barra.on_focus) then
-					barra.textura:SetStatusBarColor (1, 1, 1, 1) --> volta a cor antiga
-					barra:SetAlpha (.9) --> volta a alfa antiga
-					barra.on_focus = false
-				end
-			end
-		end
-
-		if (index == 1) then
-			barra.textura:SetValue (100)
-		else
-			barra.textura:SetValue (tabela[2]/max_*100) --> muito mais rapido...
-		end
-
-		barra.texto_esquerdo:SetText (index..instancia.divisores.colocacao..tabela[4]) --seta o texto da esqueda
-		barra.texto_direita:SetText (tabela[2] .." ".. instancia.divisores.abre .._cstr("%.1f", tabela[3]) .."%".. instancia.divisores.fecha) --seta o texto da direita
-
-		barra.icone:SetTexture (tabela[5])
-
-		barra.minha_tabela = self --> grava o jogador na barrinho... � estranho pq todas as barras v�o ter o mesmo valor do jogador
-		barra.show = tabela[1] --> grava o spellid na barra
-		barra:Show() --> mostra a barra
-
-		if (self.detalhes and self.detalhes == barra.show) then
-			self:MontaDetalhes (self.detalhes, barra) --> poderia deixar isso pro final e montar uma tail call??
-		end
-	end
-
-	--> Alvos do interrupt
-	local meus_alvos = {}
-	for target_name, amount in _pairs (self.dispell_targets) do
-		meus_alvos [#meus_alvos+1] = {target_name, amount}
-	end
-	_table_sort (meus_alvos, _detalhes.Sort2)
-
-	local amt_alvos = #meus_alvos
-	if (amt_alvos < 1) then
-		return
-	end
-	gump:JI_AtualizaContainerAlvos (amt_alvos)
-
-	local max_alvos = meus_alvos[1][2]
-
-	local barra
-	for index, tabela in _ipairs (meus_alvos) do
-
-		barra = info.barras2 [index]
-
-		if (not barra) then
-			barra = gump:CriaNovaBarraInfo2 (instancia, index)
-			barra.textura:SetStatusBarColor (1, 1, 1, 1)
-		end
-
-		if (index == 1) then
-			barra.textura:SetValue (100)
-		else
-			barra.textura:SetValue (tabela[2]/max_alvos*100)
-		end
-
-		barra.texto_esquerdo:SetText (index..instancia.divisores.colocacao..tabela[1]) --seta o texto da esqueda
-		barra.texto_direita:SetText (tabela[2] .." ".. instancia.divisores.abre .._cstr("%.1f", tabela[2]/meu_total*100) .. instancia.divisores.fecha) --seta o texto da direita
-
-		if (barra.mouse_over) then --> atualizar o tooltip
-			if (barra.isAlvo) then
-				GameTooltip:Hide()
-				GameTooltip:SetOwner (barra, "ANCHOR_TOPRIGHT")
-				if (not barra.minha_tabela:MontaTooltipAlvos (barra, index)) then
-					return
-				end
-				GameTooltip:Show()
-			end
-		end
-
-		barra.minha_tabela = self --> grava o jogador na tabela
-		barra.nome_inimigo = tabela [1] --> salva o nome do inimigo na barra --> isso � necess�rio?
-
-		barra:Show()
-	end
-
-
-end
 ------ Detalhe Info Interrupt
-function atributo_misc:MontaDetalhesInterrupt (spellid, barra)
+function atributo_misc:MontaDetalhes (spellid, barra)
+	local keys = breakdown_keys [info.sub_atributo]
+	if (not keys) then
+		return
+	end
+
 
 	for _, barra in _ipairs (info.barras3) do
 		barra:Hide()
 	end
 
-	local esta_magia = self.interrupt_spells._ActorTable [spellid]
+	local esta_magia = self [keys.spells]._ActorTable [spellid]
 	if (not esta_magia) then
 		return
 	end
@@ -2317,18 +1880,15 @@ function atributo_misc:MontaDetalhesInterrupt (spellid, barra)
 
 	_detalhes.janela_info.spell_icone:SetTexture (infospell[3])
 
-	local total = self.interrupt
-	local meu_total = esta_magia.counter
+	local total = self [keys.total]
 
-	local index = 1
 
-	local data = {}
 
 	local barras = info.barras3
 	local instancia = info.instancia
 
 	local habilidades_alvos = {}
-	for spellid, amt in pairs (esta_magia.interrompeu_oque) do
+	for spellid, amt in _pairs (esta_magia [keys.what]) do
 		habilidades_alvos [#habilidades_alvos+1] = {spellid, amt}
 	end
 	_table_sort (habilidades_alvos, _detalhes.Sort2)
@@ -2352,72 +1912,7 @@ function atributo_misc:MontaDetalhesInterrupt (spellid, barra)
 		local nome, _, icone = _GetSpellInfo (tabela[1])
 
 		barra.texto_esquerdo:SetText (index..instancia.divisores.colocacao..nome) --seta o texto da esqueda
-		barra.texto_direita:SetText (tabela[2] .." ".. instancia.divisores.abre .._cstr("%.1f", tabela[2]/total*100) .."%".. instancia.divisores.fecha) --seta o texto da direita
-
-		barra.icone:SetTexture (icone)
-
-		barra:Show() --> mostra a barra
-
-		if (index == 15) then
-			break
-		end
-	end
-
-end
------- Detalhe Info dispells
-function atributo_misc:MontaDetalhesDispell (spellid, barra)
-
-	for _, barra in _ipairs (info.barras3) do
-		barra:Hide()
-	end
-
-	local esta_magia = self.dispell_spells._ActorTable [spellid]
-	if (not esta_magia) then
-		return
-	end
-
-	--> icone direito superior
-	local nome, _, icone = _GetSpellInfo (spellid)
-	local infospell = {nome, nil, icone}
-
-	_detalhes.janela_info.spell_icone:SetTexture (infospell[3])
-
-	local total = self.dispell
-	local meu_total = esta_magia.counter
-
-	local index = 1
-
-	local data = {}
-
-	local barras = info.barras3
-	local instancia = info.instancia
-
-	local habilidades_alvos = {}
-	for spellid, amt in pairs (esta_magia.dispell_oque) do
-		habilidades_alvos [#habilidades_alvos+1] = {spellid, amt}
-	end
-	_table_sort (habilidades_alvos, _detalhes.Sort2)
-	local max_ = habilidades_alvos[1][2]
-
-	local barra
-	for index, tabela in _ipairs (habilidades_alvos) do
-		barra = barras [index]
-
-		if (not barra) then --> se a barra n�o existir, criar ela ent�o
-			barra = gump:CriaNovaBarraInfo3 (instancia, index)
-			barra.textura:SetStatusBarColor (1, 1, 1, 1) --> isso aqui � a parte da sele��o e descele��o
-		end
-
-		if (index == 1) then
-			barra.textura:SetValue (100)
-		else
-			barra.textura:SetValue (tabela[2]/max_*100) --> muito mais rapido...
-		end
-
-		local nome, _, icone = _GetSpellInfo (tabela[1])
-
-		barra.texto_esquerdo:SetText (index..instancia.divisores.colocacao..nome) --seta o texto da esqueda
-		barra.texto_direita:SetText (tabela[2] .." ".. instancia.divisores.abre .._cstr("%.1f", tabela[2]/total*100) .."%".. instancia.divisores.fecha) --seta o texto da direita
+		barra.texto_direita:SetText (_cstr ("%s %s%.1f%%%s", tabela[2], instancia.divisores.abre, tabela[2]/total*100, instancia.divisores.fecha)) --seta o texto da direita
 
 		barra.icone:SetTexture (icone)
 
@@ -2448,7 +1943,7 @@ function atributo_misc:MontaTooltipAlvos (esta_barra, index)
 	for spellid, tabela in _pairs (container) do
 		--> tabela = classe_damage_habilidade
 		local alvos = tabela.targets
-		for target_name, amount in _ipairs (alvos) do
+		for target_name, amount in _pairs (alvos) do
 			--> tabela = classe_target
 			if (target_name == inimigo) then
 				habilidades [#habilidades+1] = {spellid, amount}
@@ -2456,7 +1951,7 @@ function atributo_misc:MontaTooltipAlvos (esta_barra, index)
 		end
 	end
 
-	table.sort (habilidades, _detalhes.Sort2)
+	_table_sort (habilidades, _detalhes.Sort2)
 
 	GameTooltip:AddLine (index..". "..inimigo)
 	GameTooltip:AddLine ((indexForTab == 3 and Loc ["STRING_SPELL_INTERRUPTED"] or indexForTab == 4 and "Цели рассеивания") .. ":")
@@ -2465,9 +1960,9 @@ function atributo_misc:MontaTooltipAlvos (esta_barra, index)
 	for index, tabela in _ipairs (habilidades) do
 		local nome, rank, icone = _GetSpellInfo (tabela[1])
 		if (index < 8) then
-			GameTooltip:AddDoubleLine (index..". |T"..icone..":0|t "..nome, tabela[2].." (".._cstr("%.1f", tabela[2]/total*100).."%)", 1, 1, 1, 1, 1, 1)
+			GameTooltip:AddDoubleLine (_cstr ("%d. |T%s:0|t %s", index, icone, nome), _cstr ("%s (%.1f%%)", tabela[2], tabela[2]/total*100), 1, 1, 1, 1, 1, 1)
 		else
-			GameTooltip:AddDoubleLine (index..". "..nome, tabela[2].." (".._cstr("%.1f", tabela[2]/total*100).."%)", .65, .65, .65, .65, .65, .65)
+			GameTooltip:AddDoubleLine (_cstr ("%d. %s", index, nome), _cstr ("%s (%.1f%%)", tabela[2], tabela[2]/total*100), .65, .65, .65, .65, .65, .65)
 		end
 	end
 
@@ -2485,8 +1980,6 @@ end
 
 	--> atualize a funcao de abreviacao
 		function atributo_misc:UpdateSelectedToKFunction()
-			SelectedToKFunction = ToKFunctions [_detalhes.ps_abbreviation]
-			FormatTooltipNumber = ToKFunctions [_detalhes.tooltip.abbreviation]
 			TooltipMaximizedMethod = _detalhes.tooltip.maximize_method
 			headerColor = _detalhes.tooltip.header_text_color
 		end
@@ -2505,16 +1998,6 @@ end
 				end
 			end
 		end
-		function atributo_misc:add_total (combat_table)
-			for _, sub_attribute in _ipairs (sub_list) do
-				if (self [sub_attribute]) then
-					combat_table.totals [class_type][sub_attribute] = combat_table.totals [class_type][sub_attribute] + self [sub_attribute]
-					if (self.grupo) then
-						combat_table.totals_grupo [class_type][sub_attribute] = combat_table.totals_grupo [class_type][sub_attribute] + self [sub_attribute]
-					end
-				end
-			end
-		end
 
 local refresh_alvos = function (container1, container2)
 	for target_name, amount in _pairs (container2) do
@@ -2528,28 +2011,23 @@ local refresh_habilidades = function (container1, container2)
 	end
 end
 
+local refresh_counter = function (shadow, actor, key, what_key)
+	local spells_key = key .. "_spells"
+	refresh_alvos (shadow [key .. "_targets"], actor [key .. "_targets"])
+	refresh_habilidades (shadow [spells_key], actor [spells_key])
+	for spellid, habilidade in _pairs (actor [spells_key]._ActorTable) do
+		local habilidade_shadow = shadow [spells_key]:PegaHabilidade (spellid, true, nil, true)
+		habilidade_shadow [what_key] = habilidade_shadow [what_key] or {}
+	end
+end
+
 function atributo_misc:r_onlyrefresh_shadow (actor)
 
 	local overall_misc = _detalhes.tabela_overall [4]
-	local shadow = overall_misc._ActorTable [overall_misc._NameIndexTable [actor.nome]]
-
 	if (not actor.nome) then
 		actor.nome = "unknown"
 	end
-
-	if (not shadow) then
-		shadow = overall_misc:PegarCombatente (actor.serial, actor.nome, actor.flag_original, true)
-
-		shadow.classe = actor.classe
-		shadow.spec = actor.spec
-		shadow.grupo = actor.grupo
-		shadow.pvp = actor.pvp
-		shadow.isTank = actor.isTank
-		shadow.boss = actor.boss
-		shadow.boss_fight_component = actor.boss_fight_component
-		shadow.fight_component = actor.fight_component
-
-	end
+	local shadow = overall_misc:GetShadowOf (actor)
 
 	_detalhes.refresh:r_atributo_misc (actor, shadow)
 
@@ -2594,12 +2072,7 @@ function atributo_misc:r_onlyrefresh_shadow (actor)
 
 	--> interrupt
 		if (actor.interrupt) then
-			refresh_alvos (shadow.interrupt_targets, actor.interrupt_targets)
-			refresh_habilidades (shadow.interrupt_spells, actor.interrupt_spells)
-			for spellid, habilidade in _pairs (actor.interrupt_spells._ActorTable) do
-				local habilidade_shadow = shadow.interrupt_spells:PegaHabilidade (spellid, true, nil, true)
-				habilidade_shadow.interrompeu_oque = habilidade_shadow.interrompeu_oque or {}
-			end
+			refresh_counter (shadow, actor, "interrupt", "interrompeu_oque")
 		end
 
 	--> ress
@@ -2610,22 +2083,12 @@ function atributo_misc:r_onlyrefresh_shadow (actor)
 
 	--> dispell
 		if (actor.dispell) then
-			refresh_alvos (shadow.dispell_targets, actor.dispell_targets)
-			refresh_habilidades (shadow.dispell_spells, actor.dispell_spells)
-			for spellid, habilidade in _pairs (actor.dispell_spells._ActorTable) do
-				local habilidade_shadow = shadow.dispell_spells:PegaHabilidade (spellid, true, nil, true)
-				habilidade_shadow.dispell_oque = habilidade_shadow.dispell_oque or {}
-			end
+			refresh_counter (shadow, actor, "dispell", "dispell_oque")
 		end
 
 	--> cc break
 		if (actor.cc_break) then
-			refresh_alvos (shadow.cc_break_targets, actor.cc_break_targets)
-			refresh_habilidades (shadow.cc_break_spells, actor.cc_break_spells)
-			for spellid, habilidade in _pairs (actor.cc_break_spells._ActorTable) do
-				local habilidade_shadow = shadow.cc_break_spells:PegaHabilidade (spellid, true, nil, true)
-				habilidade_shadow.cc_break_oque = habilidade_shadow.cc_break_oque or {}
-			end
+			refresh_counter (shadow, actor, "cc_break", "cc_break_oque")
 		end
 
 	return shadow
@@ -2654,31 +2117,51 @@ local somar_habilidades = function (container1, container2)
 	end
 end
 
+local connect_counter = function (shadow, actor, host_combat, key, what_key)
+	local targets_key, spells_key = key .. "_targets", key .. "_spells"
+	if (not shadow [targets_key]) then
+		shadow [key] = 0
+		shadow [targets_key] = {}
+		shadow [spells_key] = container_habilidades:NovoContainer (_detalhes.container_type.CONTAINER_MISC_CLASS)
+		if (what_key) then
+			shadow [what_key] = {}
+		end
+	end
+
+	shadow [key] = shadow [key] + actor [key]
+	host_combat.totals[4][key] = host_combat.totals[4][key] + actor [key]
+	if (actor.grupo) then
+		host_combat.totals_grupo[4][key] = host_combat.totals_grupo[4][key] + actor [key]
+	end
+
+	somar_alvos (shadow [targets_key], actor [targets_key])
+	somar_habilidades (shadow [spells_key], actor [spells_key])
+
+	if (what_key) then
+		for spellid, habilidade in _pairs (actor [spells_key]._ActorTable) do
+			local habilidade_shadow = shadow [spells_key]:PegaHabilidade (spellid, true, nil, true)
+			habilidade_shadow [what_key] = habilidade_shadow [what_key] or {}
+			local shadow_what = habilidade_shadow [what_key]
+			for _spellid, amount in _pairs (habilidade [what_key]) do
+				shadow_what [_spellid] = (shadow_what [_spellid] or 0) + amount
+			end
+		end
+		for spellid, amount in _pairs (actor [what_key]) do
+			shadow [what_key] [spellid] = (shadow [what_key] [spellid] or 0) + amount
+		end
+	end
+end
+
 function atributo_misc:r_connect_shadow (actor, no_refresh, combat_object)
 
 	local host_combat = combat_object or _detalhes.tabela_overall
 
 	--> criar uma shadow desse ator se ainda n�o tiver uma
 	local overall_misc = host_combat [4]
-	local shadow = overall_misc._ActorTable [overall_misc._NameIndexTable [actor.nome]]
-
 	if (not actor.nome) then
 		actor.nome = "unknown"
 	end
-
-	if (not shadow) then
-		shadow = overall_misc:PegarCombatente (actor.serial, actor.nome, actor.flag_original, true)
-
-		shadow.classe = actor.classe
-		shadow.spec = actor.spec
-		shadow.grupo = actor.grupo
-		shadow.pvp = actor.pvp
-		shadow.isTank = actor.isTank
-		shadow.boss = actor.boss
-		shadow.boss_fight_component = actor.boss_fight_component
-		shadow.fight_component = actor.fight_component
-
-	end
+	local shadow = overall_misc:GetShadowOf (actor)
 
 	--> aplica a meta e indexes
 	if (not no_refresh) then
@@ -2780,114 +2263,17 @@ function atributo_misc:r_connect_shadow (actor, no_refresh, combat_object)
 		somar_habilidades (shadow.debuff_uptime_spells, actor.debuff_uptime_spells)
 	end
 
-	--> interrupt
 	if (actor.interrupt) then
-		if (not shadow.interrupt_targets) then
-			shadow.interrupt = 0
-			shadow.interrupt_targets = {}
-			shadow.interrupt_spells = container_habilidades:NovoContainer (_detalhes.container_type.CONTAINER_MISC_CLASS) --> cria o container das habilidades usadas para interromper
-			shadow.interrompeu_oque = {}
-		end
-
-		shadow.interrupt = shadow.interrupt + actor.interrupt
-		host_combat.totals[4].interrupt = host_combat.totals[4].interrupt + actor.interrupt
-		if (actor.grupo) then
-			host_combat.totals_grupo[4].interrupt = host_combat.totals_grupo[4].interrupt + actor.interrupt
-		end
-
-		somar_alvos (shadow.interrupt_targets, actor.interrupt_targets)
-		somar_habilidades (shadow.interrupt_spells, actor.interrupt_spells)
-
-		for spellid, habilidade in _pairs (actor.interrupt_spells._ActorTable) do
-			local habilidade_shadow = shadow.interrupt_spells:PegaHabilidade (spellid, true, nil, true)
-
-			habilidade_shadow.interrompeu_oque = habilidade_shadow.interrompeu_oque or {}
-
-			for _spellid, amount in _pairs (habilidade.interrompeu_oque) do
-				habilidade_shadow.interrompeu_oque [_spellid] = (habilidade_shadow.interrompeu_oque [_spellid] or 0) + amount
-			end
-		end
-		for spellid, amount in _pairs (actor.interrompeu_oque) do
-			shadow.interrompeu_oque [spellid] = (shadow.interrompeu_oque [spellid] or 0) + amount
-		end
+		connect_counter (shadow, actor, host_combat, "interrupt", "interrompeu_oque")
 	end
-
-	--> ress
 	if (actor.ress) then
-		if (not shadow.ress_targets) then
-			shadow.ress = 0
-			shadow.ress_targets = {}
-			shadow.ress_spells = container_habilidades:NovoContainer (_detalhes.container_type.CONTAINER_MISC_CLASS)
-		end
-
-		shadow.ress = shadow.ress + actor.ress
-		host_combat.totals[4].ress = host_combat.totals[4].ress + actor.ress
-		if (actor.grupo) then
-			host_combat.totals_grupo[4].ress = host_combat.totals_grupo[4].ress + actor.ress
-		end
-
-		somar_alvos (shadow.ress_targets, actor.ress_targets)
-		somar_habilidades (shadow.ress_spells, actor.ress_spells)
+		connect_counter (shadow, actor, host_combat, "ress")
 	end
-
-	--> dispell
 	if (actor.dispell) then
-		if (not shadow.dispell_targets) then
-			shadow.dispell = 0
-			shadow.dispell_targets = {}
-			shadow.dispell_spells = container_habilidades:NovoContainer (_detalhes.container_type.CONTAINER_MISC_CLASS)
-			shadow.dispell_oque = {}
-		end
-
-		shadow.dispell = shadow.dispell + actor.dispell
-		host_combat.totals[4].dispell = host_combat.totals[4].dispell + actor.dispell
-		if (actor.grupo) then
-			host_combat.totals_grupo[4].dispell = host_combat.totals_grupo[4].dispell + actor.dispell
-		end
-
-		somar_alvos (shadow.dispell_targets, actor.dispell_targets)
-		somar_habilidades (shadow.dispell_spells, actor.dispell_spells)
-
-		for spellid, habilidade in _pairs (actor.dispell_spells._ActorTable) do
-			local habilidade_shadow = shadow.dispell_spells:PegaHabilidade (spellid, true, nil, true)
-			habilidade_shadow.dispell_oque = habilidade_shadow.dispell_oque or {}
-			for _spellid, amount in _pairs (habilidade.dispell_oque) do
-				habilidade_shadow.dispell_oque [_spellid] = (habilidade_shadow.dispell_oque [_spellid] or 0) + amount
-			end
-		end
-
-		for spellid, amount in _pairs (actor.dispell_oque) do
-			shadow.dispell_oque [spellid] = (shadow.dispell_oque [spellid] or 0) + amount
-		end
+		connect_counter (shadow, actor, host_combat, "dispell", "dispell_oque")
 	end
-
 	if (actor.cc_break) then
-		if (not shadow.cc_break) then
-			shadow.cc_break = 0
-			shadow.cc_break_targets = {}
-			shadow.cc_break_spells = container_habilidades:NovoContainer (_detalhes.container_type.CONTAINER_MISC_CLASS) --> cria o container das habilidades usadas para interromper
-			shadow.cc_break_oque = {}
-		end
-
-		shadow.cc_break = shadow.cc_break + actor.cc_break
-		host_combat.totals[4].cc_break = host_combat.totals[4].cc_break + actor.cc_break
-		if (actor.grupo) then
-			host_combat.totals_grupo[4].cc_break = host_combat.totals_grupo[4].cc_break + actor.cc_break
-		end
-
-		somar_alvos (shadow.cc_break_targets, actor.cc_break_targets)
-		somar_habilidades (shadow.cc_break_spells, actor.cc_break_spells)
-
-		for spellid, habilidade in _pairs (actor.cc_break_spells._ActorTable) do
-			local habilidade_shadow = shadow.cc_break_spells:PegaHabilidade (spellid, true, nil, true)
-			habilidade_shadow.cc_break_oque = habilidade_shadow.cc_break_oque or {}
-			for _spellid, amount in _pairs (habilidade.cc_break_oque) do
-				habilidade_shadow.cc_break_oque [_spellid] = (habilidade_shadow.cc_break_oque [_spellid] or 0) + amount
-			end
-		end
-		for spellid, amount in _pairs (actor.cc_break_oque) do
-			shadow.cc_break_oque [spellid] = (shadow.cc_break_oque [spellid] or 0) + amount
-		end
+		connect_counter (shadow, actor, host_combat, "cc_break", "cc_break_oque")
 	end
 
 	return shadow
@@ -3043,466 +2429,3 @@ function _detalhes.clear:c_atributo_misc (este_jogador)
 
 end
 
-atributo_misc.__add = function (tabela1, tabela2)
-
-	if (tabela2.spell_cast) then
-		for spellid, amount in _pairs (tabela2.spell_cast) do
-			tabela1.spell_cast [spellid] = (tabela1.spell_cast [spellid] or 0) + amount
-		end
-	end
-
-	if (tabela2.cc_done) then
-		tabela1.cc_done = tabela1.cc_done + tabela2.cc_done
-
-		for target_name, amount in _pairs (tabela2.cc_done_targets) do
-			tabela1.cc_done_targets [target_name] = (tabela1.cc_done_targets [target_name] or 0) + amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.cc_done_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.cc_done_spells:PegaHabilidade (spellid, true, nil, false)
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) + amount
-			end
-
-			somar_keys (habilidade, habilidade_tabela1)
-		end
-	end
-
-	if (tabela2.interrupt) then
-
-		if (not tabela1.interrupt) then
-			tabela1.interrupt = 0
-			tabela1.interrupt_targets = {}
-			tabela1.interrupt_spells = container_habilidades:NovoContainer (container_misc)
-			tabela1.interrompeu_oque = {}
-		end
-
-		--> total de interrupts
-			tabela1.interrupt = tabela1.interrupt + tabela2.interrupt
-		--> soma o interrompeu o que
-			for spellid, amount in _pairs (tabela2.interrompeu_oque) do
-				tabela1.interrompeu_oque [spellid] = (tabela1.interrompeu_oque [spellid] or 0) + amount
-			end
-		--> soma os containers de alvos
-			for target_name, amount in _pairs (tabela2.interrupt_targets) do
-				tabela1.interrupt_targets [target_name] = (tabela1.interrupt_targets [target_name] or 0) + amount
-			end
-
-		--> soma o container de habilidades
-			for spellid, habilidade in _pairs (tabela2.interrupt_spells._ActorTable) do
-				local habilidade_tabela1 = tabela1.interrupt_spells:PegaHabilidade (spellid, true, nil, false)
-
-				habilidade_tabela1.interrompeu_oque = habilidade_tabela1.interrompeu_oque or {}
-				for _spellid, amount in _pairs (habilidade.interrompeu_oque) do
-					habilidade_tabela1.interrompeu_oque [_spellid] = (habilidade_tabela1.interrompeu_oque [_spellid] or 0) + amount
-				end
-
-				for target_name, amount in _pairs (habilidade.targets) do
-					habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) + amount
-				end
-
-				somar_keys (habilidade, habilidade_tabela1)
-			end
-
-	end
-
-	if (tabela2.buff_uptime) then
-		if (not tabela1.buff_uptime) then
-			tabela1.buff_uptime = 0
-			tabela1.buff_uptime_targets = {}
-			tabela1.buff_uptime_spells = container_habilidades:NovoContainer (container_misc)
-		end
-
-		tabela1.buff_uptime = tabela1.buff_uptime + tabela2.buff_uptime
-
-		for target_name, amount in _pairs (tabela2.buff_uptime_targets) do
-			tabela1.buff_uptime_targets [target_name] = (tabela1.buff_uptime_targets [target_name] or 0) + amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.buff_uptime_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.buff_uptime_spells:PegaHabilidade (spellid, true, nil, false)
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) + amount
-			end
-
-			somar_keys (habilidade, habilidade_tabela1)
-		end
-	end
-
-	if (tabela2.debuff_uptime) then
-		if (not tabela1.debuff_uptime) then
-			if (tabela2.boss_debuff) then
-				tabela1.debuff_uptime_targets = {}
-				tabela1.boss_debuff = true
-				tabela1.damage_twin = tabela2.damage_twin
-				tabela1.spellschool = tabela2.spellschool
-				tabela1.damage_spellid = tabela2.damage_spellid
-			else
-				tabela1.debuff_uptime_targets = {}
-			end
-
-			tabela1.debuff_uptime = 0
-			tabela1.debuff_uptime_spells = container_habilidades:NovoContainer (container_misc)
-		end
-
-		tabela1.debuff_uptime = tabela1.debuff_uptime + tabela2.debuff_uptime
-
-		for target_name, amount in _pairs (tabela2.debuff_uptime_targets) do
-			if (_type (amount) == "table") then --> boss debuff
-				local t = tabela1.debuff_uptime_targets [target_name]
-				if (not t) then
-					tabela1.debuff_uptime_targets [target_name] = atributo_misc:CreateBuffTargetObject()
-					t = tabela1.debuff_uptime_targets [target_name]
-				end
-				t.uptime = t.uptime + amount.uptime
-				t.activedamt = t.activedamt + amount.activedamt
-				t.refreshamt = t.refreshamt + amount.refreshamt
-				t.appliedamt = t.appliedamt + amount.appliedamt
-			else
-				tabela1.debuff_uptime_targets [target_name] = (tabela1.debuff_uptime_targets [target_name] or 0) + amount
-			end
-		end
-
-		for spellid, habilidade in _pairs (tabela2.debuff_uptime_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.debuff_uptime_spells:PegaHabilidade (spellid, true, nil, false)
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) + amount
-			end
-
-			somar_keys (habilidade, habilidade_tabela1)
-		end
-	end
-
-	if (tabela2.cooldowns_defensive) then
-		if (not tabela1.cooldowns_defensive) then
-			tabela1.cooldowns_defensive = 0
-			tabela1.cooldowns_defensive_targets = {}
-			tabela1.cooldowns_defensive_spells = container_habilidades:NovoContainer (container_misc)
-		end
-
-		tabela1.cooldowns_defensive = tabela1.cooldowns_defensive + tabela2.cooldowns_defensive
-
-		for target_name, amount in _pairs (tabela2.cooldowns_defensive_targets) do
-			tabela1.cooldowns_defensive_targets [target_name] = (tabela1.cooldowns_defensive_targets [target_name] or 0) + amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.cooldowns_defensive_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.cooldowns_defensive_spells:PegaHabilidade (spellid, true, nil, false)
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) + amount
-			end
-
-			somar_keys (habilidade, habilidade_tabela1)
-		end
-	end
-
-	if (tabela2.ress) then
-		if (not tabela1.ress) then
-			tabela1.ress = 0
-			tabela1.ress_targets = {}
-			tabela1.ress_spells = container_habilidades:NovoContainer (container_misc)
-		end
-
-		tabela1.ress = tabela1.ress + tabela2.ress
-
-		for target_name, amount in _pairs (tabela2.ress_targets) do
-			tabela1.ress_targets [target_name] = (tabela1.ress_targets [target_name] or 0) + amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.ress_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.ress_spells:PegaHabilidade (spellid, true, nil, false)
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) + amount
-			end
-
-			somar_keys (habilidade, habilidade_tabela1)
-		end
-	end
-
-	if (tabela2.dispell) then
-
-		if (not tabela1.dispell) then
-			tabela1.dispell = 0
-			tabela1.dispell_targets = {}
-			tabela1.dispell_spells = container_habilidades:NovoContainer (container_misc)
-			tabela1.dispell_oque = {}
-		end
-
-		tabela1.dispell = tabela1.dispell + tabela2.dispell
-
-		for target_name, amount in _pairs (tabela2.dispell_targets) do
-			tabela1.dispell_targets [target_name] = (tabela1.dispell_targets [target_name] or 0) + amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.dispell_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.dispell_spells:PegaHabilidade (spellid, true, nil, false)
-
-			habilidade_tabela1.dispell_oque = habilidade_tabela1.dispell_oque or {}
-
-			for _spellid, amount in _pairs (habilidade.dispell_oque) do
-				habilidade_tabela1.dispell_oque [_spellid] = (habilidade_tabela1.dispell_oque [_spellid] or 0) + amount
-			end
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) + amount
-			end
-
-			somar_keys (habilidade, habilidade_tabela1)
-		end
-
-		for spellid, amount in _pairs (tabela2.dispell_oque) do
-			tabela1.dispell_oque [spellid] = (tabela1.dispell_oque [spellid] or 0) + amount
-		end
-
-	end
-
-	if (tabela2.cc_break) then
-
-		if (not tabela1.cc_break) then
-			tabela1.cc_break = 0
-			tabela1.cc_break_targets = {}
-			tabela1.cc_break_spells = container_habilidades:NovoContainer (container_misc)
-			tabela1.cc_break_oque = {}
-		end
-
-		tabela1.cc_break = tabela1.cc_break + tabela2.cc_break
-
-		for target_name, amount in _pairs (tabela2.cc_break_targets) do
-			tabela1.cc_break_targets [target_name] = (tabela1.cc_break_targets [target_name] or 0) + amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.cc_break_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.cc_break_spells:PegaHabilidade (spellid, true, nil, false)
-
-			habilidade_tabela1.cc_break_oque = habilidade_tabela1.cc_break_oque or {}
-			for _spellid, amount in _pairs (habilidade.cc_break_oque) do
-				habilidade_tabela1.cc_break_oque [_spellid] = (habilidade_tabela1.cc_break_oque [_spellid] or 0) + amount
-			end
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) + amount
-			end
-
-			somar_keys (habilidade, habilidade_tabela1)
-		end
-
-		for spellid, amount in _pairs (tabela2.cc_break_oque) do
-			tabela1.cc_break_oque [spellid] = (tabela1.cc_break_oque [spellid] or 0) + amount
-		end
-	end
-
-	return tabela1
-end
-
-local subtrair_keys = function (habilidade, habilidade_tabela1)
-	for key, value in _pairs (habilidade) do
-		if (_type (value) == "number") then
-			if (key ~= "id" and key ~= "spellschool") then
-				habilidade_tabela1 [key] = (habilidade_tabela1 [key] or 0) - value
-			end
-		end
-	end
-end
-
-atributo_misc.__sub = function (tabela1, tabela2)
-
-	if (tabela2.spell_cast) then
-		for spellid, amount in _pairs (tabela2.spell_cast) do
-			tabela1.spell_cast [spellid] = (tabela1.spell_cast [spellid] or 0) - amount
-		end
-	end
-
-	if (tabela2.cc_done) then
-		tabela1.cc_done = tabela1.cc_done - tabela2.cc_done
-
-		for target_name, amount in _pairs (tabela2.cc_done_targets) do
-			tabela1.cc_done_targets [target_name] = (tabela1.cc_done_targets [target_name] or 0) - amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.cc_done_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.cc_done_spells:PegaHabilidade (spellid, true, nil, false)
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) - amount
-			end
-
-			subtrair_keys (habilidade, habilidade_tabela1)
-		end
-	end
-
-	if (tabela2.interrupt) then
-		--> total de interrupts
-			tabela1.interrupt = tabela1.interrupt - tabela2.interrupt
-		--> soma o interrompeu o que
-			for spellid, amount in _pairs (tabela2.interrompeu_oque) do
-				tabela1.interrompeu_oque [spellid] = (tabela1.interrompeu_oque [spellid] or 0) - amount
-			end
-		--> soma os containers de alvos
-			for target_name, amount in _pairs (tabela2.interrupt_targets) do
-				tabela1.interrupt_targets [target_name] = (tabela1.interrupt_targets [target_name] or 0) - amount
-			end
-
-		--> soma o container de habilidades
-			for spellid, habilidade in _pairs (tabela2.interrupt_spells._ActorTable) do
-				local habilidade_tabela1 = tabela1.interrupt_spells:PegaHabilidade (spellid, true, nil, false)
-
-				habilidade_tabela1.interrompeu_oque = habilidade_tabela1.interrompeu_oque or {}
-				for _spellid, amount in _pairs (habilidade.interrompeu_oque) do
-					habilidade_tabela1.interrompeu_oque [_spellid] = (habilidade_tabela1.interrompeu_oque [_spellid] or 0) - amount
-				end
-
-				for target_name, amount in _pairs (habilidade.targets) do
-					habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) - amount
-				end
-
-				subtrair_keys (habilidade, habilidade_tabela1)
-			end
-	end
-
-	if (tabela2.buff_uptime) then
-		tabela1.buff_uptime = tabela1.buff_uptime - tabela2.buff_uptime
-
-		for target_name, amount in _pairs (tabela2.buff_uptime_targets) do
-			tabela1.buff_uptime_targets [target_name] = (tabela1.buff_uptime_targets [target_name] or 0) - amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.buff_uptime_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.buff_uptime_spells:PegaHabilidade (spellid, true, nil, false)
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) - amount
-			end
-
-			subtrair_keys (habilidade, habilidade_tabela1)
-		end
-	end
-
-	if (tabela2.debuff_uptime) then
-		tabela1.debuff_uptime = tabela1.debuff_uptime - tabela2.debuff_uptime
-
-		for target_name, amount in _pairs (tabela2.debuff_uptime_targets) do
-			if (_type (amount) == "table") then --> boss debuff
-				local t = tabela1.debuff_uptime_targets [target_name]
-				if (not t) then
-					tabela1.debuff_uptime_targets [target_name] = atributo_misc:CreateBuffTargetObject()
-					t = tabela1.debuff_uptime_targets [target_name]
-				end
-				t.uptime = t.uptime - amount.uptime
-				t.activedamt = t.activedamt - amount.activedamt
-				t.refreshamt = t.refreshamt - amount.refreshamt
-				t.appliedamt = t.appliedamt - amount.appliedamt
-			else
-				tabela2.debuff_uptime_targets [target_name] = (tabela2.debuff_uptime_targets [target_name] or 0) - amount
-			end
-		end
-
-		for spellid, habilidade in _pairs (tabela2.debuff_uptime_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.debuff_uptime_spells:PegaHabilidade (spellid, true, nil, false)
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) - amount
-			end
-
-			subtrair_keys (habilidade, habilidade_tabela1)
-		end
-	end
-
-	if (tabela2.cooldowns_defensive) then
-		tabela1.cooldowns_defensive = tabela1.cooldowns_defensive - tabela2.cooldowns_defensive
-
-		for target_name, amount in _pairs (tabela2.cooldowns_defensive_targets) do
-			tabela1.cooldowns_defensive_targets [target_name] = (tabela1.cooldowns_defensive_targets [target_name] or 0) - amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.cooldowns_defensive_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.cooldowns_defensive_spells:PegaHabilidade (spellid, true, nil, false)
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) - amount
-			end
-
-			subtrair_keys (habilidade, habilidade_tabela1)
-		end
-	end
-
-	if (tabela2.ress) then
-		tabela1.ress = tabela1.ress - tabela2.ress
-
-		for target_name, amount in _pairs (tabela2.ress_targets) do
-			tabela1.ress_targets [target_name] = (tabela1.ress_targets [target_name] or 0) - amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.ress_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.ress_spells:PegaHabilidade (spellid, true, nil, false)
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) - amount
-			end
-
-			subtrair_keys (habilidade, habilidade_tabela1)
-		end
-	end
-
-	if (tabela2.dispell) then
-		tabela1.dispell = tabela1.dispell - tabela2.dispell
-
-		for target_name, amount in _pairs (tabela2.dispell_targets) do
-			tabela1.dispell_targets [target_name] = (tabela1.dispell_targets [target_name] or 0) - amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.dispell_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.dispell_spells:PegaHabilidade (spellid, true, nil, false)
-
-			habilidade_tabela1.dispell_oque = habilidade_tabela1.dispell_oque or {}
-
-			for _spellid, amount in _pairs (habilidade.dispell_oque) do
-				habilidade_tabela1.dispell_oque [_spellid] = (habilidade_tabela1.dispell_oque [_spellid] or 0) - amount
-			end
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) - amount
-			end
-
-			subtrair_keys (habilidade, habilidade_tabela1)
-		end
-
-		for spellid, amount in _pairs (tabela2.dispell_oque) do
-			tabela1.dispell_oque [spellid] = (tabela1.dispell_oque [spellid] or 0) - amount
-		end
-	end
-
-	if (tabela2.cc_break) then
-
-		tabela1.cc_break = tabela1.cc_break - tabela2.cc_break
-
-		for target_name, amount in _pairs (tabela2.cc_break_targets) do
-			tabela1.cc_break_targets [target_name] = (tabela1.cc_break_targets [target_name] or 0) - amount
-		end
-
-		for spellid, habilidade in _pairs (tabela2.cc_break_spells._ActorTable) do
-			local habilidade_tabela1 = tabela1.cc_break_spells:PegaHabilidade (spellid, true, nil, false)
-
-			habilidade_tabela1.cc_break_oque = habilidade_tabela1.cc_break_oque or {}
-			for _spellid, amount in _pairs (habilidade.cc_break_oque) do
-				habilidade_tabela1.cc_break_oque [_spellid] = (habilidade_tabela1.cc_break_oque [_spellid] or 0) - amount
-			end
-
-			for target_name, amount in _pairs (habilidade.targets) do
-				habilidade_tabela1.targets [target_name] = (habilidade_tabela1.targets [target_name] or 0) - amount
-			end
-
-			subtrair_keys (habilidade, habilidade_tabela1)
-		end
-
-		for spellid, amount in _pairs (tabela2.cc_break_oque) do
-			tabela1.cc_break_oque [spellid] = (tabela1.cc_break_oque [spellid] or 0) - amount
-		end
-	end
-
-	return tabela1
-end

@@ -1,14 +1,10 @@
 ## Interface: 30300
-## Title: Details! 3D Model Viewer
+## Title: |cFF9B59B6D|cFFAA77CCe|cFFBB99DDt|cFFAA77CCa|cFF9B59B6i|cFFAA77CCl|cFFBB99DDs|cFFAA77CC!|cFFDDBBEE 3D Model Viewer|r
 ## Notes: When the 3d models option is enabled, this tool is used to select which model will be used on the window's rows.
 ## Notes-ruRU: Этот инструмент используется для выбора модели.
+## Author: Accidev
 ## DefaultState: Disabled
 ## LoadOnDemand: 1
 ## Dependencies: Details
-## X-Curse-Packaged-Version: r267
-## X-Curse-Project-Name: Details!
-## X-Curse-Project-ID: details
-## X-Curse-Repository-ID: wow/details/mainline
-## X-Sirus-Update: https://github.com/fxpw/Details_Sirus/tree/master/Details_3DModelsPaths
 
 Details_3DModelsPaths.lua

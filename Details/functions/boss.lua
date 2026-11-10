@@ -1,15 +1,12 @@
 do
 	local _detalhes = _detalhes
 
-	local _ipairs = ipairs --> lua local
 	local _math_ceil = math.ceil --> lua local
 	local _pairs = pairs --> lua local
-	local _table_insert = table.insert --> lua local
-	local _table_remove = table.remove --> lua local
 	local _unpack = unpack --> lua local
 
 	local _GetCurrentMapAreaID = GetCurrentMapAreaID --api local
-	
+
 	_detalhes.EncounterInformation = {}
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -64,14 +61,6 @@ do
 					return id
 				end
 			end
-
-			--encounter journal id
-			local ids_ej = instanceTable.encounter_ids
-			if ids then
-				if ids[encounterid] then
-					return id
-				end
-			end
 		end
 	end
 
@@ -100,20 +89,11 @@ do
 			return
 		end
 
-		local bossindex = _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].encounter_ids and _detalhes.EncounterInformation[mapid].encounter_ids[encounterid]
+		local raid = _detalhes.EncounterInformation[mapid]
+		local bossindex = raid and raid.encounter_ids2 and raid.encounter_ids2[encounterid]
 		if bossindex then
-			return _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].encounters[bossindex], bossindex
-		else
-			local bossindex = _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].encounter_ids2 and _detalhes.EncounterInformation[mapid].encounter_ids2[encounterid]
-			if bossindex then
-				return _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].encounters[bossindex], bossindex
-			end
+			return raid.encounters[bossindex], bossindex
 		end
-	end
-
-	--> return the EJ boss id
-	function _detalhes:GetEncounterIdFromBossIndex(mapid, index)
-		return _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].encounter_ids and _detalhes.EncounterInformation[mapid].encounter_ids[index]
 	end
 
 	--> return the table which contain information about the start of a encounter
@@ -168,43 +148,9 @@ do
 		return _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].encounters[bossindex]
 	end
 
-	--> return a table with all names of boss enemies
-	function _detalhes:GetEncounterActors(mapid, bossindex)
-
-	end
-
-	--> return a table with spells id of specified encounter
-	function _detalhes:GetEncounterSpells(mapid, bossindex)
-		local encounter = _detalhes:GetBossDetails(mapid, bossindex)
-		local habilidades_poll = {}
-		if encounter.continuo then
-			for index, spellid in _ipairs(encounter.continuo) do
-				habilidades_poll[spellid] = true
-			end
-		end
-		local fases = encounter.phases
-		if fases then
-			for fase_id, fase in _ipairs(fases) do
-				if fase.spells then
-					for index, spellid in _ipairs(fase.spells) do
-						habilidades_poll[spellid] = true
-					end
-				end
-			end
-		end
-		return habilidades_poll
-	end
-
 	--> return a table with all boss ids from a raid instance
 	function _detalhes:GetBossIds(mapid)
 		return _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].boss_ids
-	end
-
-	function _detalhes:InstanceIsRaid(mapid)
-		return _detalhes:InstanceisRaid(mapid)
-	end
-	function _detalhes:InstanceisRaid(mapid)
-		return _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].is_raid
 	end
 
 	--> return a table with all encounter names present in raid instance
@@ -225,21 +171,6 @@ do
 		return _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].encounters[bossindex]
 	end
 
-	function _detalhes:GetEncounterInfoFromEncounterName(EJID, encountername)
-		DetailsFramework.EncounterJournal.EJ_SelectInstance(EJID)
-
-		for i = 1, 20 do
-			local name = DetailsFramework.EncounterJournal.EJ_GetEncounterInfoByIndex(i, EJID)
-			if not name then
-				return
-			end
-
-			if name == encountername or name:find(encountername) then
-				return i, DetailsFramework.EncounterJournal.EJ_GetEncounterInfoByIndex(i, EJID)
-			end
-		end
-	end
-
 	--> return the wallpaper for the raid instance
 	function _detalhes:GetRaidBackground(mapid)
 		local bosstables = _detalhes.EncounterInformation[mapid]
@@ -252,30 +183,14 @@ do
 	end
 
 	--> return the icon for the raid instance
-	function _detalhes:GetRaidIcon(mapid, ejID, instanceType)
-		local raidIcon = _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].icon
-		if raidIcon then
-			return raidIcon
-		end
-
-		if ejID and ejID ~= 0 then
-			local name, description, bgImage, buttonImage, loreImage, dungeonAreaMapID, link = DetailsFramework.EncounterJournal.EJ_GetInstanceInfo(ejID)
-			if name then
-				if instanceType == "party" then
-					return loreImage --bgImage
-				elseif instanceType == "raid" then
-					return loreImage
-				end
-			end
-		end
-
-		return nil
+	function _detalhes:GetRaidIcon(mapid)
+		return _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].icon
 	end
 
-	function _detalhes:GetBossIndex(mapid, encounterCLID, encounterEJID, encounterName)
+	function _detalhes:GetBossIndex(mapid, encounterCLID, encounterName)
 		local raidInfo = _detalhes.EncounterInformation[mapid]
 		if raidInfo then
-			local index = raidInfo.encounter_ids2[encounterCLID] or raidInfo.encounter_ids[encounterEJID]
+			local index = raidInfo.encounter_ids2[encounterCLID]
 			if not index then
 				for i = 1, #raidInfo.boss_names do
 					if raidInfo.boss_names[i] == encounterName then
@@ -290,7 +205,12 @@ do
 
 	--> return the boss icon
 	function _detalhes:GetBossIcon(mapid, bossindex)
-		if _detalhes.EncounterInformation[mapid] then
+		local raid = _detalhes.EncounterInformation[mapid]
+		if raid and not raid.icons then
+			local encounter = raid.encounters[bossindex]
+			return 0, 1, 0, 1, encounter and encounter.portrait
+		end
+		if raid then
 			local line = _math_ceil(bossindex / 4)
 			local x = (bossindex -((line - 1) * 4)) / 4
 			return x - 0.25, x, 0.25 * (line - 1), 0.25 * line, _detalhes.EncounterInformation[mapid].icons
@@ -298,7 +218,7 @@ do
 	end
 
 	--> return the boss portrit
-	function _detalhes:GetBossPortrait(mapid, bossindex, encounterName, ejID)
+	function _detalhes:GetBossPortrait(mapid, bossindex)
 		if mapid and bossindex then
 			local haveIcon = _detalhes.EncounterInformation[mapid] and _detalhes.EncounterInformation[mapid].encounters[bossindex] and _detalhes.EncounterInformation[mapid].encounters[bossindex].portrait
 			if haveIcon then
@@ -306,99 +226,7 @@ do
 			end
 		end
 
-		if encounterName and ejID and ejID ~= 0 then
-			local index, name, description, encounterID, rootSectionID, link = _detalhes:GetEncounterInfoFromEncounterName(ejID, encounterName)
-			if index and name and encounterID then
-				local id, name, description, displayInfo, iconImage = DetailsFramework.EncounterJournal.EJ_GetCreatureInfo(1, encounterID)
-				if iconImage then
-					return iconImage
-				end
-			end
-		end
-
 		return nil
-	end
-
-	--> return a list with names of adds and bosses
-	function _detalhes:GetEncounterActorsName(EJ_EncounterID)
-		--code snippet from wowpedia
-		local actors = {}
-		local stack, encounter, _, _, curSectionID = {}, DetailsFramework.EncounterJournal.EJ_GetEncounterInfo(EJ_EncounterID)
-
-		if not curSectionID then
-			return actors
-		end
-
-		repeat
-			local title, description, depth, abilityIcon, displayInfo, siblingID, nextSectionID, filteredByDifficulty, link, startsOpen, flag1, flag2, flag3, flag4 = DetailsFramework.EncounterJournal.EJ_GetSectionInfo(curSectionID)
-			if displayInfo ~= 0 and abilityIcon == "" then
-				actors[title] = {model = displayInfo, info = description}
-			end
-			_table_insert(stack, siblingID)
-			_table_insert(stack, nextSectionID)
-			curSectionID = _table_remove(stack)
-		until not curSectionID
-
-		return actors
-	end
-
-	function _detalhes:GetInstanceEJID(mapid)
-		mapid = mapid or _GetCurrentMapAreaID()
-		if mapid then
-			local instance_info = _detalhes.EncounterInformation[mapid]
-			if instance_info then
-				return instance_info.ej_id or 0
-			end
-		end
-		return 0
-	end
-
-	function _detalhes:GetCurrentDungeonBossListFromEJ()
-		local mapID = _GetCurrentMapAreaID()
-		if not mapID then
---			print("Details! exeption handled: zone has no map")
-			return
-		end
-
-		local EJ_CInstance = DetailsFramework.EncounterJournal.EJ_GetInstanceForMap(mapID)
-
-		if EJ_CInstance and EJ_CInstance ~= 0 then
-			if _detalhes.encounter_dungeons[EJ_CInstance] then
-				return _detalhes.encounter_dungeons[EJ_CInstance]
-			end
-
-			DetailsFramework.EncounterJournal.EJ_SelectInstance(EJ_CInstance)
-
-			local name, description, bgImage, buttonImage, loreImage, dungeonAreaMapID, link = DetailsFramework.EncounterJournal.EJ_GetInstanceInfo(EJ_CInstance)
-
-			local boss_list = {
-				[EJ_CInstance] = {name, description, bgImage, buttonImage, loreImage, dungeonAreaMapID, link}
-			}
-
-			for i = 1, 20 do
-				local encounterName, description, encounterID, rootSectionID, link = DetailsFramework.EncounterJournal.EJ_GetEncounterInfoByIndex(i, EJ_CInstance)
-				if encounterName then
-					for o = 1, 6 do
-						local id, creatureName, creatureDescription, displayInfo, iconImage = DetailsFramework.EncounterJournal.EJ_GetCreatureInfo(o, encounterID)
-						if id then
-							boss_list[creatureName] = {encounterName, encounterID, creatureName, iconImage, EJ_CInstance}
-						else
-							break
-						end
-					end
-				else
-					break
-				end
-			end
-
-			_detalhes.encounter_dungeons[EJ_CInstance] = boss_list
-
-			return boss_list
-		end
-	end
-
-	function _detalhes:IsRaidRegistered(mapid)
-		return _detalhes.EncounterInformation[mapid] and true
 	end
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -409,5 +237,3 @@ do
 		return true
 	end
 end
-
---functionas

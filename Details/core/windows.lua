@@ -1,7 +1,6 @@
 
 	local _detalhes =	_G._detalhes
 	local Loc =			LibStub ("AceLocale-3.0"):GetLocale ( "Details" )
-	local libwindow	=	LibStub ("LibWindow-1.1")
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> local pointers
@@ -12,16 +11,37 @@
 	local _math_min = math.min
 	local _math_max = math.max
 	local _ipairs = ipairs --lua local
+	local _pairs = pairs --lua local
 
+local _string_format = string.format
+local _table_sort = table.sort
 local _utf8len = string.utf8len
 local _utf8sub = string.utf8sub
 
-	local _GetScreenWidth = GetScreenWidth --wow api local
-	local _GetScreenHeight = GetScreenHeight --wow api local
 	local _UIParent = UIParent --wow api local
 
 	local gump = _detalhes.gump --details local
 	local _
+
+	local reskin_code_editor = function (editor)
+		editor.scroll:SetBackdrop (nil)
+		editor.editbox:SetBackdrop (nil)
+		gump:ReskinSlider (editor.scroll)
+
+		if (not editor.__background) then
+			editor.__background = editor:CreateTexture (nil, "background")
+		end
+
+		editor:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1})
+		editor:SetBackdropBorderColor (0, 0, 0, 1)
+
+		editor.__background:SetTexture (0.2317647, 0.2317647, 0.2317647)
+		editor.__background:SetVertexColor (0.27, 0.27, 0.27)
+		editor.__background:SetAlpha (0.8)
+		editor.__background:SetVertTile (true)
+		editor.__background:SetHorizTile (true)
+		editor.__background:SetAllPoints()
+	end
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> constants
@@ -45,41 +65,6 @@ local _utf8sub = string.utf8sub
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> core
-
-	function _detalhes:AnimarSplit (barra, goal)
-		barra.inicio = barra.split.barra:GetValue()
-		barra.fim = goal
-		barra.proximo_update = 0
-		barra.tem_animacao = true
-		barra:SetScript ("OnUpdate", self.FazerAnimacaoSplit)
-	end
-
-	function _detalhes:FazerAnimacaoSplit (elapsed)
-		local velocidade = 0.8
-
-		if (self.fim > self.inicio) then
-			self.inicio = self.inicio+velocidade
-			self.split.barra:SetValue (self.inicio)
-
-			self.split.div:SetPoint ("LEFT", self.split.barra, "LEFT", self.split.barra:GetValue()* (self.split.barra:GetWidth()/100) - 4, 0)
-
-			if (self.inicio+1 >= self.fim) then
-				self.tem_animacao = false
-				self:SetScript ("OnUpdate", nil)
-			end
-		else
-			self.inicio = self.inicio-velocidade
-			self.split.barra:SetValue (self.inicio)
-
-			self.split.div:SetPoint ("LEFT", self.split.barra, "LEFT", self.split.barra:GetValue()* (self.split.barra:GetWidth()/100) - 4, 0)
-
-			if (self.inicio-1 <= self.fim) then
-				self.tem_animacao = false
-				self:SetScript ("OnUpdate", nil)
-			end
-		end
-		self.proximo_update = 0
-	end
 
 
 
@@ -160,25 +145,6 @@ local _utf8sub = string.utf8sub
 
 	end
 
-	--> simple left and right animations by delta time
-	local animation_left_simple = function (self, deltaTime)
-		self.inicio = self.inicio - (animation_speed * deltaTime)
-		self:SetValue (self.inicio)
-		if (self.inicio-1 <= self.fim) then
-			self.tem_animacao = false
-			self:SetScript ("OnUpdate", nil)
-		end
-	end
-
-	local animation_right_simple = function (self, deltaTime)
-		self.inicio = self.inicio + (animation_speed * deltaTime)
-		self:SetValue (self.inicio)
-		if (self.inicio+0.1 >= self.fim) then
-			self.tem_animacao = false
-			self:SetScript ("OnUpdate", nil)
-		end
-	end
-
 	--> animation with acceleration
 	local animation_left_with_accel = function (self, deltaTime)
 		local distance = self.inicio - self.fim
@@ -207,8 +173,8 @@ local _utf8sub = string.utf8sub
 	end
 
 	--> initiate with defaults
-	animation_func_left  = animation_left_simple
-	animation_func_right = animation_right_simple
+	animation_func_left  = animation_left_with_accel
+	animation_func_right = animation_right_with_accel
 
 	function _detalhes:AnimarBarra (esta_barra, fim)
 		esta_barra.inicio = esta_barra.statusbar.value
@@ -223,47 +189,13 @@ local _utf8sub = string.utf8sub
 	end
 
 	function _detalhes:RefreshAnimationFunctions()
-		if (_detalhes.streamer_config.use_animation_accel) then
-			animation_func_left  = animation_left_with_accel
-			animation_func_right = animation_right_with_accel
-
-		else
-			animation_func_left  = animation_left_simple
-			animation_func_right = animation_right_simple
-		end
-
 		animation_speed = _detalhes.animation_speed
 		animation_speed_hightravel_trigger = _detalhes.animation_speed_triggertravel
 		animation_speed_hightravel_maxspeed = _detalhes.animation_speed_maxtravel
 		animation_speed_lowtravel_minspeed = _detalhes.animation_speed_mintravel
 	end
 
-	--deprecated
-	function _detalhes:FazerAnimacao_Esquerda (deltaTime)
-		self.inicio = self.inicio - (animation_speed * deltaTime)
-		self:SetValue (self.inicio)
-		if (self.inicio-1 <= self.fim) then
-			self.tem_animacao = false
-			self:SetScript ("OnUpdate", nil)
-		end
-	end
-	function _detalhes:FazerAnimacao_Direita (deltaTime)
-		self.inicio = self.inicio + (animation_speed * deltaTime)
-		self:SetValue (self.inicio)
-		if (self.inicio+0.1 >= self.fim) then
-			self.tem_animacao = false
-			self:SetScript ("OnUpdate", nil)
-		end
-	end
-
-	function _detalhes:AtualizaPontos()
-		local _x, _y = self:GetPositionOnScreen()
-		if (not _x) then
- 			return
- 		end
-
-		local _w, _h = self:GetRealSize()
-
+	local update_group_points = function (self, _x, _y, _w, _h)
 		local metade_largura = _w/2
 		local metade_altura = _h/2
 
@@ -287,6 +219,17 @@ local _utf8sub = string.utf8sub
 			self.ponto4.x = _x + metade_largura
 			self.ponto4.y = _y + metade_altura + (statusbar_y_mod*-1)
 		end
+	end
+
+	function _detalhes:AtualizaPontos()
+		local _x, _y = self:GetPositionOnScreen()
+		if (not _x) then
+ 			return
+ 		end
+
+		local _w, _h = self:GetRealSize()
+
+		update_group_points (self, _x, _y, _w, _h)
 
 	end
 
@@ -420,30 +363,7 @@ local _utf8sub = string.utf8sub
 		self.posicao[mostrando].w = _w
 		self.posicao[mostrando].h = _h
 
-		--> update the 4 points for window groups
-		local metade_largura = _w/2
-		local metade_altura = _h/2
-
-		local statusbar_y_mod = 0
-		if (not self.show_statusbar) then
-			statusbar_y_mod = 14 * self.baseframe:GetScale()
-		end
-
-		if (not self.ponto1) then
-			self.ponto1 = {x = _x - metade_largura, y = _y + metade_altura + (statusbar_y_mod*-1)} --topleft
-			self.ponto2 = {x = _x - metade_largura, y = _y - metade_altura + statusbar_y_mod} --bottomleft
-			self.ponto3 = {x = _x + metade_largura, y = _y - metade_altura + statusbar_y_mod} --bottomright
-			self.ponto4 = {x = _x + metade_largura, y = _y + metade_altura + (statusbar_y_mod*-1)} --topright
-		else
-			self.ponto1.x = _x - metade_largura
-			self.ponto1.y = _y + metade_altura + (statusbar_y_mod*-1)
-			self.ponto2.x = _x - metade_largura
-			self.ponto2.y = _y - metade_altura + statusbar_y_mod
-			self.ponto3.x = _x + metade_largura
-			self.ponto3.y = _y - metade_altura + statusbar_y_mod
-			self.ponto4.x = _x + metade_largura
-			self.ponto4.y = _y + metade_altura + (statusbar_y_mod*-1)
-		end
+		update_group_points (self, _x, _y, _w, _h)
 
 		self.baseframe.BoxBarrasAltura = self.baseframe:GetHeight() - end_window_spacement --> espa�o para o final da janela
 
@@ -470,9 +390,7 @@ local _utf8sub = string.utf8sub
  			return _detalhes:ScheduleTimer ("SaveMainWindowPosition", 1, self)
  		end
 
-		if (self.mostrando ~= "solo") then
-			self:SaveLibWindow()
-		end
+		self:SaveLibWindow()
 
 		--> save the position
 		local _w = baseframe_width
@@ -483,30 +401,7 @@ local _utf8sub = string.utf8sub
 		self.posicao[mostrando].w = _w
 		self.posicao[mostrando].h = _h
 
-		--> update the 4 points for window groups
-		local metade_largura = _w/2
-		local metade_altura = _h/2
-
-		local statusbar_y_mod = 0
-		if (not self.show_statusbar) then
-			statusbar_y_mod = 14 * self.baseframe:GetScale()
-		end
-
-		if (not self.ponto1) then
-			self.ponto1 = {x = _x - metade_largura, y = _y + metade_altura + (statusbar_y_mod*-1)} --topleft
-			self.ponto2 = {x = _x - metade_largura, y = _y - metade_altura + statusbar_y_mod} --bottomleft
-			self.ponto3 = {x = _x + metade_largura, y = _y - metade_altura + statusbar_y_mod} --bottomright
-			self.ponto4 = {x = _x + metade_largura, y = _y + metade_altura + (statusbar_y_mod*-1)} --topright
-		else
-			self.ponto1.x = _x - metade_largura
-			self.ponto1.y = _y + metade_altura + (statusbar_y_mod*-1)
-			self.ponto2.x = _x - metade_largura
-			self.ponto2.y = _y - metade_altura + statusbar_y_mod
-			self.ponto3.x = _x + metade_largura
-			self.ponto3.y = _y - metade_altura + statusbar_y_mod
-			self.ponto4.x = _x + metade_largura
-			self.ponto4.y = _y + metade_altura + (statusbar_y_mod*-1)
-		end
+		update_group_points (self, _x, _y, _w, _h)
 
 		self.baseframe.BoxBarrasAltura = self.baseframe:GetHeight() - end_window_spacement --> espa�o para o final da janela
 
@@ -551,8 +446,7 @@ local _utf8sub = string.utf8sub
 		self.baseframe:SetWidth (self.posicao[self.mostrando].w)
 		self.baseframe:SetHeight (self.posicao[self.mostrando].h)
 
-		self.baseframe:ClearAllPoints()
-		self.baseframe:SetPoint ("CENTER", _UIParent, "CENTER", novo_x, novo_y)
+		self.baseframe:ClearAndSetPoint ("CENTER", _UIParent, "CENTER", novo_x, novo_y)
 
 	end
 
@@ -574,8 +468,7 @@ local _utf8sub = string.utf8sub
 			self.posicao[self.mostrando].h = pre_defined.altura
 		end
 
-		self.baseframe:ClearAllPoints()
-		self.baseframe:SetPoint ("CENTER", _UIParent, "CENTER", novo_x + x, novo_y + y)
+		self.baseframe:ClearAndSetPoint ("CENTER", _UIParent, "CENTER", novo_x + x, novo_y + y)
 		self.baseframe.BoxBarrasAltura = self.baseframe:GetHeight() - end_window_spacement --> espa�o para o final da janela
 	end
 
@@ -716,10 +609,6 @@ local _utf8sub = string.utf8sub
 			if (not T) then --> primeira vez que o gump esta sendo reajustado
 				T = _math_floor (self.baseframe.BoxBarrasAltura / self.row_height)
 			end
-
-			--> reajustar o local do rel�gio
-			local meio = self.baseframe:GetWidth() / 2
-			local novo_local = meio - 25
 
 			self.rows_fit_in_window = _math_floor ( self.baseframe.BoxBarrasAltura / self.row_height)
 
@@ -875,8 +764,6 @@ local _utf8sub = string.utf8sub
 	local preset3_backdrop = {bgFile = [[Interface\DialogFrame\UI-DialogBox-Background-Dark]], edgeFile = [[Interface\AddOns\Details\images\border_3]], tile=true,
 	edgeSize = 16, tileSize = 64, insets = {left = 3, right = 3, top = 4, bottom = 4}}
 
-	_detalhes.cooltip_preset3_backdrop = preset3_backdrop
-
 	local white_table = {1, 1, 1, 1}
 	local black_table = {0, 0, 0, 1}
 	local gray_table = {0.37, 0.37, 0.37, 0.95}
@@ -940,32 +827,6 @@ local _utf8sub = string.utf8sub
 			GameCooltip:SetBackdrop (1, preset3_backdrop, nil, white_table)
 
 		end
-	end
-
---> yes no panel
-
-	do
-		_detalhes.yesNo = _detalhes.gump:NewPanel (UIParent, _, "DetailsYesNoWindow", _, 500, 80)
-		_detalhes.yesNo:SetPoint ("CENTER", UIParent, "CENTER")
-		_detalhes.gump:NewLabel (_detalhes.yesNo, _, "$parentAsk", "ask", "")
-		_detalhes.yesNo ["ask"]:SetPoint ("CENTER", _detalhes.yesNo, "CENTER", 0, 25)
-		_detalhes.yesNo ["ask"]:SetWidth (480)
-		_detalhes.yesNo ["ask"]:SetJustifyH ("CENTER")
-		_detalhes.yesNo ["ask"]:SetHeight (22)
-		_detalhes.gump:NewButton (_detalhes.yesNo, _, "$parentNo", "no", 100, 30, function() _detalhes.yesNo:Hide() end, nil, nil, nil, Loc ["STRING_NO"])
-		_detalhes.gump:NewButton (_detalhes.yesNo, _, "$parentYes", "yes", 100, 30, nil, nil, nil, nil, Loc ["STRING_YES"])
-		_detalhes.yesNo ["no"]:SetPoint (10, -45)
-		_detalhes.yesNo ["yes"]:SetPoint (390, -45)
-		_detalhes.yesNo ["no"]:InstallCustomTexture()
-		_detalhes.yesNo ["yes"]:InstallCustomTexture()
-		_detalhes.yesNo ["yes"]:SetHook ("OnMouseUp", function() _detalhes.yesNo:Hide() end)
-		function _detalhes:Ask (msg, func, ...)
-			_detalhes.yesNo ["ask"].text = msg
-			local p1, p2 = ...
-			_detalhes.yesNo ["yes"]:SetClickFunction (func, p1, p2)
-			_detalhes.yesNo:Show()
-		end
-		_detalhes.yesNo:Hide()
 	end
 
 --> cria o frame de wait for plugin
@@ -1038,83 +899,8 @@ local _utf8sub = string.utf8sub
 			label:Hide()
 			bgpanel:Hide()
 
-			if (self.meu_id == _detalhes.solo) then
-				_detalhes.SoloTables:switch (nil, _detalhes.SoloTables.Mode)
-
-			elseif (self.modo == _detalhes._detalhes_props["MODO_RAID"]) then
+			if (self.modo == _detalhes._detalhes_props["MODO_RAID"]) then
 				_detalhes.RaidTables:EnableRaidMode (self)
-
-			end
-		end
-	end
-
-	do
-		local WaitForPluginFrame = CreateFrame ("Frame", "DetailsWaitForPluginFrame", UIParent)
-		local WaitTexture = WaitForPluginFrame:CreateTexture (nil, "overlay")
-		WaitTexture:SetTexture ("Interface\\UNITPOWERBARALT\\Mechanical_Circular_Frame")
-		WaitTexture:SetPoint ("CENTER", WaitForPluginFrame)
-		WaitTexture:SetWidth (180)
-		WaitTexture:SetHeight (180)
-		WaitForPluginFrame.wheel = WaitTexture
-		local RotateAnimGroup = WaitForPluginFrame:CreateAnimationGroup()
-		local rotate = RotateAnimGroup:CreateAnimation ("Rotation")
-		rotate:SetDegrees (360)
-		rotate:SetDuration (60)
-		RotateAnimGroup:SetLooping ("repeat")
-
-		local bgpanel = gump:NewPanel (UIParent, UIParent, "DetailsWaitFrameBG", nil, 120, 30, false, false, false)
-		bgpanel:SetPoint ("CENTER", WaitForPluginFrame, "CENTER")
-		bgpanel:SetBackdrop ({bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background"})
-		bgpanel:SetBackdropColor (.2, .2, .2, 1)
-
-		local label = gump:NewLabel (UIParent, UIParent, nil, nil, Loc ["STRING_WAITPLUGIN"]) --> localize-me
-		label.color = "silver"
-		label:SetPoint ("CENTER", WaitForPluginFrame, "CENTER")
-		label:SetJustifyH ("CENTER")
-		label:Hide()
-
-		WaitForPluginFrame:Hide()
-
-		function _detalhes:WaitForSoloPlugin (instancia)
-
-			instancia:ChangeIcon ([[Interface\GossipFrame\ActiveQuestIcon]])
-
-			if (WaitForPluginFrame:IsShown() and WaitForPluginFrame:GetParent() == instancia.baseframe) then
-				return _detalhes:ScheduleTimer ("ExecDelayedPlugin", 5, instancia)
-			end
-
-			WaitForPluginFrame:SetParent (instancia.baseframe)
-			WaitForPluginFrame:SetAllPoints (instancia.baseframe)
-			local size = math.max (instancia.baseframe:GetHeight()* 0.35, 100)
-			WaitForPluginFrame.wheel:SetWidth (size)
-			WaitForPluginFrame.wheel:SetHeight (size)
-			WaitForPluginFrame:Show()
-			label:Show()
-			bgpanel:Show()
-			RotateAnimGroup:Play()
-
-			return _detalhes:ScheduleTimer ("ExecDelayedPlugin", 5, instancia)
-		end
-
-		function _detalhes:CancelWaitForPlugin()
-			RotateAnimGroup:Stop()
-			WaitForPluginFrame:Hide()
-			label:Hide()
-			bgpanel:Hide()
-		end
-
-		function _detalhes:ExecDelayedPlugin (instancia)
-
-			RotateAnimGroup:Stop()
-			WaitForPluginFrame:Hide()
-			label:Hide()
-			bgpanel:Hide()
-
-			if (instancia.meu_id == _detalhes.solo) then
-				_detalhes.SoloTables:switch (nil, _detalhes.SoloTables.Mode)
-
-			elseif (instancia.meu_id == _detalhes.raid) then
-				_detalhes.RaidTables:switch (nil, _detalhes.RaidTables.Mode)
 
 			end
 		end
@@ -1124,13 +910,6 @@ local _utf8sub = string.utf8sub
 	function _detalhes:TutorialBookmark (instance)
 		_detalhes:SetTutorialCVar ("ATTRIBUTE_SELECT_TUTORIAL1", true)
 	end
-
---> translate window
-
-	function _detalhes:OpenTranslateWindow()
-
-	end
-
 
 
 --> raid history window ~history ~statistics
@@ -1173,27 +952,10 @@ local _utf8sub = string.utf8sub
 
 			f.Mode = 2
 
-			f.bg1 = f:CreateTexture (nil, "background")
-			f.bg1:SetTexture ([[Interface\AddOns\Details\images\background]], true)
-			f.bg1:SetAlpha (0.7)
-			f.bg1:SetVertexColor (0.27, 0.27, 0.27)
-			f.bg1:SetVertTile (true)
-			f.bg1:SetHorizTile (true)
-			f.bg1:SetSize (790, 454)
-			f.bg1:SetAllPoints()
-
-			f:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-			f:SetBackdropColor (.5, .5, .5, .5)
-			f:SetBackdropBorderColor (0, 0, 0, 1)
+			_detalhes:FormatBackground (f)
 
 			--> menu title bar
-				local titlebar = CreateFrame ("Frame", nil, f)
-				titlebar:SetPoint ("TOPLEFT", f, "TOPLEFT", 2, -3)
-				titlebar:SetPoint ("TOPRIGHT", f, "TOPRIGHT", -2, -3)
-				titlebar:SetHeight (20)
-				titlebar:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-				titlebar:SetBackdropColor (.5, .5, .5, 1)
-				titlebar:SetBackdropBorderColor (0, 0, 0, 1)
+				local titlebar = _detalhes:CreateWindowTitleBar (f)
 
 			--> menu title
 				local titleLabel = _detalhes.gump:NewLabel (titlebar, titlebar, nil, "titulo", "Details! " .. Loc ["STRING_STATISTICS"], "GameFontNormal", 12) --{227/255, 186/255, 4/255}
@@ -1201,17 +963,7 @@ local _utf8sub = string.utf8sub
 				titleLabel:SetPoint ("TOP", titlebar , "TOP", 0, -4)
 
 			--> close button
-				f.Close = CreateFrame ("button", "$parentCloseButton", f)
-				f.Close:SetPoint ("RIGHT", titlebar, "RIGHT", -2, 0)
-				f.Close:SetSize (16, 16)
-				f.Close:SetNormalTexture (_detalhes.gump.folder .. "icons")
-				f.Close:SetHighlightTexture (_detalhes.gump.folder .. "icons")
-				f.Close:SetPushedTexture (_detalhes.gump.folder .. "icons")
-				f.Close:GetNormalTexture():SetTexCoord (0, 16/128, 0, 1)
-				f.Close:GetHighlightTexture():SetTexCoord (0, 16/128, 0, 1)
-				f.Close:GetPushedTexture():SetTexCoord (0, 16/128, 0, 1)
-				f.Close:SetAlpha (0.7)
-				f.Close:SetScript ("OnClick", function() f:Hide() end)
+				_detalhes:CreateWindowCloseButton (f, titlebar, function() f:Hide() end)
 
 			if (not _detalhes:GetTutorialCVar ("HISTORYPANEL_TUTORIAL")) then
 				local tutorialFrame = CreateFrame ("Frame", "$parentTutorialFrame", f)
@@ -1229,15 +981,6 @@ local _utf8sub = string.utf8sub
 				tutorialFrame.Desc.width = 370
 				tutorialFrame.Desc:SetPoint ("TOPLEFT", tutorialFrame, "TOPLEFT", 10, -45)
 
-				--[[
-				tutorialFrame.Example:SetPoint ("TOPLEFT", tutorialFrame, "TOPLEFT", 10, -110)
-				tutorialFrame.Example = _detalhes.gump:CreateLabel (tutorialFrame, Loc ["STRING_FORGE_TUTORIAL_VIDEO"], 12)
-
-				local editBox = _detalhes.gump:CreateTextEntry (tutorialFrame, function()end, 375, 20, nil, nil, nil, entry_template, label_template)
-				editBox:SetPoint ("TOPLEFT", tutorialFrame.Example, "BOTTOMLEFT", 0, -10)
-				editBox:SetText ()
-				editBox:SetTemplate (_detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"))
-				--]]
 
 				local closeButton = _detalhes.gump:CreateButton (tutorialFrame, function() _detalhes:SetTutorialCVar ("HISTORYPANEL_TUTORIAL", true); tutorialFrame:Hide() end, 80, 20, Loc ["STRING_OPTIONS_CHART_CLOSE"])
 				closeButton:SetPoint ("BOTTOM", tutorialFrame, "BOTTOM", 0, 10)
@@ -1257,24 +1000,6 @@ local _utf8sub = string.utf8sub
 			div:SetPoint ("TOPLEFT", f, "TOPLEFT", 180, -64)
 			div:SetHeight (574)
 
-			--gradient
-			--[=[
-			local blackdiv = f:CreateTexture (nil, "artwork")
-			blackdiv:SetTexture ([[Interface\ACHIEVEMENTFRAME\UI-Achievement-HorizontalShadow]])
-			blackdiv:SetVertexColor (0, 0, 0)
-			blackdiv:SetAlpha (1)
-			blackdiv:SetPoint ("TOPLEFT", f, "TOPLEFT", 187, -65)
-			blackdiv:SetHeight (507)
-			blackdiv:SetWidth (200)
-
-			local blackdiv = f:CreateTexture (nil, "artwork")
-			blackdiv:SetTexture ([[Interface\ACHIEVEMENTFRAME\UI-Achievement-HorizontalShadow]])
-			blackdiv:SetVertexColor (0, 0, 0)
-			blackdiv:SetAlpha (0.7)
-			blackdiv:SetPoint ("TOPLEFT", f, "TOPLEFT", 0, 0)
-			blackdiv:SetPoint ("BOTTOMLEFT", f, "BOTTOMLEFT", 0, 0)
-			blackdiv:SetWidth (200)
-			--]=]
 
 			--select history or guild rank
 			local options_switch_template = _detalhes.gump:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE")
@@ -1300,16 +1025,16 @@ local _utf8sub = string.utf8sub
 			end
 
 			local HistoryCheckBox, HistoryLabel = _detalhes.gump:CreateSwitch (f, select_history, false, 18, 18, "", "", "HistoryCheckBox", nil, nil, nil, nil, Loc ["STRING_GUILDDAMAGERANK_SHOWHISTORY"], options_switch_template) --, options_text_template
-			HistoryLabel:ClearAllPoints()
 			HistoryCheckBox:ClearAllPoints()
 			HistoryCheckBox:SetPoint ("TOPLEFT", f, "TOPLEFT", 100, -34)
+			HistoryLabel:ClearAllPoints()
 			HistoryLabel:SetPoint ("LEFT", HistoryCheckBox, "RIGHT", 2, 0)
 			HistoryCheckBox:SetAsCheckBox()
 
 			local GuildRankCheckBox, GuildRankLabel = _detalhes.gump:CreateSwitch (f, select_guildrank, true, 18, 18, "", "", "GuildRankCheckBox", nil, nil, nil, nil, Loc ["STRING_GUILDDAMAGERANK_SHOWRANK"], options_switch_template) --, options_text_template
-			GuildRankLabel:ClearAllPoints()
 			GuildRankCheckBox:ClearAllPoints()
 			GuildRankCheckBox:SetPoint ("TOPLEFT", f, "TOPLEFT", 240, -34)
+			GuildRankLabel:ClearAllPoints()
 			GuildRankLabel:SetPoint ("LEFT", GuildRankCheckBox, "RIGHT", 2, 0)
 			GuildRankCheckBox:SetAsCheckBox()
 
@@ -1363,6 +1088,7 @@ local _utf8sub = string.utf8sub
 
 				C_Timer:NewTicker (10, function (self)
 					if (not _detalhes.LastGuildSyncReceived) then
+						self:Cancel()
 						f.GuildSyncButton:Enable()
 						f.EndAnimationHub:Play()
 					elseif (_detalhes.LastGuildSyncReceived+10 < GetTime()) then
@@ -1376,7 +1102,7 @@ local _utf8sub = string.utf8sub
 
 			local GuildSyncButton = _detalhes.gump:CreateButton (f, guild_sync, 130, 20, Loc ["STRING_GUILDDAMAGERANK_SYNCBUTTONTEXT"], nil, nil, nil, "GuildSyncButton", nil, nil, options_button_template, options_text_template)
 			GuildSyncButton:SetPoint ("TOPRIGHT", f, "TOPRIGHT", -20, -34)
-			GuildSyncButton:SetIcon ([[Interface\GLUES\CharacterSelect\RestoreButton]], 12, 12, "overlay", {0.2, .8, 0.2, .8}, nil, 4)
+			GuildSyncButton:SetIcon ([[Interface\Buttons\UI-RefreshButton]], 12, 12, "overlay", {0, 1, 0, 1}, nil, 4)
 
 			--> listen to comm events
 				local eventListener = _detalhes:CreateEventListener()
@@ -1436,7 +1162,7 @@ local _utf8sub = string.utf8sub
 								playerName = playerName:gsub ("%|c%x%x%x%x%x%x%x%x", "")
 								playerName = playerName:gsub ("%|r", "")
 								playerName = playerName:gsub (".*%s", "")
-								tinsert (result, {playerName, f.LatestResourceTable[i][2]})
+								result[#result+1] = {playerName, f.LatestResourceTable[i][2]}
 							else
 								break
 							end
@@ -1452,7 +1178,7 @@ local _utf8sub = string.utf8sub
 
 			local ReportButton = _detalhes.gump:CreateButton (f, f.BuildReport, 130, 20, Loc ["STRING_OPTIONS_REPORT_ANCHOR"]:gsub (":", ""), nil, nil, nil, "ReportButton", nil, nil, options_button_template, options_text_template)
 			ReportButton:SetPoint ("RIGHT", GuildSyncButton, "LEFT", -2, 0)
-			ReportButton:SetIcon ([[Interface\GLUES\CharacterSelect\RestoreButton]], 12, 12, "overlay", {0.2, .8, 0.2, .8}, nil, 4)
+			ReportButton:SetIcon ([[Interface\Buttons\UI-RefreshButton]], 12, 12, "overlay", {0, 1, 0, 1}, nil, 4)
 
 			--
 			function f:SetBackgroundImage (encounterId)
@@ -1494,11 +1220,6 @@ local _utf8sub = string.utf8sub
 				f.LatestSelection.PlayerName = DetailsRaidHistoryWindow.select_player2.value
 			end)
 
-			--f.TitleText:SetText ("Details! Raid Ranking")
-			--f.portrait:SetTexture ([[Interface\AddOns\Details\images\icons2]])
-			--f.portrait:SetTexture ([[Interface\PVPFrame\PvPPrestigeIcons]])
-			--f.portrait:SetTexCoord (270/1024, 384/1024, 128/512, 256/512)
-			--f.portrait:SetTexCoord (192/512, 258/512, 322/512, 388/512)
 
 			local dropdown_size = 160
 			local icon = [[Interface\AddOns\Details\textures\FriendsFrame\BattleBet-Status-Offline]]
@@ -1508,7 +1229,6 @@ local _utf8sub = string.utf8sub
 			local boss_list = {}
 			local guild_list = {}
 
-			local sort_alphabetical = function(a,b) return a[1] < b[1] end
 			local sort_alphabetical2 = function(a,b) return a.value < b.value end
 
 			local on_select = function()
@@ -1603,12 +1323,12 @@ local _utf8sub = string.utf8sub
 				local t = {}
 				local already_listed = {}
 				if (encounterTable) then
-					for encounterIndex, encounter in ipairs (encounterTable) do
+					for encounterIndex, encounter in _ipairs (encounterTable) do
 						if (encounter.guild == guild) then
 							local roleTable = encounter [role]
-							for playerName, _ in pairs (roleTable) do
+							for playerName, _ in _pairs (roleTable) do
 								if (not already_listed [playerName]) then
-									tinsert (t, {value = playerName, label = playerName, icon = icon, onclick = on_player2_select})
+									t[#t+1] = {value = playerName, label = playerName, icon = icon, onclick = on_player2_select}
 									already_listed [playerName] = true
 								end
 							end
@@ -1616,13 +1336,15 @@ local _utf8sub = string.utf8sub
 					end
 				end
 
-				table.sort (t, sort_alphabetical2)
+				_table_sort (t, sort_alphabetical2)
 
 				return t
 			end
 			local player2_dropdown = gump:CreateDropDown (f, build_player2_list, 1, dropdown_size, 20, "select_player2")
 			local player2_string = gump:CreateLabel (f, Loc ["STRING_GUILDDAMAGERANK_PLAYERBASE_PLAYER"] .. ":", _, _, "GameFontNormal", "select_player2_label")
 			player2_dropdown:SetTemplate (gump:GetTemplate ("dropdown", "OPTIONS_DROPDOWN_TEMPLATE"))
+
+			local diff_labels = {"10 Normal", "25 Normal", "10 Heroic", "25 Heroic"}
 
 			function f:UpdateDropdowns (DoNotSelectRaid)
 
@@ -1640,86 +1362,35 @@ local _utf8sub = string.utf8sub
 
 				local raidSelected = DetailsRaidHistoryWindow.select_raid:GetValue()
 
-				for difficulty, encounterIdTable in pairs (db) do
+				for difficulty, encounterIdTable in _pairs (db) do
 					if (type (difficulty) == "number") then
-						if (difficulty == 1) then
-							local alreadyHave = false
-							for i, t in ipairs (diff_list) do
-								if (t.label == "10 Normal") then
-									alreadyHave = true
-								end
-							end
-							if (not alreadyHave) then
-								tinsert (diff_list, 1, {value = 1, label = "10 Normal", icon = icon, onclick = on_diff_select})
-							end
-						elseif (difficulty == 2) then
-							local alreadyHave = false
-							for i, t in ipairs (diff_list) do
-								if (t.label == "25 Normal") then
-									alreadyHave = true
-								end
-							end
-							if (not alreadyHave) then
-								tinsert (diff_list, 2, {value = 2, label = "25 Normal", icon = icon, onclick = on_diff_select})
-							end
-						elseif (difficulty == 3) then
-							local alreadyHave = false
-							for i, t in ipairs (diff_list) do
-								if (t.label == "10 Heroic") then
-									alreadyHave = true
-								end
-							end
-							if (not alreadyHave) then
-								tinsert (diff_list, 3, {value = 3, label = "10 Heroic", icon = icon, onclick = on_diff_select})
-							end
-						elseif (difficulty == 4) then
-							local alreadyHave = false
-							for i, t in ipairs (diff_list) do
-								if (t.label == "25 Heroic") then
-									alreadyHave = true
-								end
-							end
-							if (not alreadyHave) then
-								tinsert (diff_list, 4, {value = 4, label = "25 Heroic", icon = icon, onclick = on_diff_select})
-							end
+						if (diff_labels [difficulty]) then
+							diff_list [#diff_list+1] = {value = difficulty, label = diff_labels [difficulty], icon = icon, onclick = on_diff_select}
 						end
 
-						for encounterId, encounterTable in pairs (encounterIdTable) do
+						for encounterId, encounterTable in _pairs (encounterIdTable) do
 							if (not boss_repeated [encounterId]) then
 								local encounter, instance = _detalhes:GetBossEncounterDetailsFromEncounterId (_, encounterId)
 								if (encounter) then
 									local InstanceID = _detalhes:GetInstanceIdFromEncounterId (encounterId)
 									if (raidSelected == InstanceID) then
-										--[=[
-										local bossIndex = _detalhes:GetBossIndex (InstanceID, encounterId)
-										if (bossIndex) then
-											local l, r, t, b, texturePath = _detalhes:GetBossIcon (InstanceID, bossIndex)
-											if (texturePath) then
-												tinsert (boss_list, {value = encounterId, label = encounter.boss, icon = texturePath, texcoord = {l, r, t, b}, onclick = on_boss_select})
-											else
-												tinsert (boss_list, {value = encounterId, label = encounter.boss, icon = icon, onclick = on_boss_select})
-											end
-										else
-											tinsert (boss_list, {value = encounterId, label = encounter.boss, icon = icon, onclick = on_boss_select})
-										end
-										--]=]
 
-										tinsert (boss_list, {value = encounterId, label = encounter.boss, icon = icon, onclick = on_boss_select})
+										boss_list[#boss_list+1] = {value = encounterId, label = encounter.boss, icon = icon, onclick = on_boss_select}
 										boss_repeated [encounterId] = true
 									end
 
 									if (not raid_repeated [instance.name]) then
-										tinsert (raid_list, {value = instance.id, label = instance.name, icon = icon, onclick = on_raid_select})
+										raid_list[#raid_list+1] = {value = instance.id, label = instance.name, icon = icon, onclick = on_raid_select}
 										raid_repeated [instance.name] = true
 									end
 
 								end
 							end
 
-							for index, encounter in ipairs (encounterTable) do
+							for index, encounter in _ipairs (encounterTable) do
 								local guild = encounter.guild
 								if (not guild_repeated [guild]) then
-									tinsert (guild_list, {value = guild, label = guild, icon = icon, onclick = on_guild_select})
+									guild_list[#guild_list+1] = {value = guild, label = guild, icon = icon, onclick = on_guild_select}
 									guild_repeated [guild] = true
 								end
 							end
@@ -1727,7 +1398,8 @@ local _utf8sub = string.utf8sub
 					end
 				end
 
-				table.sort (boss_list, function (t1, t2) return t1.label < t2.label end)
+				_table_sort (diff_list, function (t1, t2) return t1.value < t2.value end)
+				_table_sort (boss_list, function (t1, t2) return t1.label < t2.label end)
 
 
 				diff_dropdown:Refresh()
@@ -1753,70 +1425,15 @@ local _utf8sub = string.utf8sub
 				local boss_repeated = {}
 				wipe (boss_list)
 
-				for difficulty, encounterIdTable in pairs (db) do
+				for difficulty, encounterIdTable in _pairs (db) do
 					if (type (difficulty) == "number") then
-						if (difficulty == 1) then
-							local alreadyHave = false
-							for i, t in ipairs (diff_list) do
-								if (t.label == "10 Normal") then
-									alreadyHave = true
-								end
-							end
-							if (not alreadyHave) then
-								tinsert (diff_list, 1, {value = 1, label = "10 Normal", icon = icon, onclick = on_diff_select})
-							end
-						elseif (difficulty == 2) then
-							local alreadyHave = false
-							for i, t in ipairs (diff_list) do
-								if (t.label == "25 Normal") then
-									alreadyHave = true
-								end
-							end
-							if (not alreadyHave) then
-								tinsert (diff_list, 2, {value = 2, label = "25 Normal", icon = icon, onclick = on_diff_select})
-							end
-						elseif (difficulty == 3) then
-							local alreadyHave = false
-							for i, t in ipairs (diff_list) do
-								if (t.label == "10 Heroic") then
-									alreadyHave = true
-								end
-							end
-							if (not alreadyHave) then
-								tinsert (diff_list, 3, {value = 3, label = "10 Heroic", icon = icon, onclick = on_diff_select})
-							end
-						elseif (difficulty == 4) then
-							local alreadyHave = false
-							for i, t in ipairs (diff_list) do
-								if (t.label == "25 Heroic") then
-									alreadyHave = true
-								end
-							end
-							if (not alreadyHave) then
-								tinsert (diff_list, 4, {value = 4, label = "25 Heroic", icon = icon, onclick = on_diff_select})
-							end
-						end
-
-						for encounterId, encounterTable in pairs (encounterIdTable) do
+						for encounterId, encounterTable in _pairs (encounterIdTable) do
 							if (not boss_repeated [encounterId]) then
 								local encounter, instance = _detalhes:GetBossEncounterDetailsFromEncounterId (_, encounterId)
 								if (encounter) then
 									local InstanceID = _detalhes:GetInstanceIdFromEncounterId (encounterId)
 									if (raidSelected == InstanceID) then
-									--[=[
-										local bossIndex = _detalhes:GetBossIndex (InstanceID, encounterId)
-										if (bossIndex) then
-											local l, r, t, b, texturePath = _detalhes:GetBossIcon (InstanceID, bossIndex)
-											if (texturePath) then
-												tinsert (boss_list, {value = encounterId, label = encounter.boss, icon = texturePath, texcoord = {l, r, t, b}, onclick = on_boss_select})
-											else
-												tinsert (boss_list, {value = encounterId, label = encounter.boss, icon = icon, onclick = on_boss_select})
-											end
-										else
-											tinsert (boss_list, {value = encounterId, label = encounter.boss, icon = icon, onclick = on_boss_select})
-										end
-									--]=]
-										tinsert (boss_list, {value = encounterId, label = encounter.boss, icon = icon, onclick = on_boss_select})
+										boss_list[#boss_list+1] = {value = encounterId, label = encounter.boss, icon = icon, onclick = on_boss_select}
 										boss_repeated [encounterId] = true
 									end
 								end
@@ -1825,7 +1442,7 @@ local _utf8sub = string.utf8sub
 					end
 				end
 
-				table.sort (boss_list, function (t1, t2) return t1.label < t2.label end)
+				_table_sort (boss_list, function (t1, t2) return t1.label < t2.label end)
 				boss_dropdown:Refresh()
 			end
 
@@ -1861,7 +1478,7 @@ local _utf8sub = string.utf8sub
 				local data = {}
 
 				if (type (playerName) == "string" and string.len (playerName) > 1) then
-					for encounterIndex, encounter in ipairs (encounterTable) do
+					for encounterIndex, encounter in _ipairs (encounterTable) do
 
 						if (encounter.guild == guild) then
 							local roleTable = encounter [role]
@@ -1875,7 +1492,7 @@ local _utf8sub = string.utf8sub
 							if (player) then
 
 								--tinsert (data, {text = date, value = player[1], data = player, fulldate = encounter.date, elapsed = encounter.elapsed})
-								tinsert (data, {text = date, value = player[1]/encounter.elapsed, utext = _detalhes:ToK2 (player[1]/encounter.elapsed), data = player, fulldate = encounter.date, elapsed = encounter.elapsed})
+								data[#data+1] = {text = date, value = player[1]/encounter.elapsed, utext = _detalhes:ToK2 (player[1]/encounter.elapsed), data = player, fulldate = encounter.date, elapsed = encounter.elapsed}
 							end
 						end
 					end
@@ -1916,13 +1533,11 @@ local _utf8sub = string.utf8sub
 			function f:BuildGuildRankTable (encounterTable, guild, role)
 
 				local header = {{name = "Player Name", type = "text"}, {name = "Per Second", type = "text"}, {name = "Total", type = "text"}, {name = "Length", type = "text"}, {name = "Item Level", type = "text"}, {name = "Date", type = "text"}}
-				local players = {}
-				local players_index = {}
 
 				local playerScore = {}
 
 				--get the best of each player
-				for encounterIndex, encounter in ipairs (encounterTable) do
+				for encounterIndex, encounter in _ipairs (encounterTable) do
 					if (encounter.guild == guild) then
 						local roleTable = encounter [role]
 
@@ -1930,7 +1545,7 @@ local _utf8sub = string.utf8sub
 						date = date:gsub (".*%s", "")
 						date = date:sub (1, -4)
 
-						for playerName, playerTable in pairs (roleTable) do
+						for playerName, playerTable in _pairs (roleTable) do
 
 							if (not playerScore [playerName]) then
 								playerScore [playerName] = {
@@ -1960,7 +1575,7 @@ local _utf8sub = string.utf8sub
 				end
 
 				local sortTable = {}
-				for playerName, t in pairs (playerScore) do
+				for playerName, t in _pairs (playerScore) do
 					local className = _detalhes.classid_to_classstring[t.class or 0]
 					local classColor = "FFFFFFFF"
 					if (className) then
@@ -1969,7 +1584,7 @@ local _utf8sub = string.utf8sub
 
 					local playerNameFormated = _detalhes:GetOnlyName (playerName)
 
-					tinsert (sortTable, {
+					sortTable[#sortTable+1] = {
 						"|c" .. classColor .. playerNameFormated .. "|r",
 						_detalhes:comma_value (t.ps),
 						_detalhes:ToK2 (t.total),
@@ -1978,10 +1593,10 @@ local _utf8sub = string.utf8sub
 						t.date,
 						t.total,
 						t.ps,
-					})
+					}
 				end
 
-				table.sort (sortTable, function(a, b) return a[8] > b[8] end)
+				_table_sort (sortTable, function(a, b) return a[8] > b[8] end)
 
 				--> add the number before the player name
 				for i = 1, #sortTable do
@@ -2010,7 +1625,7 @@ local _utf8sub = string.utf8sub
 				local player_class = {}
 				local amt_encounters = 0
 
-				for encounterIndex, encounter in ipairs (encounterTable) do
+				for encounterIndex, encounter in _ipairs (encounterTable) do
 					if (encounter.guild == guild) then
 						local roleTable = encounter [role]
 
@@ -2019,9 +1634,9 @@ local _utf8sub = string.utf8sub
 						date = date:sub (1, -4)
 						amt_encounters = amt_encounters + 1
 
-						tinsert (header, {name = date, type = "text"})
+						header[#header+1] = {name = date, type = "text"}
 
-						for playerName, playerTable in pairs (roleTable) do
+						for playerName, playerTable in _pairs (roleTable) do
 							local index = players_index [playerName]
 							local player
 
@@ -2029,19 +1644,19 @@ local _utf8sub = string.utf8sub
 								player = {playerName}
 								player_class [playerName] = playerTable [3]
 								for i = 1, amt_encounters-1 do
-									tinsert (player, "")
+									player[#player+1] = ""
 								end
-								tinsert (player, _detalhes:ToK2 (playerTable [1] / encounter.elapsed))
-								tinsert (players, player)
+								player[#player+1] = _detalhes:ToK2 (playerTable [1] / encounter.elapsed)
+								players[#players+1] = player
 								players_index [playerName] = #players
 
 								--print ("not index", playerName, amt_encounters, date, 2, amt_encounters-1)
 							else
 								player = players [index]
 								for i = #player+1, amt_encounters-1 do
-									tinsert (player, "")
+									player[#player+1] = ""
 								end
-								tinsert (player, _detalhes:ToK2 (playerTable [1] / encounter.elapsed))
+								player[#player+1] = _detalhes:ToK2 (playerTable [1] / encounter.elapsed)
 							end
 
 						end
@@ -2049,11 +1664,11 @@ local _utf8sub = string.utf8sub
 				end
 
 				--> sort alphabetical
-				table.sort (players, function(a, b) return a[1] < b[1] end)
+				_table_sort (players, function(a, b) return a[1] < b[1] end)
 
-				for index, playerTable in ipairs (players) do
+				for index, playerTable in _ipairs (players) do
 					for i = #playerTable, amt_encounters do
-						tinsert (playerTable, "")
+						playerTable[#playerTable+1] = ""
 					end
 
 					local className = _detalhes.classid_to_classstring[player_class[playerTable[1]] or 0]
@@ -2176,8 +1791,11 @@ local _utf8sub = string.utf8sub
 			-- _G.DetailsRaidHistoryWindow.FirstRun = nil
 		end
 
+		if (not statsWindow.UpdateDropdowns) then
+			_detalhes:Msg("Failed to load statistics, Details! Storage is disabled?")
+			return
+		end
 		statsWindow:UpdateDropdowns()
-		-- _G.DetailsRaidHistoryWindow:UpdateDropdowns()
 
 		statsWindow:Refresh()
 		statsWindow:Show()
@@ -2232,96 +1850,6 @@ local _utf8sub = string.utf8sub
 		DetailsPluginContainerWindow.OpenPlugin (statsWindow)
 	end
 
---> feedback window
-	function _detalhes:OpenFeedbackWindow()
-
-		if (not _G.DetailsFeedbackPanel) then
-
-			gump:CreateSimplePanel (UIParent, 340, 300, Loc ["STRING_FEEDBACK_SEND_FEEDBACK"], "DetailsFeedbackPanel")
-			local panel = _G.DetailsFeedbackPanel
-
-			local label = gump:CreateLabel (panel, Loc ["STRING_FEEDBACK_PREFERED_SITE"])
-			label:SetPoint ("TOPLEFT", panel, "TOPLEFT", 15, -60)
-
-			local wowi = gump:NewImage (panel, [[Interface\AddOns\Details\images\icons2]], 101, 34, "artwork", {0/512, 101/512, 163/512, 200/512})
-			local curse = gump:NewImage (panel, [[Interface\AddOns\Details\images\icons2]], 101, 34, "artwork", {0/512, 101/512, 201/512, 242/512})
-			local mmoc = gump:NewImage (panel, [[Interface\AddOns\Details\images\icons2]], 101, 34, "artwork", {0/512, 101/512, 243/512, 285/512})
-			wowi:SetDesaturated (true)
-			curse:SetDesaturated (true)
-			mmoc:SetDesaturated (true)
-
-			wowi:SetPoint ("TOPLEFT", panel, "TOPLEFT", 17, -100)
-			curse:SetPoint ("TOPLEFT", panel, "TOPLEFT", 17, -160)
-			mmoc:SetPoint ("TOPLEFT", panel, "TOPLEFT", 17, -220)
-
-			local wowi_title = gump:CreateLabel (panel, "Wow Interface:", nil, nil, "GameFontNormal")
-			local wowi_desc = gump:CreateLabel (panel, Loc ["STRING_FEEDBACK_WOWI_DESC"], nil, "silver")
-			wowi_desc:SetWidth (202)
-
-			wowi_title:SetPoint ("TOPLEFT", wowi, "TOPRIGHT", 5, 0)
-			wowi_desc:SetPoint ("TOPLEFT", wowi_title, "BOTTOMLEFT", 0, -1)
-			--
-			local curse_title = gump:CreateLabel (panel, "Curse:", nil, nil, "GameFontNormal")
-			local curse_desc = gump:CreateLabel (panel, Loc ["STRING_FEEDBACK_CURSE_DESC"], nil, "silver")
-			curse_desc:SetWidth (202)
-
-			curse_title:SetPoint ("TOPLEFT", curse, "TOPRIGHT", 5, 0)
-			curse_desc:SetPoint ("TOPLEFT", curse_title, "BOTTOMLEFT", 0, -1)
-			--
-			local mmoc_title = gump:CreateLabel (panel, "MMO-Champion:", nil, nil, "GameFontNormal")
-			local mmoc_desc = gump:CreateLabel (panel, Loc ["STRING_FEEDBACK_MMOC_DESC"], nil, "silver")
-			mmoc_desc:SetWidth (202)
-
-			mmoc_title:SetPoint ("TOPLEFT", mmoc, "TOPRIGHT", 5, 0)
-			mmoc_desc:SetPoint ("TOPLEFT", mmoc_title, "BOTTOMLEFT", 0, -1)
-
-			local on_enter = function (self, capsule)
-				capsule.image:SetDesaturated (false)
-			end
-			local on_leave = function (self, capsule)
-				capsule.image:SetDesaturated (true)
-			end
-
-			local on_click = function (_, _, website)
-				if (website == 1) then
-					_detalhes:CopyPaste ([[http://www.wowinterface.com/downloads/addcomment.php?action=addcomment&fileid=23056]])
-
-				elseif (website == 2) then
-					_detalhes:CopyPaste ([[http://www.curse.com/addons/wow/details]])
-
-				elseif (website == 3) then
-					_detalhes:CopyPaste ([[http://www.mmo-champion.com/threads/1480721-New-damage-meter-%28Details!%29-need-help-with-tests-and-feedbacks]])
-
-				end
-			end
-
-			local wowi_button = gump:CreateButton (panel, on_click, 103, 34, "", 1)
-			wowi_button:SetPoint ("TOPLEFT", wowi, "TOPLEFT", -1, 0)
-			wowi_button:InstallCustomTexture (nil, nil, nil, nil, true)
-			wowi_button.image = wowi
-			wowi_button:SetHook ("OnEnter", on_enter)
-			wowi_button:SetHook ("OnLeave", on_leave)
-
-			local curse_button = gump:CreateButton (panel, on_click, 103, 34, "", 2)
-			curse_button:SetPoint ("TOPLEFT", curse, "TOPLEFT", -1, 0)
-			curse_button:InstallCustomTexture (nil, nil, nil, nil, true)
-			curse_button.image = curse
-			curse_button:SetHook ("OnEnter", on_enter)
-			curse_button:SetHook ("OnLeave", on_leave)
-
-			local mmoc_button = gump:CreateButton (panel, on_click, 103, 34, "", 3)
-			mmoc_button:SetPoint ("TOPLEFT", mmoc, "TOPLEFT", -1, 0)
-			mmoc_button:InstallCustomTexture (nil, nil, nil, nil, true)
-			mmoc_button.image = mmoc
-			mmoc_button:SetHook ("OnEnter", on_enter)
-			mmoc_button:SetHook ("OnLeave", on_leave)
-
-		end
-
-		_G.DetailsFeedbackPanel:Show()
-
-	end
-
 --> config class colors
 	function _detalhes:OpenClassColorsConfig()
 		if (not _G.DetailsClassColorManager) then
@@ -2374,7 +1902,7 @@ local _utf8sub = string.utf8sub
 
 			panel.buttons = {}
 
-			for index, class_name in ipairs (CLASS_SORT_ORDER) do
+			for index, class_name in _ipairs (CLASS_SORT_ORDER) do
 
 				local icon = gump:CreateImage (upper_panel, [[Interface\Glues\CHARACTERCREATE\UI-CHARACTERCREATE-CLASSES]], 32, 32, nil, CLASS_ICON_TCOORDS [class_name], "icon_" .. class_name)
 
@@ -2392,7 +1920,6 @@ local _utf8sub = string.utf8sub
 				button:SetPoint ("LEFT", icon, "RIGHT", -32, 0)
 				button:InstallCustomTexture (nil, nil, nil, nil, true)
 				button:SetFrameLevel (panel:GetFrameLevel()+1)
-				button.my_icon = icon
 				button.my_texture = bg_texture
 				button.my_class = class_name
 				button:SetHook ("OnEnter", on_enter)
@@ -2404,7 +1931,7 @@ local _utf8sub = string.utf8sub
 
 		end
 
-		for class, button in pairs (_G.DetailsClassColorManager.buttons) do
+		for class, button in _pairs (_G.DetailsClassColorManager.buttons) do
 			button.my_texture:SetVertexColor (unpack (_detalhes.class_colors [class]))
 		end
 
@@ -2499,7 +2026,7 @@ local _utf8sub = string.utf8sub
 				local label = gump:CreateLabel (set, "")
 				label:SetPoint ("LEFT", icon, "RIGHT", 2, 0)
 
-				tinsert (panel.blocks, {icon = icon, label = label, bg = set.bg, button = set})
+				panel.blocks[#panel.blocks+1] = {icon = icon, label = label, bg = set.bg, button = set}
 			end
 
 			local normal_coords = {0, 1, 0, 1}
@@ -2548,243 +2075,6 @@ local _utf8sub = string.utf8sub
 
 		_G.DetailsBookmarkManager:Show()
 		_G.DetailsBookmarkManager:Refresh()
-	end
-
---> create bubble
-	do
-		local f = CreateFrame ("Frame", "DetailsBubble", UIParent)
-		f:SetPoint ("CENTER", UIParent, "CENTER")
-		f:SetSize (100, 100)
-		f:SetFrameStrata ("TOOLTIP")
-		f.isHorizontalFlipped = false
-		f.isVerticalFlipped = false
-
-		local t = f:CreateTexture (nil, "artwork")
-		t:SetTexture ([[Interface\AddOns\Details\images\icons]])
-		t:SetSize (131 * 1.2, 81 * 1.2)
-		--377 328 508 409  0.0009765625
-		t:SetTexCoord (0.7373046875, 0.9912109375, 0.6416015625, 0.7978515625)
-		t:SetPoint ("CENTER", f, "CENTER")
-
-		local line1 = f:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-		line1:SetPoint ("TOPLEFT", t, "TOPLEFT", 24, -10)
-		_detalhes:SetFontSize (line1, 9)
-		line1:SetTextColor (.9, .9, .9, 1)
-		line1:SetSize (110, 12)
-		line1:SetJustifyV ("CENTER")
-		line1:SetJustifyH ("CENTER")
-
-		local line2 = f:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-		line2:SetPoint ("TOPLEFT", t, "TOPLEFT", 11, -20)
-		_detalhes:SetFontSize (line2, 9)
-		line2:SetTextColor (.9, .9, .9, 1)
-		line2:SetSize (140, 12)
-		line2:SetJustifyV ("CENTER")
-		line2:SetJustifyH ("CENTER")
-
-		local line3 = f:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-		line3:SetPoint ("TOPLEFT", t, "TOPLEFT", 7, -30)
-		_detalhes:SetFontSize (line3, 9)
-		line3:SetTextColor (.9, .9, .9, 1)
-		line3:SetSize (144, 12)
-		line3:SetJustifyV ("CENTER")
-		line3:SetJustifyH ("CENTER")
-
-		local line4 = f:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-		line4:SetPoint ("TOPLEFT", t, "TOPLEFT", 11, -40)
-		_detalhes:SetFontSize (line4, 9)
-		line4:SetTextColor (.9, .9, .9, 1)
-		line4:SetSize (140, 12)
-		line4:SetJustifyV ("CENTER")
-		line4:SetJustifyH ("CENTER")
-
-		local line5 = f:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-		line5:SetPoint ("TOPLEFT", t, "TOPLEFT", 24, -50)
-		_detalhes:SetFontSize (line5, 9)
-		line5:SetTextColor (.9, .9, .9, 1)
-		line5:SetSize (110, 12)
-		line5:SetJustifyV ("CENTER")
-		line5:SetJustifyH ("CENTER")
-
-		f.lines = {line1, line2, line3, line4, line5}
-
-		function f:FlipHorizontal()
-			if (not f.isHorizontalFlipped) then
-				if (f.isVerticalFlipped) then
-					t:SetTexCoord (0.9912109375, 0.7373046875, 0.7978515625, 0.6416015625)
-				else
-					t:SetTexCoord (0.9912109375, 0.7373046875, 0.6416015625, 0.7978515625)
-				end
-				f.isHorizontalFlipped = true
-			else
-				if (f.isVerticalFlipped) then
-					t:SetTexCoord (0.7373046875, 0.9912109375, 0.7978515625, 0.6416015625)
-				else
-					t:SetTexCoord (0.7373046875, 0.9912109375, 0.6416015625, 0.7978515625)
-				end
-				f.isHorizontalFlipped = false
-			end
-		end
-
-		function f:FlipVertical()
-
-			if (not f.isVerticalFlipped) then
-				if (f.isHorizontalFlipped) then
-					t:SetTexCoord (0.7373046875, 0.9912109375, 0.7978515625, 0.6416015625)
-				else
-					t:SetTexCoord (0.9912109375, 0.7373046875, 0.7978515625, 0.6416015625)
-				end
-				f.isVerticalFlipped = true
-			else
-				if (f.isHorizontalFlipped) then
-					t:SetTexCoord (0.7373046875, 0.9912109375, 0.6416015625, 0.7978515625)
-				else
-					t:SetTexCoord (0.9912109375, 0.7373046875, 0.6416015625, 0.7978515625)
-				end
-				f.isVerticalFlipped = false
-			end
-		end
-
-		function f:TextConfig (fontsize, fontface, fontcolor)
-			for i = 1, 5 do
-
-				local line = f.lines [i]
-
-				_detalhes:SetFontSize (line, fontsize or 9)
-				_detalhes:SetFontFace (line, fontface or [[Fonts\FRIZQT__.TTF]])
-				_detalhes:SetFontColor (line, fontcolor or {.9, .9, .9, 1})
-
-			end
-		end
-
-		function f:SetBubbleText (line1, line2, line3, line4, line5)
-			if (not line1) then
-				for _, line in ipairs (f.lines) do
-					line:SetText ("")
-				end
-				return
-			end
-
-			if (line1:find ("\n")) then
-				line1, line2, line3, line4, line5 = strsplit ("\n", line1)
-			end
-
-			f.lines[1]:SetText (line1)
-			f.lines[2]:SetText (line2)
-			f.lines[3]:SetText (line3)
-			f.lines[4]:SetText (line4)
-			f.lines[5]:SetText (line5)
-		end
-
-		function f:SetOwner (frame, myPoint, hisPoint, x, y, alpha)
-			f:ClearAllPoints()
-			f:TextConfig()
-			f:SetBubbleText (nil)
-			t:SetTexCoord (0.7373046875, 0.9912109375, 0.6416015625, 0.7978515625)
-			f.isHorizontalFlipped = false
-			f.isVerticalFlipped = false
-			f:SetPoint (myPoint or "BOTTOM", frame, hisPoint or "TOP", x or 0, y or 0)
-			t:SetAlpha (alpha or 1)
-		end
-
-		function f:ShowBubble()
-			f:Show()
-		end
-
-		function f:HideBubble()
-			f:Hide()
-		end
-
-		f:SetBubbleText (nil)
-
-		f:Hide()
-	end
-
---> feed back request
-
-	function _detalhes:ShowFeedbackRequestWindow()
-
-		local feedback_frame = CreateFrame ("FRAME", "DetailsFeedbackWindow", UIParent, "ButtonFrameTemplate")
-		tinsert (UISpecialFrames, "DetailsFeedbackWindow")
-		feedback_frame:SetPoint ("CENTER", UIParent, "CENTER")
-		feedback_frame:SetSize (512, 200)
-		feedback_frame.portrait:SetTexture ([[Interface\CHARACTERFRAME\TEMPORARYPORTRAIT-FEMALE-GNOME]])
-
-		feedback_frame.TitleText:SetText ("Help Details! to Improve!")
-
-		feedback_frame.uppertext = feedback_frame:CreateFontString (nil, "artwork", "GameFontNormal")
-		feedback_frame.uppertext:SetText ("Tell us about your experience using Details!, what you liked most, where we could improve, what things you want to see in the future?")
-		feedback_frame.uppertext:SetPoint ("TOPLEFT", feedback_frame, "TOPLEFT", 60, -32)
-		local font, _, flags = feedback_frame.uppertext:GetFont()
-		feedback_frame.uppertext:SetFont (font, 10, flags)
-		feedback_frame.uppertext:SetTextColor (1, 1, 1, .8)
-		feedback_frame.uppertext:SetWidth (440)
-
-		local editbox = _detalhes.gump:NewTextEntry (feedback_frame, nil, "$parentTextEntry", "text", 387, 14)
-		editbox:SetPoint (20, -106)
-		editbox:SetAutoFocus (false)
-		editbox:SetHook ("OnEditFocusGained", function()
-			editbox.text = "http://www.mmo-champion.com/threads/1480721-New-damage-meter-%28Details!%29-need-help-with-tests-and-feedbacks"
-			editbox:HighlightText()
-		end)
-		editbox:SetHook ("OnEditFocusLost", function()
-			editbox.text = "http://www.mmo-champion.com/threads/1480721-New-damage-meter-%28Details!%29-need-help-with-tests-and-feedbacks"
-			editbox:HighlightText()
-		end)
-		editbox:SetHook ("OnChar", function()
-			editbox.text = "http://www.mmo-champion.com/threads/1480721-New-damage-meter-%28Details!%29-need-help-with-tests-and-feedbacks"
-			editbox:HighlightText()
-		end)
-		editbox.text = "http://www.mmo-champion.com/threads/1480721-New-damage-meter-%28Details!%29-need-help-with-tests-and-feedbacks"
-
-
-		feedback_frame.midtext = feedback_frame:CreateFontString (nil, "artwork", "GameFontNormal")
-		feedback_frame.midtext:SetText ("visit the link above and let's make Details! stronger!")
-		feedback_frame.midtext:SetPoint ("CENTER", editbox.widget, "CENTER")
-		feedback_frame.midtext:SetPoint ("TOP", editbox.widget, "BOTTOM", 0, -2)
-		feedback_frame.midtext:SetJustifyH ("CENTER")
-		local font, _, flags = feedback_frame.midtext:GetFont()
-		feedback_frame.midtext:SetFont (font, 10, flags)
-		--feedback_frame.midtext:SetTextColor (1, 1, 1, 1)
-		feedback_frame.midtext:SetWidth (440)
-
-
-		feedback_frame.gnoma = feedback_frame:CreateTexture (nil, "artwork")
-		feedback_frame.gnoma:SetPoint ("TOPRIGHT", feedback_frame, "TOPRIGHT", -1, -59)
-		feedback_frame.gnoma:SetTexture ("Interface\\AddOns\\Details\\images\\icons2")
-		feedback_frame.gnoma:SetSize (105*1.05, 107*1.05)
-		feedback_frame.gnoma:SetTexCoord (0.2021484375, 0, 0.7919921875, 1)
-
-		feedback_frame.close = CreateFrame ("Button", "DetailsFeedbackWindowCloseButton", feedback_frame, "OptionsButtonTemplate")
-		feedback_frame.close:SetPoint ("BOTTOMLEFT", feedback_frame, "BOTTOMLEFT", 8, 4)
-		feedback_frame.close:SetText ("Close")
-		feedback_frame.close:SetScript ("OnClick", function (self)
-			editbox:ClearFocus()
-			feedback_frame:Hide()
-		end)
-
-		feedback_frame.postpone = CreateFrame ("Button", "DetailsFeedbackWindowPostPoneButton", feedback_frame, "OptionsButtonTemplate")
-		feedback_frame.postpone:SetPoint ("BOTTOMRIGHT", feedback_frame, "BOTTOMRIGHT", -10, 4)
-		feedback_frame.postpone:SetText ("Remind-me Later")
-		feedback_frame.postpone:SetScript ("OnClick", function (self)
-			editbox:ClearFocus()
-			feedback_frame:Hide()
-			_detalhes.tutorial.feedback_window1 = false
-		end)
-		feedback_frame.postpone:SetWidth (130)
-
-		feedback_frame:SetScript ("OnHide", function()
-			editbox:ClearFocus()
-		end)
-
-		--0.0009765625 512
-		function _detalhes:FeedbackSetFocus()
-			DetailsFeedbackWindow:Show()
-			DetailsFeedbackWindowTextEntry.MyObject:SetFocus()
-			DetailsFeedbackWindowTextEntry.MyObject:HighlightText()
-		end
-		_detalhes:ScheduleTimer ("FeedbackSetFocus", 5)
-
 	end
 
 --> interface menu
@@ -3083,8 +2373,7 @@ local _utf8sub = string.utf8sub
 
 	function panel:Open (text, callback, host, default)
 		if (host) then
-			panel:ClearAllPoints()
-			panel:SetPoint ("CENTER", host, "CENTER")
+			panel:ClearAndSetPoint ("CENTER", host, "CENTER")
 		end
 
 		text = text:gsub ("||", "|")
@@ -3104,9 +2393,9 @@ local _utf8sub = string.utf8sub
 	Details.gump:SetFontSize (textentry.editbox, 14)
 	Details.gump:ReskinSlider (textentry.scroll)
 
-	local arg1_button = _detalhes.gump:NewButton (panel, nil, "$parentButton1", nil, 80, 20, function() textentry.editbox:Insert ("{data1}") end, nil, nil, nil, string.format (Loc ["STRING_OPTIONS_TEXTEDITOR_DATA"], "1"), 1)
-	local arg2_button = _detalhes.gump:NewButton (panel, nil, "$parentButton2", nil, 80, 20, function() textentry.editbox:Insert ("{data2}") end, nil, nil, nil, string.format (Loc ["STRING_OPTIONS_TEXTEDITOR_DATA"], "2"), 1)
-	local arg3_button = _detalhes.gump:NewButton (panel, nil, "$parentButton3", nil, 80, 20, function() textentry.editbox:Insert ("{data3}") end, nil, nil, nil, string.format (Loc ["STRING_OPTIONS_TEXTEDITOR_DATA"], "3"), 1)
+	local arg1_button = _detalhes.gump:NewButton (panel, nil, "$parentButton1", nil, 80, 20, function() textentry.editbox:Insert ("{data1}") end, nil, nil, nil, _string_format (Loc ["STRING_OPTIONS_TEXTEDITOR_DATA"], "1"), 1)
+	local arg2_button = _detalhes.gump:NewButton (panel, nil, "$parentButton2", nil, 80, 20, function() textentry.editbox:Insert ("{data2}") end, nil, nil, nil, _string_format (Loc ["STRING_OPTIONS_TEXTEDITOR_DATA"], "2"), 1)
+	local arg3_button = _detalhes.gump:NewButton (panel, nil, "$parentButton3", nil, 80, 20, function() textentry.editbox:Insert ("{data3}") end, nil, nil, nil, _string_format (Loc ["STRING_OPTIONS_TEXTEDITOR_DATA"], "3"), 1)
 	arg1_button:SetPoint ("TOPRIGHT", panel, "TOPRIGHT", -12, y)
 	arg2_button:SetPoint ("TOPRIGHT", panel, "TOPRIGHT", -12, y - (20*1))
 	arg3_button:SetPoint ("TOPRIGHT", panel, "TOPRIGHT", -12, y - (20*2))
@@ -3118,125 +2407,11 @@ local _utf8sub = string.utf8sub
 	arg2_button.tooltip = Loc ["STRING_OPTIONS_TEXTEDITOR_DATA_TOOLTIP"]
 	arg3_button.tooltip = Loc ["STRING_OPTIONS_TEXTEDITOR_DATA_TOOLTIP"]
 
-	-- code author Saiket from  http://www.wowinterface.com/forums/showpost.php?p=245759&postcount=6
-	--- @return StartPos, EndPos of highlight in this editbox.
-	local function GetTextHighlight ( self )
-		local Text, Cursor = self:GetText(), self:GetCursorPosition();
-		self:Insert( "" ); -- Delete selected text
-		local TextNew, CursorNew = self:GetText(), self:GetCursorPosition();
-		-- Restore previous text
-		self:SetText( Text );
-		self:SetCursorPosition( Cursor );
-		local Start, End = CursorNew, #Text - ( #TextNew - CursorNew );
-		self:HighlightText( Start, End );
-		return Start, End;
-	end
-
-	local StripColors;
-	do
-		local CursorPosition, CursorDelta;
-		--- Callback for gsub to remove unescaped codes.
-		local function StripCodeGsub ( Escapes, Code, End )
-			if ( #Escapes % 2 == 0 ) then -- Doesn't escape Code
-				if ( CursorPosition and CursorPosition >= End - 1 ) then
-					CursorDelta = CursorDelta - #Code;
-				end
-				return Escapes;
-			end
-		end
-		--- Removes a single escape sequence.
-		local function StripCode ( Pattern, Text, OldCursor )
-			CursorPosition, CursorDelta = OldCursor, 0;
-			return Text:gsub( Pattern, StripCodeGsub ), OldCursor and CursorPosition + CursorDelta;
-		end
-		--- Strips Text of all color escape sequences.
-		-- @param Cursor  Optional cursor position to keep track of.
-		-- @return Stripped text, and the updated cursor position if Cursor was given.
-		function StripColors ( Text, Cursor )
-			Text, Cursor = StripCode( "(|*)(|c%x%x%x%x%x%x%x%x)()", Text, Cursor );
-			return StripCode( "(|*)(|r)()", Text, Cursor );
-		end
-	end
-
-	local COLOR_END = "|r";
-	--- Wraps this editbox's selected text with the given color.
-	local function ColorSelection ( self, ColorCode )
-		local Start, End = GetTextHighlight( self );
-		local Text, Cursor = self:GetText(), self:GetCursorPosition();
-		if ( Start == End ) then -- Nothing selected
-			--Start, End = Cursor, Cursor; -- Wrap around cursor
-			return; -- Wrapping the cursor in a color code and hitting backspace crashes the client!
-		end
-		-- Find active color code at the end of the selection
-		local ActiveColor;
-		if ( End < #Text ) then -- There is text to color after the selection
-			local ActiveEnd;
-			local CodeEnd, _, Escapes, Color = 0;
-			while ( true ) do
-				_, CodeEnd, Escapes, Color = Text:find( "(|*)(|c%x%x%x%x%x%x%x%x)", CodeEnd + 1 );
-				if ( not CodeEnd or CodeEnd > End ) then
-					break;
-				end
-				if ( #Escapes % 2 == 0 ) then -- Doesn't escape Code
-					ActiveColor, ActiveEnd = Color, CodeEnd;
-				end
-			end
-
-			if ( ActiveColor ) then
-				-- Check if color gets terminated before selection ends
-				CodeEnd = 0;
-				while ( true ) do
-					_, CodeEnd, Escapes = Text:find( "(|*)|r", CodeEnd + 1 );
-					if ( not CodeEnd or CodeEnd > End ) then
-						break;
-					end
-					if ( CodeEnd > ActiveEnd and #Escapes % 2 == 0 ) then -- Terminates ActiveColor
-						ActiveColor = nil;
-						break;
-					end
-				end
-			end
-		end
-
-		local Selection = Text:sub( Start + 1, End );
-		-- Remove color codes from the selection
-		local Replacement, CursorReplacement = StripColors( Selection, Cursor - Start );
-
-		self:SetText( ( "" ):join(
-			Text:sub( 1, Start ),
-			ColorCode, Replacement, COLOR_END,
-			ActiveColor or "", Text:sub( End + 1 )
-		) );
-
-		-- Restore cursor and highlight, adjusting for wrapper text
-		Cursor = Start + CursorReplacement;
-		if ( CursorReplacement > 0 ) then -- Cursor beyond start of color code
-			Cursor = Cursor + #ColorCode;
-		end
-		if ( CursorReplacement >= #Replacement ) then -- Cursor beyond end of color
-			Cursor = Cursor + #COLOR_END;
-		end
-
-		self:SetCursorPosition( Cursor );
-		-- Highlight selection and wrapper
-		self:HighlightText( Start, #ColorCode + ( #Replacement - #Selection ) + #COLOR_END + End );
-	end
-
-	local color_func = function (_, r, g, b, a)
-		local hex = _detalhes:hex (a*255).._detalhes:hex (r*255).._detalhes:hex (g*255).._detalhes:hex (b*255)
-		ColorSelection ( textentry.editbox, "|c" .. hex)
-	end
-
 	local func_button = _detalhes.gump:NewButton (panel, nil, "$parentButton4", nil, 80, 20, function() textentry.editbox:Insert ("{func local player, combat = ...; return 0;}") end, nil, nil, nil, Loc ["STRING_OPTIONS_TEXTEDITOR_FUNC"], 1)
-	local color_button = _detalhes.gump:NewColorPickButton (panel, "$parentButton5", nil, color_func)
-	color_button:SetSize (80, 20)
-	color_button:SetTemplate (buttonTemplate)
 
 	func_button:SetPoint ("TOPRIGHT", panel, "TOPRIGHT", -12, y - (20*3))
-	--color_button:SetPoint ("TOPRIGHT", panel, "TOPRIGHT", -12, y - (20*4))
 	func_button:SetTemplate (buttonTemplate)
 
-	color_button.tooltip = Loc ["STRING_OPTIONS_TEXTEDITOR_COLOR_TOOLTIP"]
 	func_button.tooltip = Loc ["STRING_OPTIONS_TEXTEDITOR_FUNC_TOOLTIP"]
 	local done = function()
 		local text = panel.editbox:GetText()
@@ -3259,72 +2434,6 @@ local _utf8sub = string.utf8sub
 	cancel_button:SetTemplate (buttonTemplate)
 	cancel_button:SetPoint ("TOPRIGHT", panel, "TOPRIGHT", -100, -194)
 
-	--update window
-	function _detalhes:OpenUpdateWindow()
-
-		if (not _G.DetailsUpdateDialog) then
-			local updatewindow_frame = CreateFrame ("Frame", "DetailsUpdateDialog", UIParent, "ButtonFrameTemplate")
-			updatewindow_frame:SetFrameStrata ("LOW")
-			tinsert (UISpecialFrames, "DetailsUpdateDialog")
-			updatewindow_frame:SetPoint ("CENTER", UIParent, "CENTER")
-			updatewindow_frame:SetSize (512, 200)
-			updatewindow_frame.portrait:SetTexture ([[Interface\CHARACTERFRAME\TEMPORARYPORTRAIT-FEMALE-GNOME]])
-
-			updatewindow_frame.TitleText:SetText ("A New Version Is Available!")
-
-			updatewindow_frame.midtext = updatewindow_frame:CreateFontString (nil, "artwork", "GameFontNormal")
-			updatewindow_frame.midtext:SetText ("Good news everyone!\nA new version has been forged and is waiting to be looted.")
-			updatewindow_frame.midtext:SetPoint ("TOPLEFT", updatewindow_frame, "TOPLEFT", 10, -90)
-			updatewindow_frame.midtext:SetJustifyH ("CENTER")
-			updatewindow_frame.midtext:SetWidth (370)
-
-			updatewindow_frame.gnoma = updatewindow_frame:CreateTexture (nil, "artwork")
-			updatewindow_frame.gnoma:SetPoint ("TOPRIGHT", updatewindow_frame, "TOPRIGHT", -3, -59)
-			updatewindow_frame.gnoma:SetTexture ("Interface\\AddOns\\Details\\images\\icons2")
-			updatewindow_frame.gnoma:SetSize (105*1.05, 107*1.05)
-			updatewindow_frame.gnoma:SetTexCoord (0.2021484375, 0, 0.7919921875, 1)
-
-			local editbox = _detalhes.gump:NewTextEntry (updatewindow_frame, nil, "$parentTextEntry", "text", 387, 14)
-			editbox:SetPoint (20, -136)
-			editbox:SetAutoFocus (false)
-			editbox:SetHook ("OnEditFocusGained", function()
-				editbox.text = "http://www.curse.com/addons/wow/details"
-				editbox:HighlightText()
-			end)
-			editbox:SetHook ("OnEditFocusLost", function()
-				editbox.text = "http://www.curse.com/addons/wow/details"
-				editbox:HighlightText()
-			end)
-			editbox:SetHook ("OnChar", function()
-				editbox.text = "http://www.curse.com/addons/wow/details"
-				editbox:HighlightText()
-			end)
-			editbox.text = "http://www.curse.com/addons/wow/details"
-
-			updatewindow_frame.close = CreateFrame ("Button", "DetailsUpdateDialogCloseButton", updatewindow_frame, "OptionsButtonTemplate")
-			updatewindow_frame.close:SetPoint ("BOTTOMLEFT", updatewindow_frame, "BOTTOMLEFT", 8, 4)
-			updatewindow_frame.close:SetText ("Close")
-
-			updatewindow_frame.close:SetScript ("OnClick", function (self)
-				DetailsUpdateDialog:Hide()
-				editbox:ClearFocus()
-			end)
-
-			updatewindow_frame:SetScript ("OnHide", function()
-				editbox:ClearFocus()
-			end)
-
-			function _detalhes:UpdateDialogSetFocus()
-				DetailsUpdateDialog:Show()
-				DetailsUpdateDialogTextEntry.MyObject:SetFocus()
-				DetailsUpdateDialogTextEntry.MyObject:HighlightText()
-			end
-			_detalhes:ScheduleTimer ("UpdateDialogSetFocus", 1)
-
-		end
-
-	end
-
 	function _detalhes:OpenProfiler()
 
 		--> isn't first run, so just quit
@@ -3337,7 +2446,7 @@ local _utf8sub = string.utf8sub
 		else
 			--> check is this is the first run of the addon (after being installed)
 			local amount = 0
-			for name, profile in pairs (_detalhes_global.__profiles) do
+			for name, profile in _pairs (_detalhes_global.__profiles) do
 				amount = amount + 1
 			end
 			if (amount == 1) then
@@ -3383,7 +2492,7 @@ local _utf8sub = string.utf8sub
 			local t = {
 				{value = current_profile, label = Loc ["STRING_OPTIONS_PROFILE_USENEW"], onclick = on_select_profile, icon = [[Interface\AddOns\Details\textures\FriendsFrame\UI-Toast-FriendRequestIcon]], texcoord = {4/32, 30/32, 4/32, 28/32}, iconcolor = "orange"}
 			}
-			for _, profilename in ipairs (_detalhes:GetProfileList()) do
+			for _, profilename in _ipairs (_detalhes:GetProfileList()) do
 				if (profilename ~= current_profile) then
 					t[#t+1] = {value = profilename, label = profilename, onclick = on_select_profile, icon = [[Interface\AddOns\Details\textures\FriendsFrame\UI-Toast-FriendOnlineIcon]], texcoord = texcoord, iconcolor = "yellow"}
 				end
@@ -3406,7 +2515,7 @@ local _utf8sub = string.utf8sub
 
 	end
 
-	--> minimap icon and hotcorner
+	--> minimap icon
 	function _detalhes:RegisterMinimap()
 
 		local LDB = LibStub ("LibDataBroker-1.1", true)
@@ -3418,8 +2527,6 @@ local _utf8sub = string.utf8sub
 				type = "data source",
 				icon = [[Interface\AddOns\Details\images\minimap]],
 				text = "0",
-
-				HotCornerIgnore = true,
 
 				OnClick = function (self, button)
 
@@ -3479,7 +2586,7 @@ local _utf8sub = string.utf8sub
 						GameCooltip:AddLine ("$div")
 
 						--> nova instancia
-						GameCooltip:AddMenu (1, _detalhes.CriarInstancia, true, nil, nil, Loc ["STRING_MINIMAPMENU_NEWWINDOW"], nil, true)
+						GameCooltip:AddMenu (1, function() _detalhes:CriarInstancia (nil, true) end, true, nil, nil, Loc ["STRING_MINIMAPMENU_NEWWINDOW"], nil, true)
 						--GameCooltip:AddIcon ([[Interface\Buttons\UI-AttributeButton-Encourage-Up]], 1, 1, 10, 10, 4/16, 12/16, 4/16, 12/16)
 						GameCooltip:AddIcon ([[Interface\AddOns\Details\images\icons]], 1, 1, 12, 11, 462/512, 473/512, 1/512, 11/512)
 
@@ -3503,7 +2610,7 @@ local _utf8sub = string.utf8sub
 
 						--> disable minimap icon
 						local disable_minimap = function()
-							_detalhes.minimap.hide = not value
+							_detalhes.minimap.hide = true
 
 							LDBIcon:Refresh ("Details", _detalhes.minimap)
 							if (_detalhes.minimap.hide) then
@@ -3549,83 +2656,6 @@ local _utf8sub = string.utf8sub
 		end
 	end
 
-	function _detalhes:DoRegisterHotCorner()
-		--register lib-hotcorners
-		local on_click_on_hotcorner_button = function (frame, button)
-			if (_detalhes.hotcorner_topleft.onclick_what_todo == 1) then
-				local lower_instance = _detalhes:GetLowerInstanceNumber()
-				if (not lower_instance) then
-					local instance = _detalhes:GetInstance (1)
-					_detalhes.CriarInstancia (_, _, 1)
-					_detalhes:OpenOptionsWindow (instance)
-				else
-					_detalhes:OpenOptionsWindow (_detalhes:GetInstance (lower_instance))
-				end
-
-			elseif (_detalhes.hotcorner_topleft.onclick_what_todo == 2) then
-				_detalhes.tabela_historico:resetar()
-			end
-		end
-
-		local quickclick_func1 = function (frame, button)
-			_detalhes.tabela_historico:resetar()
-		end
-
-		local quickclick_func2 = function (frame, button)
-			local lower_instance = _detalhes:GetLowerInstanceNumber()
-			if (not lower_instance) then
-				local instance = _detalhes:GetInstance (1)
-				_detalhes.CriarInstancia (_, _, 1)
-				_detalhes:OpenOptionsWindow (instance)
-			else
-				_detalhes:OpenOptionsWindow (_detalhes:GetInstance (lower_instance))
-			end
-		end
-
-		local tooltip_hotcorner = function()
-			GameTooltip:AddLine ("Details!", 1, 1, 1, 1)
-			if (_detalhes.hotcorner_topleft.onclick_what_todo == 1) then
-				GameTooltip:AddLine ("|cFF00FF00Left Click:|r open options panel.", 1, 1, 1, 1)
-
-			elseif (_detalhes.hotcorner_topleft.onclick_what_todo == 2) then
-				GameTooltip:AddLine ("|cFF00FF00Left Click:|r clear all segments.", 1, 1, 1, 1)
-
-			end
-		end
-
-		if (_G.HotCorners) then
-			_G.HotCorners:RegisterHotCornerButton (
-				--> absolute name
-				"Details",
-				--> corner
-				"TOPLEFT",
-				--> config table
-				_detalhes.hotcorner_topleft,
-				--> frame _G name
-				"DetailsLeftCornerButton",
-				--> icon
-				[[Interface\AddOns\Details\images\minimap]],
-				--> tooltip
-				tooltip_hotcorner,
-				--> click function
-				on_click_on_hotcorner_button,
-				--> menus
-				nil,
-				--> quick click
-				{
-					{func = quickclick_func1, name = "Details! - Reset Data"},
-					{func = quickclick_func2, name = "Details! - Open Options"}
-				},
-				--> onenter
-				nil,
-				--> onleave
-				nil,
-				--> is install
-				true
-			)
-		end
-	end
-
 	function _detalhes:TestBarsUpdate()
 		local current_combat = _detalhes:GetCombat ("current")
 		for index, actor in current_combat[1]:ListActors() do
@@ -3655,7 +2685,7 @@ local _utf8sub = string.utf8sub
 
 	function _detalhes:CreateTestBars (alphabet)
 		local current_combat = _detalhes:GetCombat ("current")
-		local pclass = select (2, UnitClass ("player"))
+		local _, pclass = UnitClass ("player")
 
 		local actors_name = {
 				{"Ragnaros", "MAGE", 63},
@@ -3789,10 +2819,18 @@ local _utf8sub = string.utf8sub
 
 		end
 
-		local actors_classes = CLASS_SORT_ORDER
 
 		local total_damage = 0
 		local total_heal = 0
+
+		local class_specs = {
+			DEATHKNIGHT = {250, 251, 252}, DRUID = {102, 103, 104, 105}, HUNTER = {253, 254, 255}, MAGE = {62, 63, 64}, PALADIN = {65, 66, 70},
+			PRIEST = {256, 257, 258}, ROGUE = {259, 260, 261}, SHAMAN = {262, 263, 264}, WARLOCK = {265, 266, 267}, WARRIOR = {71, 72, 73},
+		}
+		local random_spec = function (who)
+			local specs = class_specs [who[2]]
+			return who[3] or (specs and specs [math.random (1, #specs)])
+		end
 
 		for i = 1, 10 do
 
@@ -3803,42 +2841,7 @@ local _utf8sub = string.utf8sub
 
 			robot.classe = who [2]
 
-			if (who[3]) then
-				robot.spec = who[3]
-			elseif (robot.classe == "DEATHKNIGHT") then
-				local specs = {250, 251, 252}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "DRUID") then
-				local specs = {102, 103, 104, 105}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "HUNTER") then
-				local specs = {253, 254, 255}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "MAGE") then
-				local specs = {62, 63, 64}
-				robot.spec = specs [math.random (1, #specs)]
-			-- elseif (robot.classe == "MONK") then
-			-- 	local specs = {268, 269, 270}
-			-- 	robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "PALADIN") then
-				local specs = {65, 66, 70}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "PRIEST") then
-				local specs = {256, 257, 258}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "ROGUE") then
-				local specs = {259, 260, 261}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "SHAMAN") then
-				local specs = {262, 263, 264}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "WARLOCK") then
-				local specs = {265, 266, 267}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "WARRIOR") then
-				local specs = {71, 72, 73}
-				robot.spec = specs [math.random (1, #specs)]
-			end
+			robot.spec = random_spec (who)
 
 			robot.total = math.random (10000000, 60000000)
 			robot.damage_taken = math.random (10000000, 60000000)
@@ -3852,7 +2855,7 @@ local _utf8sub = string.utf8sub
 				robot_death.classe = robot.classe
 				local esta_morte = {{true, 96648, 100000, time(), 0, "Lady Holenna"}, {true, 96648, 100000, time()-52, 100000, "Lady Holenna"}, {true, 96648, 100000, time()-86, 200000, "Lady Holenna"}, {true, 96648, 100000, time()-101, 300000, "Lady Holenna"}, {false, 55296, 400000, time()-54, 400000, "King Djoffrey"}, {true, 14185, 0, time()-59, 400000, "Lady Holenna"}, {false, 87351, 400000, time()-154, 400000, "King Djoffrey"}, {false, 56236, 400000, time()-158, 400000, "King Djoffrey"} }
 				local t = {esta_morte, time(), robot.nome, robot.classe, 400000, "52m 12s",  ["dead"] = true}
-				table.insert (current_combat.last_events_tables, #current_combat.last_events_tables+1, t)
+				current_combat.last_events_tables[#current_combat.last_events_tables+1] = t
 
 			elseif (robot.nome == "Mr. President") then
 				rawset (_detalhes.spellcache, 56488, {"Nuke", 56488, [[Interface\ICONS\inv_gizmo_supersappercharge]]})
@@ -3865,42 +2868,7 @@ local _utf8sub = string.utf8sub
 			robot.grupo = true
 			robot.classe = who[2]
 
-			if (who[3]) then
-				robot.spec = who[3]
-			elseif (robot.classe == "DEATHKNIGHT") then
-				local specs = {250, 251, 252}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "DRUID") then
-				local specs = {102, 103, 104, 105}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "HUNTER") then
-				local specs = {253, 254, 255}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "MAGE") then
-				local specs = {62, 63, 64}
-				robot.spec = specs [math.random (1, #specs)]
-			-- elseif (robot.classe == "MONK") then
-			-- 	local specs = {268, 269, 270}
-			-- 	robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "PALADIN") then
-				local specs = {65, 66, 70}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "PRIEST") then
-				local specs = {256, 257, 258}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "ROGUE") then
-				local specs = {259, 260, 261}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "SHAMAN") then
-				local specs = {262, 263, 264}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "WARLOCK") then
-				local specs = {265, 266, 267}
-				robot.spec = specs [math.random (1, #specs)]
-			elseif (robot.classe == "WARRIOR") then
-				local specs = {71, 72, 73}
-				robot.spec = specs [math.random (1, #specs)]
-			end
+			robot.spec = random_spec (who)
 
 			robot.total = math.random (10000000, 60000000)
 			robot.totalover = math.random (10000000, 60000000)
@@ -3921,7 +2889,7 @@ local _utf8sub = string.utf8sub
 		current_combat.totals [1] = total_damage
 		current_combat.totals [2] = total_heal
 
-		for _, instance in ipairs (_detalhes.tabela_instancias) do
+		for _, instance in _ipairs (_detalhes.tabela_instancias) do
 			if (instance:IsEnabled()) then
 				instance:InstanceReset()
 			end
@@ -3965,17 +2933,8 @@ local _utf8sub = string.utf8sub
 			local scrollbox_line_height = 79.5
 			local scrollbox_size = {890, 563}
 
-			f.bg1 = f:CreateTexture (nil, "background")
-			f.bg1:SetTexture ([[Interface\AddOns\Details\images\background]], true)
-			f.bg1:SetAlpha (0.8)
-			f.bg1:SetVertexColor (0.27, 0.27, 0.27)
-			f.bg1:SetVertTile (true)
-			f.bg1:SetHorizTile (true)
-			f.bg1:SetSize (790, 454)
-			f.bg1:SetAllPoints()
-			f:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-			f:SetBackdropColor (.5, .5, .5, .7)
-			f:SetBackdropBorderColor (0, 0, 0, 1)
+			f:SetFrameStrata ("HIGH")
+			_detalhes:FormatBackground (f, 0.8, .7)
 
 			local macrosAvailable = _detalhes.MacroList
 
@@ -4106,32 +3065,14 @@ local _utf8sub = string.utf8sub
 			DetailsRunCodePanel.Initialized = true
 
 			local f = DetailsRunCodePanel or gump:CreateSimplePanel (UIParent, 700, 480, "Details! Run Code", "DetailsRunCodePanel")
+			f:SetFrameStrata ("HIGH")
 
 			--> lua editor
 			local code_editor = gump:NewSpecialLuaEditorEntry (f, 885, 510, "text", "$parentCodeEditorWindow")
 			f.CodeEditor = code_editor
 			code_editor:SetPoint ("TOPLEFT", f, "TOPLEFT", 20, -56)
 
-				--> code editor appearance
-				code_editor.scroll:SetBackdrop (nil)
-				code_editor.editbox:SetBackdrop (nil)
-				code_editor:SetBackdrop (nil)
-
-				gump:ReskinSlider (code_editor.scroll)
-
-				if (not code_editor.__background) then
-					code_editor.__background = code_editor:CreateTexture (nil, "background")
-				end
-
-				code_editor:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1})
-				code_editor:SetBackdropBorderColor (0, 0, 0, 1)
-
-				code_editor.__background:SetTexture (0.2317647, 0.2317647, 0.2317647)
-				code_editor.__background:SetVertexColor (0.27, 0.27, 0.27)
-				code_editor.__background:SetAlpha (0.8)
-				code_editor.__background:SetVertTile (true)
-				code_editor.__background:SetHorizTile (true)
-				code_editor.__background:SetAllPoints()
+				reskin_code_editor (code_editor)
 
 				--> code compile error warning
 				local errortext_frame = CreateFrame ("Frame", nil, code_editor)
@@ -4157,7 +3098,7 @@ local _utf8sub = string.utf8sub
 						local func, errortext = loadstring (script, "Q")
 						if (not func) then
 							local firstLine = strsplit ("\n", script, 2)
-							errortext = errortext:gsub (firstLine, "")
+							errortext = errortext:gsub ((firstLine:gsub ("%p", "%%%0")), "")
 							errortext = errortext:gsub ("%[string \"", "")
 							errortext = errortext:gsub ("...\"]:", "")
 							errortext = errortext:gsub ("Q\"]:", "")
@@ -4174,7 +3115,6 @@ local _utf8sub = string.utf8sub
 			--> script selector
 			local on_select_CodeType_option = function (self, fixedParameter, value)
 				--> set the current editing code type
-				f.EditingCode = _detalhes.RunCodeTypes [value].Value
 				f.EditingCodeKey = _detalhes.RunCodeTypes [value].ProfileKey
 
 				--> load the code for the event
@@ -4234,66 +3174,7 @@ local _utf8sub = string.utf8sub
 
 			--> create run now button
 
-				--source https://github.com/WeakAuras/WeakAuras2/blob/520951a4b49b64cb49d88c1a8542d02bbcdbe412/WeakAuras/AuraEnvironment.lua#L66
-			local blockedFunctions = {
-				-- Lua functions that may allow breaking out of the environment
-				setfenv = true,
-				getfenv = true,
-				loadstring = true,
-				pcall = true,
-				xpcall = true,
-				getglobal = true,
-
-				-- blocked WoW API
-				SendMail = true,
-				SetTradeMoney = true,
-				AddTradeMoney = true,
-				PickupTradeMoney = true,
-				PickupPlayerMoney = true,
-				TradeFrame = true,
-				MailFrame = true,
-				EnumerateFrames = true,
-				RunScript = true,
-				AcceptTrade = true,
-				SetSendMailMoney = true,
-				EditMacro = true,
-				SlashCmdList = true,
-				DevTools_DumpCommand = true,
-				hash_SlashCmdList = true,
-				CreateMacro = true,
-				SetBindingMacro = true,
-				GuildDisband = true,
-				GuildUninvite = true,
-				securecall = true,
-				DeleteCursorItem = true,
-				ChatEdit_SendText = true,
-				CastSpellByName = true,
-				CastSpell = true,
-				CastSpellByID = true,
-
-				--additional
-				setmetatable = true,
-			}
-			local blockedTables = {
-				SlashCmdList = true,
-				SendMailMailButton = true,
-				SendMailMoneyGold = true,
-				MailFrameTab2 = true,
-				ChatFrame1 = true,
-				WeakAurasOptions = true,
-				WeakAurasOptionsSaved = true
-			}
-			local functionFilter = setmetatable({}, {__index = function(env, key)
-				if key == "_G" then
-					return env
-				elseif blockedFunctions[key] then
-					return nil
-				elseif blockedTables[key] then
-					return {}
-				else
-					return _G[key]
-				end
-			end})
+			local functionFilter = _detalhes:CreateScriptEnvironment()
 
 			local execute_script = function()
 				local script = code_editor:GetText()
@@ -4317,7 +3198,6 @@ local _utf8sub = string.utf8sub
 		DetailsRunCodePanel.CodeTypeDropdown:Select (1, true)
 
 		--> show the initialization code when showing up this window
-		DetailsRunCodePanel.EditingCode = _detalhes.RunCodeTypes [1].Value
 		DetailsRunCodePanel.EditingCodeKey = _detalhes.RunCodeTypes [1].ProfileKey
 
 		local code = _detalhes.run_code [DetailsRunCodePanel.EditingCodeKey]
@@ -4344,65 +3224,6 @@ local _utf8sub = string.utf8sub
 
 	function _detalhes.OpenAPI()
 
-
-		--[=[
-		if (not DetailsAPIPanel or not DetailsAPIPanel.Initialized) then
-
-			local f = DetailsAPIPanel or gump:CreateSimplePanel (UIParent, 700, 480, "Details! API", "DetailsAPIPanel")
-			DetailsAPIPanel.Initialized = true
-
-			local text_box = gump:NewSpecialLuaEditorEntry (f, 685, 540, "text", "$parentTextEntry", true)
-			text_box:SetPoint ("TOPLEFT", f, "TOPLEFT", 220, -40)
-			text_box:SetBackdrop (nil)
-
-			DetailsFramework:ReskinSlider (text_box.scroll)
-
-			--background
-			f.bg1 = f:CreateTexture (nil, "background")
-			f.bg1:SetTexture ([[Interface\AddOns\Details\images\background]], true)
-			f.bg1:SetAlpha (0.8)
-			f.bg1:SetVertexColor (0.27, 0.27, 0.27)
-			f.bg1:SetVertTile (true)
-			f.bg1:SetHorizTile (true)
-			f.bg1:SetSize (790, 454)
-			f.bg1:SetAllPoints()
-			f:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-			f:SetBackdropColor (.5, .5, .5, .7)
-			f:SetBackdropBorderColor (0, 0, 0, 1)
-
-			--> create a background area where the text editor is
-			local TextEditorBackground = gump:NewButton (f, nil, nil, nil, 1, 1, function()end)
-			TextEditorBackground:SetAllPoints (text_box)
-			TextEditorBackground:SetTemplate (gump:GetTemplate ("button", "DETAILS_CUSTOMDISPLAY_CODE_BOX"))
-
-			local file, size, flags = text_box.editbox:GetFont()
-			text_box.editbox:SetFont (file, 12, flags)
-
-			local topics = Details.APITopics
-
-			local select_topic = function (self, button, topic)
-				text_box:SetText (Details.APIText [topic])
-			end
-
-			for i = 1, #topics do
-				local title = topics [i]
-				local button = gump:CreateButton (f, select_topic, 200, 20, title, i)
-
-				button:SetTemplate (gump:GetTemplate ("button", "DETAILS_PLUGIN_BUTTON_TEMPLATE"))
-				button:SetPoint ("TOPLEFT", f, "TOPLEFT", 5, (-i*22)-30)
-				button:SetIcon ([[Interface\Buttons\UI-GuildButton-PublicNote-Up]], nil, nil, nil, nil, nil, nil, 2)
-				button:SetWidth (200)
-			end
-
-			select_topic (nil, nil, 1)
-
-		end
-
-		--DetailsAPIPanel:Show()
-		DetailsPluginContainerWindow.OpenPlugin (DetailsAPIPanel)
-
-		--]=]
-
 		if (not DetailsAPI2Frame or not DetailsAPI2Frame.Initialized) then
 
 			--menu settings
@@ -4410,7 +3231,6 @@ local _utf8sub = string.utf8sub
 			DetailsAPI2Frame.Initialized = true
 
 			local panelWidth = 800
-			local panelHeight = 610
 			local scrollWidth = 200
 			local scrollHeight = 570
 			local lineHeight = 20
@@ -4426,7 +3246,7 @@ local _utf8sub = string.utf8sub
 			--local Api2Frame = DetailsFramework:CreateSimplePanel (UIParent, panelWidth, panelHeight, "Details! API 2.0", "DetailsAPI2Frame")
 			local Api2Frame = DetailsAPI2Frame
 
-			Api2Frame:SetFrameStrata ("FULLSCREEN")
+			Api2Frame:SetFrameStrata ("HIGH")
 			Api2Frame:SetPoint ("CENTER")
 			DetailsFramework:ApplyStandardBackdrop (Api2Frame, false, 1.2)
 
@@ -4461,7 +3281,7 @@ local _utf8sub = string.utf8sub
 
 				--update the copy line text box
 				local parameters = ""
-				for parameterIndex, parameterInfo in ipairs (apiInfo.parameters) do
+				for parameterIndex, parameterInfo in _ipairs (apiInfo.parameters) do
 					if (parameterInfo.required) then
 						parameters = parameters .. parameterInfo.name .. ", "
 					end
@@ -4469,7 +3289,7 @@ local _utf8sub = string.utf8sub
 				parameters = parameters:gsub (", $", "")
 
 				local returnValues = "local "
-				for returnIndex, returnInfo in ipairs (apiInfo.returnValues) do
+				for returnIndex, returnInfo in _ipairs (apiInfo.returnValues) do
 					returnValues = returnValues .. returnInfo.name .. ", "
 				end
 				returnValues = returnValues:gsub (", $", "")
@@ -4541,8 +3361,8 @@ local _utf8sub = string.utf8sub
 				end
 			end
 
-			for apiIndex, apiDesc in ipairs (api) do
-				tinsert (apiFunctionNames, apiDesc.name)
+			for apiIndex, apiDesc in _ipairs (api) do
+				apiFunctionNames[#apiFunctionNames+1] = apiDesc.name
 			end
 
 			local api2ScrollMenu = DetailsFramework:CreateScrollBox (Api2Frame, "$parentApi2MenuScroll", apiMenuScrollRefresh, apiFunctionNames, scrollWidth, scrollHeight, lineAmount, lineHeight)
@@ -4664,7 +3484,6 @@ local _utf8sub = string.utf8sub
 				end
 
 				for i = 1, parametersAmount do
-					local parameterLine = {}
 					local f = CreateFrame ("Button", nil, Api2Frame)
 					f:SetSize (infoWidth, 20)
 					f:SetScript ("OnEnter", parameterOnEnter)
@@ -4685,7 +3504,7 @@ local _utf8sub = string.utf8sub
 					f.required:SetPoint ("LEFT", f, "LEFT", space2, 0)
 					f.default:SetPoint ("LEFT", f, "LEFT", space3, 0)
 
-					tinsert (parametersLines, f)
+					parametersLines[#parametersLines+1] = f
 				end
 
 			--return value box
@@ -4714,7 +3533,6 @@ local _utf8sub = string.utf8sub
 				end
 
 				for i = 1, returnAmount do
-					local parameterLine = {}
 					local f = CreateFrame ("Button", nil, Api2Frame)
 					f:SetSize (infoWidth, 20)
 					f:SetScript ("OnEnter", returnOnEnter)
@@ -4738,7 +3556,7 @@ local _utf8sub = string.utf8sub
 
 					f.desc:SetPoint ("TOPLEFT", f.name, "BOTTOMLEFT", 0, -5)
 
-					tinsert (returnLines, f)
+					returnLines[#returnLines+1] = f
 				end
 
 			function Api2Frame.Refresh()
@@ -4757,410 +3575,13 @@ local _utf8sub = string.utf8sub
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-function Details.OpenDpsBenchmark()
-
-	--main frame
-
-		local DF = _detalhes.gump
-		local _ = nil
-
-		--declaration
-		local f = CreateFrame ("Frame", "DetailsBenchmark", UIParent)
-		f:SetSize (800, 600)
-		f:SetPoint ("LEFT", UIParent, "LEFT")
-		f:SetFrameStrata ("LOW")
-		f:EnableMouse (true)
-		f:SetMovable (true)
-		f:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tileSize = 64, tile = true})
-		f:SetBackdropColor (0, 0, 0, 0.9)
-		f:SetBackdropBorderColor (0, 0, 0, 1)
-
-		--register to libwindow
-		local LibWindow = LibStub ("LibWindow-1.1")
-		LibWindow.RegisterConfig (f, _detalhes.benchmark_db.frame)
-		LibWindow.RestorePosition (f)
-		LibWindow.MakeDraggable (f)
-		LibWindow.SavePosition (f)
-
-		--titlebar
-		f.TitleBar = CreateFrame ("Frame", "$parentTitleBar", f)
-		f.TitleBar:SetPoint ("TOPLEFT", f, "TOPLEFT", 2, -3)
-		f.TitleBar:SetPoint ("TOPRIGHT", f, "TOPRIGHT", -2, -3)
-		f.TitleBar:SetHeight (20)
-		f.TitleBar:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tileSize = 64, tile = true})
-		f.TitleBar:SetBackdropColor (.2, .2, .2, 1)
-		f.TitleBar:SetBackdropBorderColor (0, 0, 0, 1)
-
-		--close button
-		f.Close = CreateFrame ("button", "$parentCloseButton", f)
-		f.Close:SetPoint ("RIGHT", f.TitleBar, "RIGHT", -2, 0)
-		f.Close:SetSize (16, 16)
-		f.Close:SetNormalTexture (_detalhes.gump.folder .. "icons")
-		f.Close:SetHighlightTexture (_detalhes.gump.folder .. "icons")
-		f.Close:SetPushedTexture (_detalhes.gump.folder .. "icons")
-		f.Close:GetNormalTexture():SetTexCoord (0, 16/128, 0, 1)
-		f.Close:GetHighlightTexture():SetTexCoord (0, 16/128, 0, 1)
-		f.Close:GetPushedTexture():SetTexCoord (0, 16/128, 0, 1)
-		f.Close:SetAlpha (0.7)
-		f.Close:SetScript ("OnClick", function() f:Hide() end)
-
-		--title
-		f.Title = f.TitleBar:CreateFontString ("$parentTitle", "overlay", "GameFontNormal")
-		f.Title:SetPoint ("CENTER", f.TitleBar, "CENTER")
-		f.Title:SetTextColor (.8, .8, .8, 1)
-		f.Title:SetText ("Details! Benchmark")
-
-		DF:InstallTemplate ("font", "DETAILS_BENCHMARK_NORMAL", {color = "white", size = 10, font = "Friz Quadrata TT"})
-
-		function f.CreateCombatObject()
-			local t = {}
-
-			return t
-		end
-
-		function f.StartNewBenchmark()
-
-		end
-
-		function f.StopCurrentBenchmark()
-
-		end
-
-
-		f.OnTickInterval = 0
-		function f.UpdateOnTick (self, deltaTime)
-			f.OnTickInterval = f.OnTickInterval + deltaTime
-			if (f.OnTickInterval >= 0.024) then
-				--do the update
-
-				--reset the interval
-				f.OnTickInterval = 0
-			end
-		end
-		function f.StartUpdateOnTick()
-			f:SetScript ("OnUpdate", f.UpdateOnTick)
-		end
-
-		--events
-		f:RegisterEvent ("PLAYER_REGEN_DISABLED")
-		f:RegisterEvent ("PLAYER_REGEN_ENABLED")
-
-		f:SetScript ("OnEvent", function (self, event, ...)
-			if (event == "PLAYER_REGEN_DISABLED") then
-				f.StartNewBenchmark()
-
-			elseif (event == "PLAYER_REGEN_ENABLED") then
-				f.StopCurrentBenchmark()
-
-			end
-		end)
-
-		local normal_text_template = DF:GetTemplate ("font", "DETAILS_BENCHMARK_NORMAL")
-		local options_dropdown_template = DF:GetTemplate ("dropdown", "OPTIONS_DROPDOWN_TEMPLATE")
-		local options_switch_template = DF:GetTemplate ("switch", "OPTIONS_CHECKBOX_TEMPLATE")
-		local options_slider_template = DF:GetTemplate ("slider", "OPTIONS_SLIDER_TEMPLATE")
-		local options_button_template = DF:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE")
-
-	--locations
-		f.FrameLocations = {
-			summary = {10, -30},
-			auras = {10, -120},
-			spells = {10, -180},
-			history = {10, -280},
-		}
-		f.FrameSizes = {
-			default = {300, 200},
-		}
-
-	--summary block
-
-		--declaration
-			local summaryFrame = CreateFrame ("Frame", "$parentSummaryFrame", f)
-			summaryFrame:SetPoint ("TOPLEFT", f, "TOPLEFT", unpack (f.FrameLocations.summary))
-			summaryFrame:SetSize (unpack (f.FrameSizes.default))
-			summaryFrame:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tileSize = 64, tile = true})
-			summaryFrame:SetBackdropColor (0, 0, 0, 0.9)
-			summaryFrame:SetBackdropBorderColor (0, 0, 0, 1)
-
-		--time to test string and dropdown
-			local build_time_list = function()
-				local t = {
-					{value = 40, label = "40 seconds"},
-					{value = 60, label = "60 seconds"},
-					{value = 90, label = "90 seconds"},
-					{value = 120, label = "2 minutes"},
-					{value = 180, label = "3 minutes"},
-					{value = 300, label = "5 minutes"},
-				}
-				return t
-			end
-
-			summaryFrame.TimeToTestLabel = DF:CreateLabel (summaryFrame, "Amount of Time", normal_text_template)
-			summaryFrame.TimeToTestDropdown = DF:CreateDropDown (summaryFrame, build_time_list, default, 150, 20, _, _, options_dropdown_template)
-
-		--description string and text entry
-			summaryFrame.DescriptionLabel = DF:CreateLabel (summaryFrame, "Description", normal_text_template)
-			summaryFrame.DescriptionEntry = DF:CreateTextEntry (summaryFrame, function()end, 120, 20, nil, _, nil, options_dropdown_template)
-
-		--DPS Amount string
-			summaryFrame.DPSLabel = DF:CreateLabel (summaryFrame, "100K", normal_text_template)
-
-		--TIME ELAPSED string
-			summaryFrame.TimeElapsedLabel = DF:CreateLabel (summaryFrame, "01:00", normal_text_template)
-
-		--boss simulation string and dropdown
-			local build_bosssimulation_list, default = function()
-				local t = {
-					{value = "patchwerk", label = "Patchwerk"},
-				}
-				return t
-			end
-			summaryFrame.BossSimulationLabel = DF:CreateLabel (summaryFrame, "Boss Simulation", normal_text_template)
-			summaryFrame.BossSimulationDropdown = DF:CreateDropDown (summaryFrame, build_bosssimulation_list, default, 150, 20, _, _, options_dropdown_template)
-
-		--boss records line with a tooltip importing data from the storage
-			summaryFrame.BossRecordsFrame = CreateFrame ("Button", nil, summaryFrame)
-			summaryFrame.BossRecordsFrame:SetSize (f.FrameSizes.default[1]-20, 20)
-			summaryFrame.BossRecordsFrame:SetBackdropColor (0, 0, 0, 0.3)
-			summaryFrame.BossRecordsFrame:SetScript ("OnEnter", function()
-
-			end)
-			summaryFrame.BossRecordsFrame:SetScript ("OnLeave", function()
-
-			end)
-
-		--set the points
-			do
-				local x, y = 10, -10
-				summaryFrame.TimeToTestLabel:SetPoint ("TOPLEFT", summaryFrame, "TOPLEFT", x, y)
-				summaryFrame.TimeToTestDropdown:SetPoint ("TOPLEFT", summaryFrame.TimeToTestLabel, "BOTTOMLEFT", 0, -2)
-
-				--y = y - 40
-				summaryFrame.DescriptionLabel:SetPoint ("TOPLEFT", summaryFrame, "TOPLEFT", x+160, y)
-				summaryFrame.DescriptionEntry:SetPoint ("TOPLEFT", summaryFrame.DescriptionLabel, "BOTTOMLEFT", 0, -2)
-
-				y = y - 40
-				summaryFrame.DPSLabel:SetPoint ("TOPLEFT", summaryFrame, "TOPLEFT", x, y)
-				summaryFrame.TimeElapsedLabel:SetPoint ("TOPLEFT", summaryFrame, "TOPLEFT", x + 100, y)
-
-				y = y - 40
-				summaryFrame.BossSimulationLabel:SetPoint ("TOPLEFT", summaryFrame, "TOPLEFT", x, y)
-				summaryFrame.BossSimulationDropdown:SetPoint ("TOPLEFT", summaryFrame.BossSimulationLabel, "BOTTOMLEFT", 0, -2)
-
-				y = y - 40
-				summaryFrame.BossRecordsFrame:SetPoint ("TOPLEFT", summaryFrame, "TOPLEFT", 0, 0)
-			end
-
-
-
-
-	--spells block
-
-		--declaration
-			local spellsFrame = CreateFrame ("Frame", "$parentSpellsFrame", f)
-			spellsFrame:SetPoint ("TOPLEFT", f, "TOPLEFT", unpack (f.FrameLocations.spells))
-			spellsFrame:SetSize (unpack (f.FrameSizes.default))
-			spellsFrame:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tileSize = 64, tile = true})
-			spellsFrame:SetBackdropColor (0, 0, 0, 0.9)
-			spellsFrame:SetBackdropBorderColor (0, 0, 0, 1)
-
-		--header with the string titles:
-			--Spell Icon | DPS | Damage | Casts | Criticals | Highest Damage
-
-		--scrollpanel
-			--each line with:
-				--Texture for the icon
-				--5 strings for the data
-				--hover over scripts
-
-	--auras block
-
-		--declaration
-			local aurasFrame = CreateFrame ("Frame", "$parentAurasFrame", f)
-			aurasFrame:SetPoint ("TOPLEFT", f, "TOPLEFT", unpack (f.FrameLocations.auras))
-			aurasFrame:SetSize (unpack (f.FrameSizes.default))
-			aurasFrame:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tileSize = 64, tile = true})
-			aurasFrame:SetBackdropColor (0, 0, 0, 0.9)
-			aurasFrame:SetBackdropBorderColor (0, 0, 0, 1)
-
-		--will be 9 blocks?
-
-		--each block with:
-			--Texture for the icon
-			--3 strings for Total Update, Applications and Refreshes
-
-
-	--history block
-
-		--declaration
-			local historyFrame = CreateFrame ("Frame", "$parentHistoryFrame", f)
-			historyFrame:SetPoint ("TOPLEFT", f, "TOPLEFT", unpack (f.FrameLocations.history))
-			historyFrame:SetSize (unpack (f.FrameSizes.default))
-			historyFrame:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tileSize = 64, tile = true})
-			historyFrame:SetBackdropColor (0, 0, 0, 0.9)
-			historyFrame:SetBackdropBorderColor (0, 0, 0, 1)
-
-		--header with the string titles:
-			--Spec | ILevel | DPS | Time | Talents | Crit | Haste | Versatility | Mastery | Int | Description
-
-		--scrollpanel
-			--each line with:
-				--7 Textures for talent icons
-				--10 strings for the data
-				--hover over scripts
-
-
-
-	--mechanics
-
-	--to open the window
-		--on target a training dummy
-		--need to be on a specific map / sanctuary
-
-	--on start a new combat:
-		--start the timer
-		--start the boss script if not patchwerk
-		--create the graphic tables for *player total damage and *spell damage
-		--create aura tables / grab auras already applied to the player / auras with no duration wont be added
-
-	--on tick:
-		--*check if the time is gone *update the time string *update the graphic *update the spells *upate the auras
-
-
-	--on finishes:
-		--stop the timer and check if the elapsed time is done
-		--create a new benchmark object to store the test
-		--export the data to this new object
-		--add this new object to the benchmark storage table
-		--update the history scrollbar
-
-
-end
-
-
-	--old versions dialog
-	--[[
-	--print ("Last Version:", _detalhes_database.last_version, "Last Interval Version:", _detalhes_database.last_realversion)
-
-	local resetwarning_frame = CreateFrame ("FRAME", "DetailsResetConfigWarningDialog", UIParent, "ButtonFrameTemplate")
-	resetwarning_frame:SetFrameStrata ("LOW")
-	tinsert (UISpecialFrames, "DetailsResetConfigWarningDialog")
-	resetwarning_frame:SetPoint ("CENTER", UIParent, "CENTER")
-	resetwarning_frame:SetSize (512, 200)
-	resetwarning_frame.portrait:SetTexture ("Interface\\CHARACTERFRAME\\TEMPORARYPORTRAIT-FEMALE-GNOME")
-	resetwarning_frame:SetScript ("OnHide", function()
-		DetailsBubble:HideBubble()
-	end)
-
-	resetwarning_frame.TitleText:SetText ("Noooooooooooo!!!")
-
-	resetwarning_frame.midtext = resetwarning_frame:CreateFontString (nil, "artwork", "GameFontNormal")
-	resetwarning_frame.midtext:SetText ("A pack of murlocs has attacked Details! tech center, our gnomes engineers are working on fixing the damage.\n\n If something is messed in your Details!, especially the close, instance and reset buttons, you can either 'Reset Skin' or access the options panel.")
-	resetwarning_frame.midtext:SetPoint ("TOPLEFT", resetwarning_frame, "TOPLEFT", 10, -90)
-	resetwarning_frame.midtext:SetJustifyH ("CENTER")
-	resetwarning_frame.midtext:SetWidth (370)
-
-	resetwarning_frame.gnoma = resetwarning_frame:CreateTexture (nil, "artwork")
-	resetwarning_frame.gnoma:SetPoint ("TOPRIGHT", resetwarning_frame, "TOPRIGHT", -3, -80)
-	resetwarning_frame.gnoma:SetTexture ("Interface\\AddOns\\Details\\images\\icons2")
-	resetwarning_frame.gnoma:SetSize (89*1.00, 97*1.00)
-	--resetwarning_frame.gnoma:SetTexCoord (0.212890625, 0.494140625, 0.798828125, 0.99609375) -- 109 409 253 510
-	resetwarning_frame.gnoma:SetTexCoord (0.17578125, 0.001953125, 0.59765625, 0.787109375) -- 1 306 90 403
-
-	resetwarning_frame.close = CreateFrame ("Button", "DetailsFeedbackWindowCloseButton", resetwarning_frame, "OptionsButtonTemplate")
-	resetwarning_frame.close:SetPoint ("BOTTOMLEFT", resetwarning_frame, "BOTTOMLEFT", 8, 4)
-	resetwarning_frame.close:SetText ("Close")
-	resetwarning_frame.close:SetScript ("OnClick", function (self)
-		resetwarning_frame:Hide()
-	end)
-
-	resetwarning_frame.see_updates = CreateFrame ("Button", "DetailsResetWindowSeeUpdatesButton", resetwarning_frame, "OptionsButtonTemplate")
-	resetwarning_frame.see_updates:SetPoint ("BOTTOMRIGHT", resetwarning_frame, "BOTTOMRIGHT", -10, 4)
-	resetwarning_frame.see_updates:SetText ("Update Info")
-	resetwarning_frame.see_updates:SetScript ("OnClick", function (self)
-		_detalhes.OpenNewsWindow()
-		DetailsBubble:HideBubble()
-		--resetwarning_frame:Hide()
-	end)
-	resetwarning_frame.see_updates:SetWidth (130)
-
-	resetwarning_frame.reset_skin = CreateFrame ("Button", "DetailsResetWindowResetSkinButton", resetwarning_frame, "OptionsButtonTemplate")
-	resetwarning_frame.reset_skin:SetPoint ("RIGHT", resetwarning_frame.see_updates, "LEFT", -5, 0)
-	resetwarning_frame.reset_skin:SetText ("Reset Skin")
-	resetwarning_frame.reset_skin:SetScript ("OnClick", function (self)
-		--do the reset
-		for index, instance in ipairs (_detalhes.tabela_instancias) do
-			if (not instance.iniciada) then
-				instance:RestauraJanela()
-				local skin = instance.skin
-				instance:ChangeSkin ("WoW Interface")
-				instance:ChangeSkin ("Minimalistic")
-				instance:ChangeSkin (skin)
-				instance:DesativarInstancia()
-			else
-				local skin = instance.skin
-				instance:ChangeSkin ("WoW Interface")
-				instance:ChangeSkin ("Minimalistic")
-				instance:ChangeSkin (skin)
-			end
-		end
-	end)
-	resetwarning_frame.reset_skin:SetWidth (130)
-
-	resetwarning_frame.open_options = CreateFrame ("Button", "DetailsResetWindowOpenOptionsButton", resetwarning_frame, "OptionsButtonTemplate")
-	resetwarning_frame.open_options:SetPoint ("RIGHT", resetwarning_frame.reset_skin, "LEFT", -5, 0)
-	resetwarning_frame.open_options:SetText ("Options Panel")
-	resetwarning_frame.open_options:SetScript ("OnClick", function (self)
-		local lower_instance = _detalhes:GetLowerInstanceNumber()
-		if (not lower_instance) then
-			local instance = _detalhes:GetInstance (1)
-			_detalhes.CriarInstancia (_, _, 1)
-			_detalhes:OpenOptionsWindow (instance)
-		else
-			_detalhes:OpenOptionsWindow (_detalhes:GetInstance (lower_instance))
-		end
-	end)
-	resetwarning_frame.open_options:SetWidth (130)
-
-	function _detalhes:ResetWarningDialog()
-		DetailsResetConfigWarningDialog:Show()
-		DetailsBubble:SetOwner (resetwarning_frame.gnoma, "BOTTOMRIGHT", "TOPLEFT", 30, -37, 1)
-		DetailsBubble:FlipHorizontal()
-		DetailsBubble:SetBubbleText ("", "", "WWHYYYYYYYYY!!!!", "", "")
-		DetailsBubble:TextConfig (14, nil, "deeppink")
-		DetailsBubble:ShowBubble()
-
-
-	end
-	_detalhes:ScheduleTimer ("ResetWarningDialog", 7)
---]]
-
---[[
-	local background_up = f:CreateTexture (nil, "background")
-	background_up:SetPoint ("TOPLEFT", f, "TOPLEFT")
-	background_up:SetSize (250, 150)
-	background_up:SetTexture ("Interface\\QuestionFrame\\Question-Main")
-	background_up:SetTexCoord (0, 420/512, 320/512, 475/512)
-
-	local background_down = f:CreateTexture (nil, "background")
-	background_down:SetPoint ("TOPLEFT", background_up, "BOTTOMLEFT")
-	background_down:SetSize (250, 150)
-	background_down:SetTexture ("Interface\\QuestionFrame\\Question-Main")
-	background_down:SetTexCoord (0, 420/512, 156/512, 308/512)
-
-	background_up:SetDesaturated (true)
-	background_down:SetDesaturated (true)
---]]
-
 
 local CreateCurrentDpsFrame = function (parent, name)
 
 	local DF = _detalhes.gump
-	local SharedMedia = LibStub:GetLibrary ("LibSharedMedia-3.0")
 
 	--> some constants
 		local header_size = 12 --title bar size
-		local spacing_vertical = -6 --vertical space between the group anchor and the group dps
 		local green_team_color = {.5, 1, .5, 1}
 		local yellow_team_color = {1, 1, .5, 1}
 
@@ -5241,27 +3662,6 @@ local CreateCurrentDpsFrame = function (parent, name)
 			end
 		end
 
-	--> labels for mythic dungeon / group party
-		local labelGroupDamage = f:CreateFontString (nil, "overlay", "GameFontNormal")
-		labelGroupDamage:SetText ("Real Time Group DPS")
-		DF:SetFontSize (labelGroupDamage, 14)
-		DF:SetFontOutline (labelGroupDamage, "NONE")
-
-		local labelGroupDamage_DPS = f:CreateFontString (nil, "overlay", "GameFontNormal")
-		labelGroupDamage_DPS:SetText ("0")
-
-		labelGroupDamage:SetPoint ("CENTER", f, "CENTER", 0, 10)
-		labelGroupDamage_DPS:SetPoint ("CENTER", labelGroupDamage, "CENTER")
-		labelGroupDamage_DPS:SetPoint ("TOP", labelGroupDamage, "BOTTOM", 0, spacing_vertical)
-
-		--[=[
-		local labelGroupDamage_DPS_Icon = f:CreateTexture (nil, "overlay")
-		labelGroupDamage_DPS_Icon:SetTexture ([[Interface\LFGFRAME\UI-LFG-ICON-ROLES]])
-		labelGroupDamage_DPS_Icon:SetTexCoord (72/256, 130/256, 69/256, 127/256)
-		labelGroupDamage_DPS_Icon:SetSize (icon_size, icon_size)
-		labelGroupDamage_DPS_Icon:SetPoint ("TOPLEFT", labelPlayerTeam, "BOTTOMLEFT", 0, -4)
-		--]=]
-
 	--> frame update function
 
 		--> update
@@ -5276,11 +3676,6 @@ local CreateCurrentDpsFrame = function (parent, name)
 		f.YellowDamage = 0
 		f.LastPlayerTeamDamage = 0
 		f.LastYellowDamage = 0
-
-		--> mythic dungeon / party group
-		f.GroupBuffer = {}
-		f.GroupTotalDamage = 0
-		f.LastTickGroupDamage = 0
 
 		--> general
 		f.SampleSize = _detalhes.current_dps_meter.sample_size
@@ -5346,30 +3741,6 @@ local CreateCurrentDpsFrame = function (parent, name)
 				labelYellowTeam_DPS_Icon:Hide()
 			end
 
-			if (scenario == "mythicdungeon") then
-				labelGroupDamage:Show()
-				labelGroupDamage_DPS:Show()
-
-				DF:SetFontColor (labelGroupDamage_DPS, _detalhes.current_dps_meter.font_color)
-				DF:SetFontFace (labelGroupDamage_DPS, _detalhes.current_dps_meter.font_face)
-				DF:SetFontSize (labelGroupDamage_DPS, _detalhes.current_dps_meter.font_size)
-				DF:SetFontOutline (labelGroupDamage_DPS, _detalhes.current_dps_meter.font_shadow)
-
-				--> wipe current data for mythic dungeon
-				f.GroupBuffer = {}
-
-				--> reset damage
-				f.GroupTotalDamage = 0
-
-				--> reset last tick damage
-				f.LastTickGroupDamage = 0
-
-				f:Show()
-			else
-				labelGroupDamage:Hide()
-				labelGroupDamage_DPS:Hide()
-			end
-
 			--> frame position
 			f:SetSize (_detalhes.current_dps_meter.frame.width, _detalhes.current_dps_meter.frame.height)
 			LibWindow.RegisterConfig (f, _detalhes.current_dps_meter.frame)
@@ -5389,13 +3760,8 @@ local CreateCurrentDpsFrame = function (parent, name)
 			end
 
 			--> frame can show title
-			if (_detalhes.current_dps_meter.frame.show_title) then
-				TitleString:Show()
-				TitleBackground:Show()
-			else
-				TitleString:Hide()
-				TitleBackground:Hide()
-			end
+			TitleString:SetShown(_detalhes.current_dps_meter.frame.show_title)
+			TitleBackground:SetShown(_detalhes.current_dps_meter.frame.show_title)
 
 			--> frame strata
 			f:SetFrameStrata (_detalhes.current_dps_meter.frame.strata)
@@ -5489,47 +3855,6 @@ local CreateCurrentDpsFrame = function (parent, name)
 						f.NextScreenUpdate = _detalhes.current_dps_meter.update_interval
 					end
 
-				elseif (self.ShowingMythicDungeon) then
-
-					--iniciava um novo combate e tinha o buffer do combate anterior
-					--ent�o dava o total de dano do combate recente menos o que tinha no buffer do round anterior
-
-					--> the party damage done at this tick
-					local thisTickGroupDamage = 0
-
-					for i, actor in damageContainer:ListActors() do
-						if (actor:IsPlayer() and actor:IsGroupPlayer()) then
-							thisTickGroupDamage = thisTickGroupDamage + actor.total
-						end
-					end
-
-					--> calculate how much damage the team made on this tick
-					local groupDamageDoneOnThisTick = thisTickGroupDamage - f.LastTickGroupDamage
-
-					--> add the damage to buffer
-					tinsert (f.GroupBuffer, 1, groupDamageDoneOnThisTick)
-
-					--> save the current damage amount
-					f.LastTickGroupDamage = thisTickGroupDamage
-
-					--> add the damage to current total damage
-					f.GroupTotalDamage = f.GroupTotalDamage + groupDamageDoneOnThisTick
-
-					--> cicle buffer removing the last index and subtract its damage
-					local removedDamage = tremove (f.GroupBuffer, f.MaxBufferIndex+1)
-					if (removedDamage) then
-						--> remove the value from the total damage
-						f.GroupTotalDamage = f.GroupTotalDamage - removedDamage
-						--> be save
-						f.GroupTotalDamage = max (0, f.GroupTotalDamage)
-					end
-
-					self.NextScreenUpdate = self.NextScreenUpdate - time_fraction
-					if (self.NextScreenUpdate <= 0) then
-						labelGroupDamage_DPS:SetText (_detalhes:ToK2 (f.GroupTotalDamage / self.SampleSize))
-						f.NextScreenUpdate = _detalhes.current_dps_meter.update_interval
-					end
-
 				end
 
 				--> set next update time
@@ -5539,7 +3864,6 @@ local CreateCurrentDpsFrame = function (parent, name)
 
 		f:SetScript ("OnHide", function()
 			f.ShowingArena = false
-			f.ShowingMythicDungeon = false
 			f:SetScript ("OnUpdate", nil)
 		end)
 
@@ -5547,14 +3871,6 @@ local CreateCurrentDpsFrame = function (parent, name)
 			if (not f.ShowingArena) then
 				_detalhes:UpdateTheRealCurrentDPSFrame ("arena")
 				f.ShowingArena = true
-				f:SetScript ("OnUpdate", on_tick)
-			end
-		end
-
-		function f:StartForMythicDungeon()
-			if (not f.ShowingMythicDungeon) then
-				_detalhes:UpdateTheRealCurrentDPSFrame ("mythicdungeon")
-				f.ShowingMythicDungeon = true
 				f:SetScript ("OnUpdate", on_tick)
 			end
 		end
@@ -5567,17 +3883,7 @@ local CreateCurrentDpsFrame = function (parent, name)
 			end
 		end
 
-		function eventListener:MythicDungeonStarted()
-			if (_detalhes.current_dps_meter.mythic_dungeon_enabled) then
-				f:StartForMythicDungeon()
-			end
-		end
-
 		function eventListener:ArenaEnded()
-			f:Hide()
-		end
-
-		function eventListener:MythicDungeonEnded()
 			f:Hide()
 		end
 
@@ -5585,11 +3891,8 @@ local CreateCurrentDpsFrame = function (parent, name)
 			if (f:IsShown()) then
 				wipe (f.PlayerTeamBuffer)
 				wipe (f.YellowTeamBuffer)
-				wipe (f.GroupBuffer)
-				f.GroupTotalDamage = 0
 				f.PlayerTeamDamage = 0
 				f.YellowDamage = 0
-				f.LastTickGroupDamage = 0
 				f.LastPlayerTeamDamage = 0
 				f.LastYellowDamage = 0
 			end
@@ -5597,12 +3900,9 @@ local CreateCurrentDpsFrame = function (parent, name)
 
 		eventListener:RegisterEvent ("COMBAT_ARENA_START", "ArenaStarted")
 		eventListener:RegisterEvent ("COMBAT_ARENA_END", "ArenaEnded")
-		eventListener:RegisterEvent ("COMBAT_MYTHICDUNGEON_START", "MythicDungeonStarted")
-		eventListener:RegisterEvent ("COMBAT_MYTHICDUNGEON_END", "MythicDungeonEnded")
 		eventListener:RegisterEvent ("COMBAT_PLAYER_ENTER", "ResetBuffer")
 
 	_detalhes.Broadcaster_CurrentDpsLoaded = true
-	_detalhes.Broadcaster_CurrentDpsFrame = f
 	f:Hide()
 end
 
@@ -5775,7 +4075,6 @@ local CreateEventTrackerFrame = function (parent, name)
 		local ABILITYTABLE_SPELLID = 2
 		local ABILITYTABLE_CASTERNAME = 3
 		local ABILITYTABLE_TARGETNAME = 4
-		local ABILITYTABLE_TIME = 5
 		local ABILITYTABLE_EXTRASPELLID = 6
 		local ABILITYTABLE_GAMETIME = 7
 		local ABILITYTABLE_CASTERSERIAL = 8
@@ -6031,7 +4330,7 @@ local CreateEventTrackerFrame = function (parent, name)
 				update_line (line)
 			else
 				--> update all lines
-				for index, line in ipairs (scrollframe:GetFrames()) do
+				for index, line in _ipairs (scrollframe:GetFrames()) do
 					update_line (line)
 				end
 				scrollframe:SetFramesHeight (_detalhes.event_tracker.line_height)
@@ -6050,15 +4349,10 @@ local CreateEventTrackerFrame = function (parent, name)
 			LibWindow.RestorePosition (f)
 			scrollframe:OnSizeChanged()
 
-			if (_detalhes.event_tracker.frame.locked) then
-				f:EnableMouse (false)
-				left_resize:Hide()
-				right_resize:Hide()
-			else
-				f:EnableMouse (true)
-				left_resize:Show()
-				right_resize:Show()
-			end
+			local locked = _detalhes.event_tracker.frame.locked
+			f:EnableMouse (not locked)
+			left_resize:SetShown(not locked)
+			right_resize:SetShown(not locked)
 
 			if (_detalhes.event_tracker.frame.show_title) then
 				TitleString:Show()
@@ -6154,7 +4448,6 @@ local CreateEventTrackerFrame = function (parent, name)
 		end)
 
 	_detalhes.Broadcaster_EventTrackerLoaded = true
-	_detalhes.Broadcaster_EventTrackerFrame = f
 	f:Hide()
 
 end
@@ -6178,7 +4471,7 @@ function Details:LoadFramesForBroadcastTools()
 		end
 
 	--> current dps
-		local bIsEnabled = _detalhes.current_dps_meter.enabled and (_detalhes.current_dps_meter.arena_enabled or _detalhes.current_dps_meter.mythic_dungeon_enabled)
+		local bIsEnabled = _detalhes.current_dps_meter.enabled and _detalhes.current_dps_meter.arena_enabled
 
 		--> if enabled and not loaded, load it
 		if (bIsEnabled and not _detalhes.Broadcaster_CurrentDpsLoaded) then
@@ -6187,12 +4480,10 @@ function Details:LoadFramesForBroadcastTools()
 
 		--> if enabled, check if can show
 		if (bIsEnabled and _detalhes.Broadcaster_CurrentDpsLoaded) then
-			if (_detalhes.current_dps_meter.arena_enabled) then
-				local zoneName, instanceType, difficultyID, difficultyName, maxPlayers, dynamicDifficulty = GetInstanceInfo()
-				if (instanceType == "arena") then
-					--> player is inside an arena
-					DetailsCurrentDpsMeter:StartForArenaMatch()
-				end
+			local _, instanceType = GetInstanceInfo()
+			if (instanceType == "arena") then
+				--> player is inside an arena
+				DetailsCurrentDpsMeter:StartForArenaMatch()
 			end
 		end
 
@@ -6357,17 +4648,6 @@ function Details:OpenCurrentRealDPSOptions (from_options_panel)
 				name = "Arena Matches",
 				text_template = options_text_template,
 			},
-			--mythic dungeon
-			{
-				type = "toggle",
-				get = function() return Details.current_dps_meter.mythic_dungeon_enabled end,
-				set = function (self, fixedparam, value)
-					Details.current_dps_meter.mythic_dungeon_enabled = not Details.current_dps_meter.mythic_dungeon_enabled
-					Details:LoadFramesForBroadcastTools()
-				end,
-				name = "Mythic Dungeons",
-				text_template = options_text_template,
-			},
 
 			{type = "breakline"},
 			{type = "label", get = function() return "Text Settings:" end, text_template = DF:GetTemplate ("font", "ORANGE_FONT_TEMPLATE")},
@@ -6425,8 +4705,8 @@ function Details:OpenCurrentRealDPSOptions (from_options_panel)
 			if (DetailsCurrentDpsMeter) then
 				--> check if can hide the main frame as well
 				--> we force show the main frame for the user see the frame while editing the options
-				local zoneName, instanceType, difficultyID, difficultyName, maxPlayers, dynamicDifficulty = GetInstanceInfo()
-				if (instanceType ~= "party" and instanceType ~= "arena") then
+				local _, instanceType = GetInstanceInfo()
+				if (instanceType ~= "arena") then
 					DetailsCurrentDpsMeter:Hide()
 				end
 			end
@@ -6513,10 +4793,10 @@ function Details:OpenEventTrackerOptions (from_options_panel)
 			local SharedMedia = LibStub:GetLibrary ("LibSharedMedia-3.0")
 			local textures = SharedMedia:HashTable ("statusbar")
 			local texTable = {}
-			for name, texturePath in pairs (textures) do
+			for name, texturePath in _pairs (textures) do
 				texTable [#texTable + 1] = {value = name, label = name, statusbar = texturePath, onclick = set_bar_texture}
 			end
-			table.sort (texTable, function (t1, t2) return t1.label < t2.label end)
+			_table_sort (texTable, function (t1, t2) return t1.label < t2.label end)
 
 		--> options table
 		local options = {
@@ -6683,17 +4963,10 @@ function Details:OpenEventTrackerOptions (from_options_panel)
 
 end
 
--- fazer painel de op��es
--- fazer um painel de op��es "broadcaster settings"
 
-C_Timer:After (1, function()
-	--Details:OpenOptionsWindow(Details:GetInstance(1))
-end)
-
-
-function _detalhes:FormatBackground (f)
+function _detalhes:FormatBackground (f, bgAlpha, backdropAlpha)
 	f:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-	f:SetBackdropColor (.5, .5, .5, .5)
+	f:SetBackdropColor (.5, .5, .5, backdropAlpha or .5)
 	f:SetBackdropBorderColor (0, 0, 0, 1)
 
 	if (not f.__background) then
@@ -6701,7 +4974,7 @@ function _detalhes:FormatBackground (f)
 	end
 
 	f.__background:SetTexture ([[Interface\AddOns\Details\images\background]], true)
-	f.__background:SetAlpha (0.7)
+	f.__background:SetAlpha (bgAlpha or 0.7)
 	f.__background:SetVertexColor (0.27, 0.27, 0.27)
 	f.__background:SetVertTile (true)
 	f.__background:SetHorizTile (true)
@@ -6727,25 +5000,7 @@ function Details:Dump (t)
 		local text_editor = DetailsFramework:NewSpecialLuaEditorEntry (DetailsDumpFrame, 680, 560, "Editbox", "$parentEntry", true)
 		text_editor:SetPoint ("TOPLEFT", DetailsDumpFrame, "TOPLEFT", 10, -30)
 
-		text_editor.scroll:SetBackdrop (nil)
-		text_editor.editbox:SetBackdrop (nil)
-		text_editor:SetBackdrop (nil)
-
-		DetailsFramework:ReskinSlider (text_editor.scroll)
-
-		if (not text_editor.__background) then
-			text_editor.__background = text_editor:CreateTexture (nil, "background")
-		end
-
-		text_editor:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1})
-		text_editor:SetBackdropBorderColor (0, 0, 0, 1)
-
-		text_editor.__background:SetTexture (0.2317647, 0.2317647, 0.2317647)
-		text_editor.__background:SetVertexColor (0.27, 0.27, 0.27)
-		text_editor.__background:SetAlpha (0.8)
-		text_editor.__background:SetVertTile (true)
-		text_editor.__background:SetHorizTile (true)
-		text_editor.__background:SetAllPoints()
+		reskin_code_editor (text_editor)
 	end
 
 	t = t or {}
@@ -6765,8 +5020,7 @@ function Details:ScrollDamage()
 		DetailsScrollDamage:SetSize (707, 505)
 		DetailsScrollDamage:SetTitle ("Details! Scroll Damage")
 		DetailsScrollDamage.Data = {}
-		DetailsScrollDamage:ClearAllPoints()
-		DetailsScrollDamage:SetPoint ("LEFT", UIParent, "LEFT", 10, 0)
+		DetailsScrollDamage:ClearAndSetPoint ("LEFT", UIParent, "LEFT", 10, 0)
 		DetailsScrollDamage:Hide()
 
 		local scroll_width = 675
@@ -6992,30 +5246,8 @@ function _detalhes:ShowImportWindow (defaultText, confirmFunc, titleText)
 		DetailsFramework:ApplyStandardBackdrop (importWindow, false, 1.2)
 
 		local importTextEditor = DetailsFramework:NewSpecialLuaEditorEntry (importWindow, 780, 540, "ImportEditor", "$parentEditor", true)
-		importTextEditor:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\Tooltips\UI-Tooltip-Background]], tileSize = 64, tile = true})
-		importTextEditor:SetBackdropColor (.2, .2, .2, .5)
-		importTextEditor:SetBackdropBorderColor (0, 0, 0, 1)
 		importTextEditor:SetPoint ("TOPLEFT", importWindow, "TOPLEFT", 10, -30)
-
-		importTextEditor.scroll:SetBackdrop (nil)
-		importTextEditor.editbox:SetBackdrop (nil)
-		importTextEditor:SetBackdrop (nil)
-
-		DetailsFramework:ReskinSlider (importTextEditor.scroll)
-
-		if (not importTextEditor.__background) then
-			importTextEditor.__background = importTextEditor:CreateTexture (nil, "background")
-		end
-
-		importTextEditor:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1})
-		importTextEditor:SetBackdropBorderColor (0, 0, 0, 1)
-
-		importTextEditor.__background:SetTexture (0.2317647, 0.2317647, 0.2317647)
-		importTextEditor.__background:SetVertexColor (0.27, 0.27, 0.27)
-		importTextEditor.__background:SetAlpha (0.8)
-		importTextEditor.__background:SetVertTile (true)
-		importTextEditor.__background:SetHorizTile (true)
-		importTextEditor.__background:SetAllPoints()
+		reskin_code_editor (importTextEditor)
 
 		--import button
 		local onClickImportButton = function()
@@ -7026,7 +5258,6 @@ function _detalhes:ShowImportWindow (defaultText, confirmFunc, titleText)
 		end
 		local okayButton = DetailsFramework:CreateButton (importTextEditor, onClickImportButton, 120, 20, "Okay", -1, nil, nil, nil, nil, nil, _detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"), _detalhes.gump:GetTemplate ("font", "OPTIONS_FONT_TEMPLATE")) --> localize-me
 		okayButton:SetIcon ([[Interface\BUTTONS\UI-Panel-BiggerButton-Up]], 20, 20, "overlay", {0.1, .9, 0.1, .9})
-		importTextEditor.OkayButton = okayButton
 
 		--cancel button
 		local cancelButton = DetailsFramework:CreateButton (importTextEditor, function() importWindow:Hide() end, 120, 20, "Cancel", -1, nil, nil, nil, nil, nil, _detalhes.gump:GetTemplate ("button", "OPTIONS_BUTTON_TEMPLATE"), _detalhes.gump:GetTemplate ("font", "OPTIONS_FONT_TEMPLATE")) --> localize-me
@@ -7052,10 +5283,3 @@ end
 
 
 
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
---> api2 window
-
-function Details:ShowApi2()
-
-
-end

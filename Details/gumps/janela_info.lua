@@ -12,6 +12,7 @@ local _math_floor = math.floor
 local _ipairs = ipairs
 local _pairs = pairs
 local _type = type
+local _table_sort = table.sort
 --api locals
 local _CreateFrame = CreateFrame
 local _GetTime = GetTime
@@ -19,11 +20,9 @@ local _GetSpellInfo = _detalhes.getspellinfo
 local _GetCursorPosition = GetCursorPosition
 local _unpack = unpack
 
-local atributos = _detalhes.atributos
 local sub_atributos = _detalhes.sub_atributos
 
 local info = _detalhes.janela_info
-local classe_icones = _G.CLASS_ICON_TCOORDS
 local container3_bars_pointFunc
 
 local SummaryWidgets = {}
@@ -136,13 +135,13 @@ function _detalhes:AbreJanelaInfo (jogador, from_att_change, refresh, ShiftKeyDo
 	end
 
 	if (info.barras1) then
-		for index, barra in ipairs (info.barras1) do
+		for index, barra in _ipairs (info.barras1) do
 			barra.other_actor = nil
 		end
 	end
 
 	if (info.barras2) then
-		for index, barra in ipairs (info.barras2) do
+		for index, barra in _ipairs (info.barras2) do
 			barra.icone:SetTexture (nil)
 			barra.icone:SetTexCoord (0, 1, 0, 1)
 		end
@@ -157,7 +156,6 @@ function _detalhes:AbreJanelaInfo (jogador, from_att_change, refresh, ShiftKeyDo
 	info.instancia = self --> salva a refer�ncia da inst�ncia que pediu o info
 
 	info.target_text = Loc ["STRING_TARGETS"] .. ":"
-	info.target_member = "total"
 	info.target_persecond = false
 
 	info.mostrando = nil
@@ -282,6 +280,26 @@ function _detalhes:AbreJanelaInfo (jogador, from_att_change, refresh, ShiftKeyDo
 end
 
 -- for beta todo: info background need a major rewrite
+local set_right_panel_layout = function (tipo)
+	info.bg1_sec_texture:SetTexture (.05, .05, .05, .4)
+	info.bg3_sec_texture:Show()
+	info.bg2_sec_texture:Show()
+	info.tipo = tipo
+	for i = 1, spellInfoSettings.amount do
+		info ["right_background" .. i]:Hide()
+	end
+end
+
+local set_taken_layout = function()
+	set_right_panel_layout (2)
+	info.targets:SetText (Loc ["STRING_TARGETS"] .. ":")
+	info.no_targets:Show()
+	info.no_targets.text:Show()
+	info.apoio_icone_esquerdo:Hide()
+	info.apoio_icone_direito:Hide()
+	info.report_direita:Show()
+end
+
 function gump:TrocaBackgroundInfo()
 
 	info.bg3_sec_texture:Hide()
@@ -310,36 +328,10 @@ function gump:TrocaBackgroundInfo()
 			end
 
 		elseif (info.sub_atributo == 3) then --> damage taken
-
-			--info.bg1_sec_texture:SetTexture ([[Interface\AddOns\Details\images\info_window_damagetaken]])
-			info.bg1_sec_texture:SetTexture (.05, .05, .05, .4)
-			info.bg3_sec_texture:Show()
-			info.bg2_sec_texture:Show()
-			info.tipo = 2
-
-			for i = 1, spellInfoSettings.amount do
-				info ["right_background" .. i]:Hide()
-			end
-
-			info.targets:SetText (Loc ["STRING_TARGETS"] .. ":")
-			info.no_targets:Show()
-			info.no_targets.text:Show()
-
-			info.apoio_icone_esquerdo:Hide()
-			info.apoio_icone_direito:Hide()
-			info.report_direita:Show()
+			set_taken_layout()
 
 		elseif (info.sub_atributo == 4) then --> friendly fire
-			--info.bg1_sec_texture:SetTexture ([[Interface\AddOns\Details\images\info_window_damagetaken]])
-			info.bg1_sec_texture:SetTexture (.05, .05, .05, .4)
-			info.bg3_sec_texture:Show()
-			info.bg2_sec_texture:Show()
-			info.tipo = 3
-
-			for i = 1, spellInfoSettings.amount do
-				info ["right_background" .. i]:Hide()
-			end
-
+			set_right_panel_layout (3)
 			info.targets:SetText (Loc ["STRING_SPELLS"] .. ":")
 
 			info.apoio_icone_esquerdo:Hide()
@@ -347,16 +339,7 @@ function gump:TrocaBackgroundInfo()
 			info.report_direita:Show()
 
 		elseif (info.sub_atributo == 6) then --> enemies
-			--info.bg1_sec_texture:SetTexture ([[Interface\AddOns\Details\images\info_window_damagetaken]])
-			info.bg1_sec_texture:SetTexture (.05, .05, .05, .4)
-			info.bg3_sec_texture:Show()
-			info.bg2_sec_texture:Show()
-			info.tipo = 3
-
-			for i = 1, spellInfoSettings.amount do
-				info ["right_background" .. i]:Hide()
-			end
-
+			set_right_panel_layout (3)
 			info.targets:SetText (Loc ["STRING_DAMAGE_TAKEN_FROM"])
 		end
 
@@ -367,7 +350,6 @@ function gump:TrocaBackgroundInfo()
 
 			if (info.sub_atributo == 3) then
 				info.targets:SetText (Loc ["STRING_OVERHEALED"] .. ":")
-				info.target_member = "overheal"
 				info.target_text = Loc ["STRING_OVERHEALED"] .. ":"
 			elseif (info.sub_atributo == 2) then
 				info.targets:SetText (Loc ["STRING_TARGETS"] .. " " .. Loc ["STRING_ATTRIBUTE_HEAL_HPS"] .. ":")
@@ -377,22 +359,7 @@ function gump:TrocaBackgroundInfo()
 			end
 
 		elseif (info.sub_atributo == 4) then --> Healing taken
-			info.bg1_sec_texture:SetTexture (.05, .05, .05, .4)
-			info.bg3_sec_texture:Show()
-			info.bg2_sec_texture:Show()
-			info.tipo = 2
-
-			for i = 1, spellInfoSettings.amount do
-				info ["right_background" .. i]:Hide()
-			end
-
-			info.targets:SetText (Loc ["STRING_TARGETS"] .. ":")
-			info.no_targets:Show()
-			info.no_targets.text:Show()
-
-			info.apoio_icone_esquerdo:Hide()
-			info.apoio_icone_direito:Hide()
-			info.report_direita:Show()
+			set_taken_layout()
 		end
 
 	elseif (info.atributo == 3) then --> REGEN
@@ -606,12 +573,9 @@ end
 ------------------------------------------------------------------------------------------------------------------------------
 function gump:SetaDetalheInfoAltura (index, xmod, ymod)
 	local info = _detalhes.janela_info.grupos_detalhes [index]
-	local janela =  _detalhes.janela_info.container_detalhes
 
 	local altura = {-10, -63, -118, -173, -228, -279}
 
-	local x1 = 64 + (xmod or 0)
-	local x2 = 00 + (ymod or 0)
 
 	altura = altura [index]
 
@@ -823,7 +787,6 @@ function gump:JI_AtualizaContainerBarras (amt)
 	elseif (amt < 8 and container.slider.ativo) then
 		container.slider:Update (true)
 		container.gump:SetHeight (140)
-		container.scroll_ativo = false
 		container.ultimo = 0
 	end
 end
@@ -841,7 +804,6 @@ function gump:JI_AtualizaContainerAlvos (amt)
 	elseif (amt <= 5 and container.slider.ativo) then
 		container.slider:Update (true)
 		container.gump:SetHeight (100)
-		container.scroll_ativo = false
 		container.ultimo = 0
 	end
 end
@@ -946,7 +908,7 @@ function _detalhes:ApplyPDWSkin (skin_name)
 --hide extra frames
 	local window = DetailsPlayerDetailsWindow
 	if (window.extra_frames) then
-		for framename, frame in pairs (window.extra_frames) do
+		for framename, frame in _pairs (window.extra_frames) do
 			frame:Hide()
 		end
 	end
@@ -992,13 +954,13 @@ function _detalhes:SetPDWBarConfig (texture)
 		_detalhes.player_details_window.bar_texture = texture
 		local texture = SharedMedia:Fetch ("statusbar", texture)
 
-		for _, bar in ipairs (window.barras1) do
+		for _, bar in _ipairs (window.barras1) do
 			bar.textura:SetStatusBarTexture (texture)
 		end
-		for _, bar in ipairs (window.barras2) do
+		for _, bar in _ipairs (window.barras2) do
 			bar.textura:SetStatusBarTexture (texture)
 		end
-		for _, bar in ipairs (window.barras3) do
+		for _, bar in _ipairs (window.barras3) do
 			bar.textura:SetStatusBarTexture (texture)
 		end
 	end
@@ -1030,8 +992,7 @@ local default_skin = function()
 
 	window.close_button:GetNormalTexture():SetDesaturated (false)
 
-	window.title_string:ClearAllPoints()
-	window.title_string:SetPoint ("CENTER", window, "CENTER")
+	window.title_string:ClearAndSetPoint ("CENTER", window, "CENTER")
 	window.title_string:SetPoint ("TOP", window, "TOP", 0, -18)
 	window.title_string:SetParent (window)
 	window.title_string:SetTextColor (.890, .729, .015, 1)
@@ -1082,16 +1043,13 @@ local default_skin = function()
 	--right panel textures
 	window.bg2_sec_texture:SetPoint ("TOPLEFT", window.bg1_sec_texture, "TOPLEFT", 8, 0)
 	window.bg2_sec_texture:SetPoint ("BOTTOMRIGHT", window.bg1_sec_texture, "BOTTOMRIGHT", -30, 0)
-	window.bg2_sec_texture:SetTexture ([[Interface\Glues\CREDITS\Warlords\Shadowmoon_Color_jlo3]])
-	window.bg2_sec_texture:SetDesaturated (true)
-	window.bg2_sec_texture:SetAlpha (0.3)
 
 	window.bg3_sec_texture:SetPoint ("TOPLEFT", window.bg2_sec_texture, "TOPLEFT", 0, 0)
 	window.bg3_sec_texture:SetPoint ("BOTTOMRIGHT", window.bg2_sec_texture, "BOTTOMRIGHT", 0, 0)
 	window.bg3_sec_texture:SetTexture (0, 0, 0, 1)
 
 	--the 5 spell details blocks
-	for i, infoblock in ipairs (_detalhes.janela_info.grupos_detalhes) do
+	for i, infoblock in _ipairs (_detalhes.janela_info.grupos_detalhes) do
 		infoblock.bg:SetSize (219, 47) --219 original
 	end
 	local xLocation = {-85, -136, -191, -246, -301, -356}
@@ -1122,7 +1080,7 @@ local default_skin = function()
 		barra:SetPoint ("TOP", janela, "TOP", 0, y+y_start)
 	end
 
-	for index, barra in ipairs (window.barras3) do
+	for index, barra in _ipairs (window.barras3) do
 		local y = (index-1) * 17
 		y = y*-1
 		barra:SetPoint ("LEFT", janela, "LEFT", x_start, 0)
@@ -1134,24 +1092,18 @@ local default_skin = function()
 	window.container_barras.cima:SetNormalTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Up")
 	window.container_barras.cima:SetPushedTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Down")
 	window.container_barras.cima:SetDisabledTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Disabled")
-	window.container_barras.cima:GetNormalTexture():ClearAllPoints()
-	window.container_barras.cima:GetPushedTexture():ClearAllPoints()
-	window.container_barras.cima:GetDisabledTexture():ClearAllPoints()
-	window.container_barras.cima:GetNormalTexture():SetPoint ("CENTER", window.container_barras.cima, "CENTER", 0, 0)
-	window.container_barras.cima:GetPushedTexture():SetPoint ("CENTER", window.container_barras.cima, "CENTER", 0, 0)
-	window.container_barras.cima:GetDisabledTexture():SetPoint ("CENTER", window.container_barras.cima, "CENTER", 0, 0)
+	window.container_barras.cima:GetNormalTexture():ClearAndSetPoint ("CENTER", window.container_barras.cima, "CENTER", 0, 0)
+	window.container_barras.cima:GetPushedTexture():ClearAndSetPoint ("CENTER", window.container_barras.cima, "CENTER", 0, 0)
+	window.container_barras.cima:GetDisabledTexture():ClearAndSetPoint ("CENTER", window.container_barras.cima, "CENTER", 0, 0)
 	window.container_barras.cima:SetSize (29, 32)
 	window.container_barras.cima:SetBackdrop (nil)
 
 	window.container_barras.baixo:SetNormalTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Up")
 	window.container_barras.baixo:SetPushedTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Down")
 	window.container_barras.baixo:SetDisabledTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Disabled")
-	window.container_barras.baixo:GetNormalTexture():ClearAllPoints()
-	window.container_barras.baixo:GetPushedTexture():ClearAllPoints()
-	window.container_barras.baixo:GetDisabledTexture():ClearAllPoints()
-	window.container_barras.baixo:GetNormalTexture():SetPoint ("CENTER", window.container_barras.baixo, "CENTER", 0, 0)
-	window.container_barras.baixo:GetPushedTexture():SetPoint ("CENTER", window.container_barras.baixo, "CENTER", 0, 0)
-	window.container_barras.baixo:GetDisabledTexture():SetPoint ("CENTER", window.container_barras.baixo, "CENTER", 0, 0)
+	window.container_barras.baixo:GetNormalTexture():ClearAndSetPoint ("CENTER", window.container_barras.baixo, "CENTER", 0, 0)
+	window.container_barras.baixo:GetPushedTexture():ClearAndSetPoint ("CENTER", window.container_barras.baixo, "CENTER", 0, 0)
+	window.container_barras.baixo:GetDisabledTexture():ClearAndSetPoint ("CENTER", window.container_barras.baixo, "CENTER", 0, 0)
 	window.container_barras.baixo:SetSize (29, 32)
 	window.container_barras.baixo:SetBackdrop (nil)
 
@@ -1169,24 +1121,18 @@ local default_skin = function()
 	window.container_alvos.cima:SetNormalTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Up")
 	window.container_alvos.cima:SetPushedTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Down")
 	window.container_alvos.cima:SetDisabledTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Disabled")
-	window.container_alvos.cima:GetNormalTexture():ClearAllPoints()
-	window.container_alvos.cima:GetPushedTexture():ClearAllPoints()
-	window.container_alvos.cima:GetDisabledTexture():ClearAllPoints()
-	window.container_alvos.cima:GetNormalTexture():SetPoint ("CENTER", window.container_alvos.cima, "CENTER", 0, 0)
-	window.container_alvos.cima:GetPushedTexture():SetPoint ("CENTER", window.container_alvos.cima, "CENTER", 0, 0)
-	window.container_alvos.cima:GetDisabledTexture():SetPoint ("CENTER", window.container_alvos.cima, "CENTER", 0, 0)
+	window.container_alvos.cima:GetNormalTexture():ClearAndSetPoint ("CENTER", window.container_alvos.cima, "CENTER", 0, 0)
+	window.container_alvos.cima:GetPushedTexture():ClearAndSetPoint ("CENTER", window.container_alvos.cima, "CENTER", 0, 0)
+	window.container_alvos.cima:GetDisabledTexture():ClearAndSetPoint ("CENTER", window.container_alvos.cima, "CENTER", 0, 0)
 	window.container_alvos.cima:SetSize (29, 32)
 	window.container_alvos.cima:SetBackdrop (nil)
 
 	window.container_alvos.baixo:SetNormalTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Up")
 	window.container_alvos.baixo:SetPushedTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Down")
 	window.container_alvos.baixo:SetDisabledTexture ("Interface\\BUTTONS\\UI-ScrollBar-ScrollUpButton-Disabled")
-	window.container_alvos.baixo:GetNormalTexture():ClearAllPoints()
-	window.container_alvos.baixo:GetPushedTexture():ClearAllPoints()
-	window.container_alvos.baixo:GetDisabledTexture():ClearAllPoints()
-	window.container_alvos.baixo:GetNormalTexture():SetPoint ("CENTER", window.container_alvos.baixo, "CENTER", 0, 0)
-	window.container_alvos.baixo:GetPushedTexture():SetPoint ("CENTER", window.container_alvos.baixo, "CENTER", 0, 0)
-	window.container_alvos.baixo:GetDisabledTexture():SetPoint ("CENTER", window.container_alvos.baixo, "CENTER", 0, 0)
+	window.container_alvos.baixo:GetNormalTexture():ClearAndSetPoint ("CENTER", window.container_alvos.baixo, "CENTER", 0, 0)
+	window.container_alvos.baixo:GetPushedTexture():ClearAndSetPoint ("CENTER", window.container_alvos.baixo, "CENTER", 0, 0)
+	window.container_alvos.baixo:GetDisabledTexture():ClearAndSetPoint ("CENTER", window.container_alvos.baixo, "CENTER", 0, 0)
 	window.container_alvos.baixo:SetSize (29, 32)
 	window.container_alvos.baixo:SetBackdrop (nil)
 
@@ -1202,7 +1148,7 @@ local default_skin = function()
 	window.container_alvos.slider.thumb:SetVertexColor (1, 1, 1, 1)
 
 end
-_detalhes:InstallPDWSkin ("WoWClassic", {func = default_skin, author = "Details! Team", version = "v1.0", desc = "Default skin."})
+_detalhes:InstallPDWSkin ("WoWClassic", {func = default_skin, author = "Accidev", version = "v1.0", desc = "Default skin."})
 
 local elvui_skin = function()
 	local window = DetailsPlayerDetailsWindow
@@ -1238,13 +1184,7 @@ local elvui_skin = function()
 
 	local titlebar = window.extra_frames ["ElvUITitleBar"]
 	if (not titlebar) then
-		titlebar = CreateFrame ("Frame", nil, window)
-		titlebar:SetPoint ("TOPLEFT", window, "TOPLEFT", 2, -3)
-		titlebar:SetPoint ("TOPRIGHT", window, "TOPRIGHT", -2, -3)
-		titlebar:SetHeight (20)
-		titlebar:SetBackdrop ({edgeFile = [[Interface\Buttons\WHITE8X8]], edgeSize = 1, bgFile = [[Interface\AddOns\Details\images\background]], tileSize = 64, tile = true})
-		titlebar:SetBackdropColor (.5, .5, .5, 1)
-		titlebar:SetBackdropBorderColor (0, 0, 0, 1)
+		titlebar = _detalhes:CreateWindowTitleBar (window)
 		window.extra_frames ["ElvUITitleBar"] = titlebar
 
 		local name_bg_texture = window:CreateTexture (nil, "background")
@@ -1262,8 +1202,7 @@ local elvui_skin = function()
 		window.extra_frames ["ElvUINameTexture"]:Show()
 	end
 
-	window.title_string:ClearAllPoints()
-	window.title_string:SetPoint ("CENTER", window, "CENTER")
+	window.title_string:ClearAndSetPoint ("CENTER", window, "CENTER")
 	window.title_string:SetPoint ("TOP", window, "TOP", 0, -7)
 	window.title_string:SetParent (titlebar)
 	window.title_string:SetTextColor (.8, .8, .8, 1)
@@ -1311,16 +1250,13 @@ local elvui_skin = function()
 	--right panel textures
 	window.bg2_sec_texture:SetPoint ("TOPLEFT", window.bg1_sec_texture, "TOPLEFT", 7, 0)
 	window.bg2_sec_texture:SetPoint ("BOTTOMRIGHT", window.bg1_sec_texture, "BOTTOMRIGHT", -30, 0)
-	window.bg2_sec_texture:SetTexture ([[Interface\Glues\CREDITS\Warlords\Shadowmoon_Color_jlo3]])
-	window.bg2_sec_texture:SetDesaturated (true)
-	window.bg2_sec_texture:SetAlpha (0)
 
 	window.bg3_sec_texture:SetPoint ("TOPLEFT", window.bg2_sec_texture, "TOPLEFT", 0, 0)
 	window.bg3_sec_texture:SetPoint ("BOTTOMRIGHT", window.bg2_sec_texture, "BOTTOMRIGHT", 0, 0)
 	window.bg3_sec_texture:SetTexture (0, 0, 0, 0.3)
 
 	--the 5 spell details blocks - not working
-	for i, infoblock in ipairs (_detalhes.janela_info.grupos_detalhes) do
+	for i, infoblock in _ipairs (_detalhes.janela_info.grupos_detalhes) do
 		infoblock.bg:SetSize (330, 47)
 	end
 	local xLocation = {-85, -136, -191, -246, -301}
@@ -1358,7 +1294,7 @@ local elvui_skin = function()
 		barra:SetPoint ("TOP", janela, "TOP", 0, y+y_start)
 	end
 
-	for index, barra in ipairs (window.barras3) do
+	for index, barra in _ipairs (window.barras3) do
 		local y = (index-1) * 17
 		y = y*-1
 		barra:SetPoint ("LEFT", janela, "LEFT", x_start, 0)
@@ -1535,7 +1471,7 @@ local elvui_skin = function()
 		end
 	end
 end
-_detalhes:InstallPDWSkin ("ElvUI", {func = elvui_skin, author = "Details! Team", version = "v1.0", desc = "Skin compatible with ElvUI addon."})
+_detalhes:InstallPDWSkin ("ElvUI", {func = elvui_skin, author = "Accidev", version = "v1.0", desc = "Skin compatible with ElvUI addon."})
 
 --> search key: ~create ~inicio ~start
 function gump:CriaJanelaInfo()
@@ -1565,14 +1501,10 @@ function gump:CriaJanelaInfo()
 	este_gump.SummaryWindowWidgets = CreateFrame ("Frame", "DetailsPlayerDetailsWindowSummaryWidgets", este_gump)
 	local SWW = este_gump.SummaryWindowWidgets
 	SWW:SetAllPoints()
-	tinsert (SummaryWidgets, SWW)
+	SummaryWidgets[#SummaryWidgets+1] = SWW
 
 	local scaleBar = Details.gump:CreateScaleBar (este_gump, Details.player_details_window)
 	este_gump:SetScale (Details.player_details_window.scale)
-
-	--classic:
-	--este_gump:SetWidth (590)
-	--este_gump:SetHeight (354)
 
 	--> joga a janela para a global
 	_detalhes.janela_info = este_gump
@@ -1662,42 +1594,6 @@ function gump:CriaJanelaInfo()
 	este_gump.apoio_icone_direito:SetHeight (13)
 
 
-	este_gump.topright_text1 = este_gump:CreateFontString (nil, "overlay", "GameFontNormal")
-	este_gump.topright_text1:SetPoint ("BOTTOMRIGHT", este_gump, "TOPRIGHT",  -18 - (94 * (1-1)), -36)
-	este_gump.topright_text1:SetJustifyH ("RIGHT")
-	_detalhes.gump:SetFontSize (este_gump.topright_text1, 10)
-
-	este_gump.topright_text2 = este_gump:CreateFontString (nil, "overlay", "GameFontNormal")
-	este_gump.topright_text2:SetPoint ("BOTTOMRIGHT", este_gump, "TOPRIGHT",  -18 - (94 * (1-1)), -48)
-	este_gump.topright_text2:SetJustifyH ("RIGHT")
-	_detalhes.gump:SetFontSize (este_gump.topright_text2, 10)
-
-	function este_gump:SetTopRightTexts (text1, text2, size, color, font)
-		if (text1) then
-			este_gump.topright_text1:SetText (text1)
-		else
-			este_gump.topright_text1:SetText ("")
-		end
-		if (text2) then
-			este_gump.topright_text2:SetText (text2)
-		else
-			este_gump.topright_text2:SetText ("")
-		end
-
-		if (size and type (size) == "number") then
-			_detalhes.gump:SetFontSize (este_gump.topright_text1, size)
-			_detalhes.gump:SetFontSize (este_gump.topright_text2, size)
-		end
-		if (color) then
-			_detalhes.gump:SetFontColor (este_gump.topright_text1, color)
-			_detalhes.gump:SetFontColor (este_gump.topright_text2, color)
-		end
-		if (font) then
-			_detalhes.gump:SetFontFace (este_gump.topright_text1, font)
-			_detalhes.gump:SetFontFace (este_gump.topright_text2, font)
-		end
-	end
-
 -------------------------------------------------
 
 	local alpha_bgs = 1
@@ -1727,9 +1623,6 @@ function gump:CriaJanelaInfo()
 		este_gump.bg2_sec_texture:SetDrawLayer ("BORDER", 3)
 		este_gump.bg2_sec_texture:SetPoint ("TOPLEFT", este_gump.bg1_sec_texture, "TOPLEFT", 8, 0)
 		este_gump.bg2_sec_texture:SetPoint ("BOTTOMRIGHT", este_gump.bg1_sec_texture, "BOTTOMRIGHT", -30, 0)
-		este_gump.bg2_sec_texture:SetTexture ([[Interface\Glues\CREDITS\Warlords\Shadowmoon_Color_jlo3]])
-		este_gump.bg2_sec_texture:SetDesaturated (true)
-		este_gump.bg2_sec_texture:SetAlpha (0.3)
 		este_gump.bg2_sec_texture:Hide()
 
 		este_gump.bg3_sec_texture = SWW:CreateTexture ("DetailsPlayerDetailsWindow_BG3_SEC_Texture", "BORDER")
@@ -1763,12 +1656,6 @@ function gump:CriaJanelaInfo()
 
 	--> cria o container onde vai abrigar os alvos do jogador
 	cria_container_alvos (este_gump, SWW)
-
---	local leftbars1_backgound = SWW:CreateTexture (nil, "background")
---	leftbars1_backgound:SetTexture ([[Interface\DialogFrame\UI-DialogBox-Background-Dark]])
---	leftbars1_backgound:SetSize (303, 149)
---	leftbars1_backgound:SetAlpha (alpha_bgs)
---	este_gump.leftbars1_backgound = leftbars1_backgound
 
 	local leftbars1_backgound = CreateFrame ("Frame", "DetailsPlayerDetailsWindow_Left_SpellsBackground", SWW)
 	leftbars1_backgound:EnableMouse (false)
@@ -1889,735 +1776,12 @@ function gump:CriaJanelaInfo()
 			iconTableSummary --icon table
 	)
 
-		--> search key: ~avoidance --> begining of avoidance tab
-
-		local avoidance_create = function (tab, frame)
-
-		--> Percent Desc
-			local percent_desc = frame:CreateFontString (nil, "artwork", "GameFontNormal")
-			percent_desc:SetText ("Percent values are comparisons with the previous try.")
-			percent_desc:SetPoint ("BOTTOMLEFT", frame, "BOTTOMLEFT", 13, 13 + PLAYER_DETAILS_STATUSBAR_HEIGHT)
-			percent_desc:SetTextColor (.5, .5, .5, 1)
-
-		--> SUMMARY
-
-			local summaryBox = CreateFrame ("Frame", nil, frame)
-			_detalhes.gump:ApplyStandardBackdrop (summaryBox)
-			summaryBox:SetPoint ("TOPLEFT", frame, "TOPLEFT", 10, -15)
-			summaryBox:SetSize (200, 160)
-
-			local y = -5
-			local padding = 16
-
-			local summary_text = summaryBox:CreateFontString (nil, "artwork", "GameFontNormal")
-			summary_text:SetText ("Summary")
-			summary_text :SetPoint ("TOPLEFT", summaryBox, "TOPLEFT", 5, y)
-
-			y = y - padding
-
-			--total damage received
-			local damagereceived = summaryBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			damagereceived:SetPoint ("TOPLEFT", summaryBox, "TOPLEFT", 15, y)
-			damagereceived:SetText ("Total Damage Taken:") --> localize-me
-			damagereceived:SetTextColor (.8, .8, .8, 1)
-
-			local damagereceived_amt = summaryBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			damagereceived_amt:SetPoint ("LEFT", damagereceived,  "RIGHT", 2, 0)
-			damagereceived_amt:SetText ("0")
-			tab.damagereceived = damagereceived_amt
-
-			y = y - padding
-
-			--per second
-			local damagepersecond = summaryBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			damagepersecond:SetPoint ("TOPLEFT", summaryBox, "TOPLEFT", 20, y)
-			damagepersecond:SetText ("Per Second:") --> localize-me
-
-			local damagepersecond_amt = summaryBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			damagepersecond_amt:SetPoint ("LEFT", damagepersecond,  "RIGHT", 2, 0)
-			damagepersecond_amt:SetText ("0")
-			tab.damagepersecond = damagepersecond_amt
-
-			y = y - padding
-
-			--total absorbs
-			local absorbstotal = summaryBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			absorbstotal:SetPoint ("TOPLEFT", summaryBox, "TOPLEFT", 15, y)
-			absorbstotal:SetText ("Total Absorbs:") --> localize-me
-			absorbstotal:SetTextColor (.8, .8, .8, 1)
-
-			local absorbstotal_amt = summaryBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			absorbstotal_amt:SetPoint ("LEFT", absorbstotal,  "RIGHT", 2, 0)
-			absorbstotal_amt:SetText ("0")
-			tab.absorbstotal = absorbstotal_amt
-
-			y = y - padding
-
-			--per second
-			local absorbstotalpersecond = summaryBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			absorbstotalpersecond:SetPoint ("TOPLEFT", summaryBox, "TOPLEFT", 20, y)
-			absorbstotalpersecond:SetText ("Per Second:") --> localize-me
-
-			local absorbstotalpersecond_amt = summaryBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			absorbstotalpersecond_amt:SetPoint ("LEFT", absorbstotalpersecond,  "RIGHT", 2, 0)
-			absorbstotalpersecond_amt:SetText ("0")
-			tab.absorbstotalpersecond = absorbstotalpersecond_amt
-
-
-		--> MELEE
-
-			y = -5
-
-			local meleeBox = CreateFrame ("Frame", nil, frame)
-			_detalhes.gump:ApplyStandardBackdrop (meleeBox)
-			meleeBox:SetPoint ("TOPLEFT", summaryBox, "BOTTOMLEFT", 0, -5)
-			meleeBox:SetSize (200, 160)
-
-			local melee_text = meleeBox:CreateFontString (nil, "artwork", "GameFontNormal")
-			melee_text:SetText ("Melee")
-			melee_text :SetPoint ("TOPLEFT", meleeBox, "TOPLEFT", 5, y)
-
-			y = y - padding
-
-			--dodge
-			local dodge = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			dodge:SetPoint ("TOPLEFT", meleeBox, "TOPLEFT", 15, y)
-			dodge:SetText ("Dodge:") --> localize-me
-			dodge:SetTextColor (.8, .8, .8, 1)
-			local dodge_amt = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			dodge_amt:SetPoint ("LEFT", dodge,  "RIGHT", 2, 0)
-			dodge_amt:SetText ("0")
-			tab.dodge = dodge_amt
-
-			y = y - padding
-
-			local dodgepersecond = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			dodgepersecond:SetPoint ("TOPLEFT", meleeBox, "TOPLEFT", 20, y)
-			dodgepersecond:SetText ("Per Second:") --> localize-me
-
-			local dodgepersecond_amt = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			dodgepersecond_amt:SetPoint ("LEFT", dodgepersecond,  "RIGHT", 2, 0)
-			dodgepersecond_amt:SetText ("0")
-			tab.dodgepersecond = dodgepersecond_amt
-
-			y = y - padding
-
-			-- parry
-			local parry = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			parry:SetPoint ("TOPLEFT", meleeBox, "TOPLEFT", 15, y)
-			parry:SetText ("Parry:") --> localize-me
-			parry:SetTextColor (.8, .8, .8, 1)
-			local parry_amt = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			parry_amt:SetPoint ("LEFT", parry,  "RIGHT", 2, 0)
-			parry_amt:SetText ("0")
-			tab.parry = parry_amt
-
-			y = y - padding
-
-			local parrypersecond = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			parrypersecond:SetPoint ("TOPLEFT", meleeBox, "TOPLEFT", 20, y)
-			parrypersecond:SetText ("Per Second:") --> localize-me
-			local parrypersecond_amt = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			parrypersecond_amt:SetPoint ("LEFT", parrypersecond,  "RIGHT", 2, 0)
-			parrypersecond_amt:SetText ("0")
-			tab.parrypersecond = parrypersecond_amt
-
-			y = y - padding
-
-			-- block
-			local block = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			block:SetPoint ("TOPLEFT", meleeBox, "TOPLEFT", 15, y)
-			block:SetText ("Block:") --> localize-me
-			block:SetTextColor (.8, .8, .8, 1)
-			local block_amt = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			block_amt:SetPoint ("LEFT", block,  "RIGHT", 2, 0)
-			block_amt:SetText ("0")
-			tab.block = block_amt
-
-			y = y - padding
-
-			local blockpersecond = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			blockpersecond:SetPoint ("TOPLEFT", meleeBox, "TOPLEFT", 20, y)
-			blockpersecond:SetText ("Per Second:") --> localize-me
-			local blockpersecond_amt = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			blockpersecond_amt:SetPoint ("LEFT", blockpersecond,  "RIGHT", 2, 0)
-			blockpersecond_amt:SetText ("0")
-			tab.blockpersecond = blockpersecond_amt
-
-			y = y - padding
-
-			local blockeddamage = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			blockeddamage:SetPoint ("TOPLEFT", meleeBox, "TOPLEFT", 20, y)
-			blockeddamage:SetText ("Damage Blocked:") --> localize-me
-			local blockeddamage_amt = meleeBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			blockeddamage_amt:SetPoint ("LEFT", blockeddamage,  "RIGHT", 2, 0)
-			blockeddamage_amt:SetText ("0")
-			tab.blockeddamage_amt = blockeddamage_amt
-
-
-		--> ABSORBS
-
-			y = -5
-
-			local absorbsBox = CreateFrame ("Frame", nil, frame)
-			_detalhes.gump:ApplyStandardBackdrop (absorbsBox)
-			absorbsBox:SetPoint ("TOPLEFT", summaryBox, "TOPRIGHT", 10, 0)
-			absorbsBox:SetSize (200, 160)
-
-			local absorb_text = absorbsBox:CreateFontString (nil, "artwork", "GameFontNormal")
-			absorb_text:SetText ("Absorb")
-			absorb_text :SetPoint ("TOPLEFT", absorbsBox, "TOPLEFT", 5, y)
-
-			y = y - padding
-
-			--full absorbs
-			local fullsbsorbed = absorbsBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			fullsbsorbed:SetPoint ("TOPLEFT", absorbsBox, "TOPLEFT", 20, y)
-			fullsbsorbed:SetText ("Full Absorbs:") --> localize-me
-			fullsbsorbed:SetTextColor (.8, .8, .8, 1)
-			local fullsbsorbed_amt = absorbsBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			fullsbsorbed_amt:SetPoint ("LEFT", fullsbsorbed,  "RIGHT", 2, 0)
-			fullsbsorbed_amt:SetText ("0")
-			tab.fullsbsorbed = fullsbsorbed_amt
-
-			y = y - padding
-
-			--partially absorbs
-			local partiallyabsorbed = absorbsBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			partiallyabsorbed:SetPoint ("TOPLEFT", absorbsBox, "TOPLEFT", 20, y)
-			partiallyabsorbed:SetText ("Partially Absorbed:") --> localize-me
-			partiallyabsorbed:SetTextColor (.8, .8, .8, 1)
-			local partiallyabsorbed_amt = absorbsBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			partiallyabsorbed_amt:SetPoint ("LEFT", partiallyabsorbed,  "RIGHT", 2, 0)
-			partiallyabsorbed_amt:SetText ("0")
-			tab.partiallyabsorbed = partiallyabsorbed_amt
-
-			y = y - padding
-
-			--partially absorbs per second
-			local partiallyabsorbedpersecond = absorbsBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			partiallyabsorbedpersecond:SetPoint ("TOPLEFT", absorbsBox, "TOPLEFT", 25, y)
-			partiallyabsorbedpersecond:SetText ("Average:") --> localize-me
-			local partiallyabsorbedpersecond_amt = absorbsBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			partiallyabsorbedpersecond_amt:SetPoint ("LEFT", partiallyabsorbedpersecond,  "RIGHT", 2, 0)
-			partiallyabsorbedpersecond_amt:SetText ("0")
-			tab.partiallyabsorbedpersecond = partiallyabsorbedpersecond_amt
-
-			y = y - padding
-
-			--no absorbs
-			local noabsorbs = absorbsBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			noabsorbs:SetPoint ("TOPLEFT", absorbsBox, "TOPLEFT", 20, y)
-			noabsorbs:SetText ("No Absorption:") --> localize-me
-			noabsorbs:SetTextColor (.8, .8, .8, 1)
-			local noabsorbs_amt = absorbsBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			noabsorbs_amt:SetPoint ("LEFT", noabsorbs,  "RIGHT", 2, 0)
-			noabsorbs_amt:SetText ("0")
-			tab.noabsorbs = noabsorbs_amt
-
-
-		--> HEALING
-
-			y = -5
-
-			local healingBox = CreateFrame ("Frame", nil, frame)
-			_detalhes.gump:ApplyStandardBackdrop (healingBox)
-			healingBox:SetPoint ("TOPLEFT", absorbsBox, "BOTTOMLEFT", 0, -5)
-			healingBox:SetSize (200, 160)
-
-			local healing_text = healingBox:CreateFontString (nil, "artwork", "GameFontNormal")
-			healing_text:SetText ("Healing")
-			healing_text :SetPoint ("TOPLEFT", healingBox, "TOPLEFT", 5, y)
-
-			y = y - padding
-
-			--self healing
-			local selfhealing = healingBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			selfhealing:SetPoint ("TOPLEFT", healingBox, "TOPLEFT", 20, y)
-			selfhealing:SetText ("Self Healing:") --> localize-me
-			selfhealing:SetTextColor (.8, .8, .8, 1)
-			local selfhealing_amt = healingBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			selfhealing_amt:SetPoint ("LEFT", selfhealing,  "RIGHT", 2, 0)
-			selfhealing_amt:SetText ("0")
-			tab.selfhealing = selfhealing_amt
-
-			y = y - padding
-
-			--self healing per second
-			local selfhealingpersecond = healingBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			selfhealingpersecond:SetPoint ("TOPLEFT", healingBox, "TOPLEFT", 25, y)
-			selfhealingpersecond:SetText ("Per Second:") --> localize-me
-			local selfhealingpersecond_amt = healingBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-			selfhealingpersecond_amt:SetPoint ("LEFT", selfhealingpersecond,  "RIGHT", 2, 0)
-			selfhealingpersecond_amt:SetText ("0")
-			tab.selfhealingpersecond = selfhealingpersecond_amt
-
-			y = y - padding
-
-			for i = 1, 5 do
-				local healer = healingBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-				healer:SetPoint ("TOPLEFT", healingBox, "TOPLEFT", 20, y + ((i-1)*15)*-1)
-				healer:SetText ("healer name:") --> localize-me
-				healer:SetTextColor (.8, .8, .8, 1)
-				local healer_amt = healingBox:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-				healer_amt:SetPoint ("LEFT", healer,  "RIGHT", 2, 0)
-				healer_amt:SetText ("0")
-				tab ["healer" .. i] = {healer, healer_amt}
-			end
-
-
-
-
-		--SPELLS
-
-			y = -5
-
-			local spellsBox = CreateFrame ("Frame", nil, frame)
-			_detalhes.gump:ApplyStandardBackdrop (spellsBox)
-			spellsBox:SetPoint ("TOPLEFT", absorbsBox, "TOPRIGHT", 10, 0)
-			spellsBox:SetSize (346, 160 * 2 + 5)
-
-			local spells_text = spellsBox:CreateFontString (nil, "artwork", "GameFontNormal")
-			spells_text:SetText ("Spells")
-			spells_text :SetPoint ("TOPLEFT", spellsBox, "TOPLEFT", 5, y)
-
-			local frame_tooltip_onenter = function (self)
-				if (self.spellid) then
-					--self:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 512, edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border", edgeSize = 8})
-					self:SetBackdropColor (.5, .5, .5, .5)
-					GameTooltip:SetOwner (self, "ANCHOR_TOPLEFT")
-					_detalhes:GameTooltipSetSpellByID (self.spellid)
-					GameTooltip:Show()
-				end
-			end
-			local frame_tooltip_onleave = function (self)
-				if (self.spellid) then
-					self:SetBackdropColor (.5, .5, .5, .1)
-					GameTooltip:Hide()
-				end
-			end
-
-			y = y - padding
-
-			for i = 1, 40 do
-				local frame_tooltip = CreateFrame ("Button", nil, spellsBox)
-				frame_tooltip:SetPoint ("TOPLEFT", spellsBox, "TOPLEFT", 5, y + ((i-1)*17)*-1)
-				frame_tooltip:SetSize (spellsBox:GetWidth()-10, 16)
-				frame_tooltip:SetScript ("OnEnter", frame_tooltip_onenter)
-				frame_tooltip:SetScript ("OnLeave", frame_tooltip_onleave)
-				frame_tooltip:Hide()
-
-				frame_tooltip:SetBackdrop ({bgFile = "Interface\\Tooltips\\UI-Tooltip-Background", tile = true, tileSize = 512})
-				frame_tooltip:SetBackdropColor (.5, .5, .5, .1)
-
-				local icon = frame_tooltip:CreateTexture (nil, "artwork")
-				icon:SetSize (14, 14)
-				icon:SetPoint ("LEFT", frame_tooltip, "LEFT")
-
-				local spell = frame_tooltip:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-				spell:SetPoint ("LEFT", icon, "RIGHT", 2, 0)
-				spell:SetText ("spell name:") --> localize-me
-				spell:SetTextColor (.8, .8, .8, 1)
-
-				local spell_amt = frame_tooltip:CreateFontString (nil, "artwork", "GameFontHighlightSmall")
-				spell_amt:SetPoint ("LEFT", spell,  "RIGHT", 2, 0)
-				spell_amt:SetText ("0")
-
-				tab ["spell" .. i] = {spell, spell_amt, icon, frame_tooltip}
-			end
-
-		end
-
-		local getpercent = function (value, lastvalue, elapsed_time, inverse)
-			local ps = value / elapsed_time
-			local diff
-
-			if (lastvalue == 0) then
-				diff = "+0%"
-			else
-				if (ps >= lastvalue) then
-					local d = ps - lastvalue
-					d = d / lastvalue * 100
-					d = _math_floor (math.abs (d))
-
-					if (d > 999) then
-						d = "> 999"
-					end
-
-					if (inverse) then
-						diff = "|c" .. green .. "+" .. d .. "%|r"
-					else
-						diff = "|c" .. red .. "+" .. d .. "%|r"
-					end
-				else
-					local d = lastvalue - ps
-					d = d / ps * 100
-					d = _math_floor (math.abs (d))
-
-					if (d > 999) then
-						d = "> 999"
-					end
-
-					if (inverse) then
-						diff = "|c" .. red .. "-" .. d .. "%|r"
-					else
-						diff = "|c" .. green .. "-" .. d .. "%|r"
-					end
-				end
-			end
-
-			return ps, diff
-		end
-
-		local avoidance_fill = function (tab, player, combat)
-
-			local elapsed_time = combat:GetCombatTime()
-
-			local last_combat = combat.previous_combat
-			if (not last_combat or not last_combat [1]) then
-				last_combat = combat
-			end
-			local last_actor = last_combat (1, player.nome)
-			local n = player.nome
-			if (n:find ("-")) then
-				n = n:gsub (("-.*"), "")
-			end
-
-			--> damage taken
-				local playerdamage = combat (1, player.nome)
-
-				if (not playerdamage.avoidance) then
-					playerdamage.avoidance = _detalhes:CreateActorAvoidanceTable()
-				end
-
-				local damagetaken = playerdamage.damage_taken
-				local last_damage_received = 0
-				if (last_actor) then
-					last_damage_received = last_actor.damage_taken / last_combat:GetCombatTime()
-				end
-
-				tab.damagereceived:SetText (_detalhes:ToK2 (damagetaken))
-
-				local ps, diff = getpercent (damagetaken, last_damage_received, elapsed_time)
-				tab.damagepersecond:SetText (_detalhes:comma_value (_math_floor (ps)) .. " (" .. diff .. ")")
-
-			--> absorbs
-				local totalabsorbs = playerdamage.avoidance.overall.ABSORB_AMT
-				local incomingtotal = damagetaken + totalabsorbs
-
-				local last_total_absorbs = 0
-				if (last_actor and last_actor.avoidance) then
-					last_total_absorbs = last_actor.avoidance.overall.ABSORB_AMT / last_combat:GetCombatTime()
-				end
-
-				tab.absorbstotal:SetText (_detalhes:ToK2 (totalabsorbs) .. " (" .. _math_floor (totalabsorbs / incomingtotal * 100) .. "%)")
-
-				local ps, diff = getpercent (totalabsorbs, last_total_absorbs, elapsed_time, true)
-				tab.absorbstotalpersecond:SetText (_detalhes:comma_value (_math_floor (ps)) .. " (" .. diff .. ")")
-
-			--> dodge
-				local totaldodge = playerdamage.avoidance.overall.DODGE
-				tab.dodge:SetText (totaldodge)
-
-				local last_total_dodge = 0
-				if (last_actor and last_actor.avoidance) then
-					last_total_dodge = last_actor.avoidance.overall.DODGE / last_combat:GetCombatTime()
-				end
-				local ps, diff = getpercent (totaldodge, last_total_dodge, elapsed_time, true)
-				tab.dodgepersecond:SetText ( string.format ("%.2f", ps) .. " (" .. diff .. ")")
-
-			--> parry
-				local totalparry = playerdamage.avoidance.overall.PARRY
-				tab.parry:SetText (totalparry)
-
-				local last_total_parry = 0
-				if (last_actor and last_actor.avoidance) then
-					last_total_parry = last_actor.avoidance.overall.PARRY / last_combat:GetCombatTime()
-				end
-				local ps, diff = getpercent (totalparry, last_total_parry, elapsed_time, true)
-				tab.parrypersecond:SetText (string.format ("%.2f", ps) .. " (" .. diff .. ")")
-
-			--> block
-				local totalblock = playerdamage.avoidance.overall.BLOCKED_HITS
-				tab.block:SetText (totalblock)
-
-				local last_total_block = 0
-				if (last_actor and last_actor.avoidance) then
-					last_total_block = last_actor.avoidance.overall.BLOCKED_HITS / last_combat:GetCombatTime()
-				end
-				local ps, diff = getpercent (totalblock, last_total_block, elapsed_time, true)
-				tab.blockpersecond:SetText (string.format ("%.2f", ps) .. " (" .. diff .. ")")
-
-				tab.blockeddamage_amt:SetText (_detalhes:ToK2 (playerdamage.avoidance.overall.BLOCKED_AMT))
-
-			--> absorb
-				local fullabsorb = playerdamage.avoidance.overall.FULL_ABSORBED
-				local halfabsorb = playerdamage.avoidance.overall.PARTIAL_ABSORBED
-				local halfabsorb_amt = playerdamage.avoidance.overall.PARTIAL_ABSORB_AMT
-				local noabsorb = playerdamage.avoidance.overall.FULL_HIT
-
-				tab.fullsbsorbed:SetText (fullabsorb)
-				tab.partiallyabsorbed:SetText (halfabsorb)
-				tab.noabsorbs:SetText (noabsorb)
-
-				if (halfabsorb_amt > 0) then
-					local average = halfabsorb_amt / halfabsorb --tenho o average
-					local last_average = 0
-					if (last_actor and last_actor.avoidance and last_actor.avoidance.overall.PARTIAL_ABSORBED > 0) then
-						last_average = last_actor.avoidance.overall.PARTIAL_ABSORB_AMT / last_actor.avoidance.overall.PARTIAL_ABSORBED
-					end
-
-					local ps, diff = getpercent (halfabsorb_amt, last_average, halfabsorb, true)
-					tab.partiallyabsorbedpersecond:SetText (_detalhes:comma_value (_math_floor (ps)) .. " (" .. diff .. ")")
-				else
-					tab.partiallyabsorbedpersecond:SetText ("0.00 (0%)")
-				end
-
-
-
-			--> healing
-
-				local actor_heal = combat (2, player.nome)
-				if (not actor_heal) then
-					tab.selfhealing:SetText ("0")
-					tab.selfhealingpersecond:SetText ("0 (0%)")
-				else
-					local last_actor_heal = last_combat (2, player.nome)
-					local este_alvo = actor_heal.targets [player.nome]
-					if (este_alvo) then
-						local heal_total = este_alvo
-						tab.selfhealing:SetText (_detalhes:ToK2 (heal_total))
-
-						if (last_actor_heal) then
-							local este_alvo = last_actor_heal.targets [player.nome]
-							if (este_alvo) then
-								local heal = este_alvo
-
-								local last_heal = heal / last_combat:GetCombatTime()
-
-								local ps, diff = getpercent (heal_total, last_heal, elapsed_time, true)
-								tab.selfhealingpersecond:SetText (_detalhes:comma_value (_math_floor (ps)) .. " (" .. diff .. ")")
-
-							else
-								tab.selfhealingpersecond:SetText ("0 (0%)")
-							end
-						else
-							tab.selfhealingpersecond:SetText ("0 (0%)")
-						end
-
-					else
-						tab.selfhealing:SetText ("0")
-						tab.selfhealingpersecond:SetText ("0 (0%)")
-					end
-
-
-					-- taken from healer
-					local heal_from = actor_heal.healing_from
-					local myReceivedHeal = {}
-
-					for actorName, _ in pairs (heal_from) do
-						local thisActor = combat (2, actorName)
-						local targets = thisActor.targets --> targets is a container with target classes
-						local amount = targets [player.nome] or 0
-						myReceivedHeal [#myReceivedHeal+1] = {actorName, amount, thisActor.classe}
-					end
-
-					table.sort (myReceivedHeal, _detalhes.Sort2) --> Sort2 sort by second index
-
-					for i = 1, 5 do
-						local label1, label2 = unpack (tab ["healer" .. i])
-						if (myReceivedHeal [i]) then
-							local name = myReceivedHeal [i][1]
-
-							name = _detalhes:GetOnlyName (name)
-							--name = _detalhes:RemoveOwnerName (name)
-
-							label1:SetText (name .. ":")
-							local class = myReceivedHeal [i][3]
-							if (class) then
-								local c = RAID_CLASS_COLORS [class]
-								if (c) then
-									label1:SetTextColor (c.r, c.g, c.b)
-								end
-							else
-								label1:SetTextColor (.8, .8, .8, 1)
-							end
-
-							local last_actor = last_combat (2, myReceivedHeal [i][1])
-							if (last_actor) then
-								local targets = last_actor.targets
-								local amount = targets [player.nome] or 0
-								if (amount) then
-
-									local last_heal = amount
-
-									local ps, diff = getpercent (myReceivedHeal[i][2], last_heal, 1, true)
-									label2:SetText ( _detalhes:ToK2 (myReceivedHeal[i][2] or 0) .. " (" .. diff .. ")")
-
-								else
-									label2:SetText ( _detalhes:ToK2 (myReceivedHeal[i][2] or 0))
-								end
-							else
-								label2:SetText ( _detalhes:ToK2 (myReceivedHeal[i][2] or 0))
-							end
-
-
-						else
-							label1:SetText ("-- -- -- --")
-							label1:SetTextColor (.8, .8, .8, 1)
-							label2:SetText ("")
-						end
-					end
-				end
-
-			--> Spells
-				--> cooldowns
-				local index_used = 1
-				local misc_player = combat (4, player.nome)
-				local encounter_time = combat:GetCombatTime()
-
-				if (misc_player) then
-					if (misc_player.cooldowns_defensive_spells) then
-						local minha_tabela = misc_player.cooldowns_defensive_spells._ActorTable
-						local buffUpdateSpells = misc_player.buff_uptime_spells -- ._ActorTable
-
-						local cooldowns_usados = {}
-
-						for _spellid, _tabela in pairs (minha_tabela) do
-							cooldowns_usados [#cooldowns_usados+1] = {_spellid, _tabela.counter}
-						end
-
-						if (#cooldowns_usados > 0) then
-
-							table.sort (cooldowns_usados, _detalhes.Sort2)
-
-							for i = 1, #cooldowns_usados do
-								local esta_habilidade = cooldowns_usados[i]
-								local nome_magia, _, icone_magia = _GetSpellInfo (esta_habilidade[1])
-
-								local label1, label2, icon1, framebg = unpack (tab ["spell" .. index_used])
-								framebg.spellid = esta_habilidade[1]
-								framebg:Show()
-
-								--> attempt to get the buff update
-								local spellInfo = buffUpdateSpells:GetSpell (framebg.spellid)
-								if (spellInfo) then
-									label2:SetText (esta_habilidade[2] .. " (" .. floor (spellInfo.uptime / encounter_time * 100) .. "% uptime)")
-								else
-									label2:SetText (esta_habilidade[2])
-								end
-
-								--> update the line
-								label1:SetText (nome_magia .. ":")
-
-								icon1:SetTexture (icone_magia)
-								icon1:SetTexCoord (0.0625, 0.953125, 0.0625, 0.953125)
-
-								index_used = index_used + 1
-							end
-						end
-					end
-				end
-
-				local cooldownInfo = DetailsFramework.CooldownsInfo
-
-				--> see cooldowns that other players used in this actor
-				for playerName, _ in pairs (combat.raid_roster) do
-					if (playerName ~= player.nome) then
-						local miscPlayer = combat (4, playerName)
-						if (miscPlayer) then
-							if (miscPlayer.cooldowns_defensive_spells) then
-								local cooldowns = miscPlayer.cooldowns_defensive_spells
-								for spellID, spellTable in cooldowns:ListActors() do
-									local targets = spellTable.targets
-									if (targets) then
-										for targetName, amountCasted in pairs (targets) do
-											if (targetName == player.nome) then
-												local spellName, _, spellIcon = _GetSpellInfo (spellID)
-												local label1, label2, icon1, framebg = unpack (tab ["spell" .. index_used])
-												framebg.spellid = spellID
-												framebg:Show()
-
-												--> attempt to get the buff update
-												local info = cooldownInfo [spellID]
-												local cooldownDuration = info and info.duration or 0
-
-												if (cooldownDuration > 0) then
-													label2:SetText (amountCasted .. " (" .. "|cFFFFFF00" .. miscPlayer.nome .. "|r " .. floor (cooldownDuration / encounter_time * 100) .. "% uptime)")
-												else
-													label2:SetText (amountCasted)
-												end
-
-												--> update the line
-												label1:SetText (spellName .. ":")
-
-												icon1:SetTexture (spellIcon)
-												icon1:SetTexCoord (0.0625, 0.953125, 0.0625, 0.953125)
-
-												index_used = index_used + 1
-											end
-										end
-									end
-								end
-							end
-						end
-					end
-				end
-
-
-				for i = index_used, 40 do
-					local label1, label2, icon1, framebg = unpack (tab ["spell" .. i])
-
-					framebg.spellid = nil
-					framebg:Hide()
-					label1:SetText ("")
-					label2:SetText ("")
-					icon1:SetTexture (nil)
-				end
-
-			--> habilidade usada para interromper
-
-
-
-
---[[
-
---]]
-		end
-
-		local iconTableAvoidance = {
-			texture = [[Interface\AddOns\Details\images\icons]],
-			--coords = {363/512, 381/512, 0/512, 17/512},
-			coords = {384/512, 402/512, 19/512, 38/512},
-			width = 16,
-			height = 16,
-		}
-
-		_detalhes:CreatePlayerDetailsTab ("Avoidance", --[1] tab name
-			Loc ["STRING_INFO_TAB_AVOIDANCE"], --[2] localized name
-			function (tabOBject, playerObject)  --[2] condition
-				if (playerObject.isTank) then
-					return true
-				else
-					return false
-				end
-			end,
-
-			avoidance_fill, --[3] fill function
-
-			nil, --[4] onclick
-
-			avoidance_create, --[5] oncreate
-			iconTableAvoidance
-		)
-
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> ~auras
 
 	local auras_tab_create = function (tab, frame)
 		local DF = _detalhes.gump
 		local scroll_line_amount = 22
-		local scroll_line_height = 19
 		local scroll_width = 410
 		local scrollHeight = 445
 		local scroll_line_height = 19
@@ -2839,12 +2003,12 @@ function gump:CriaJanelaInfo()
 		do --buffs
 			local newAuraTable = {}
 			if (miscActor and miscActor.buff_uptime_spells) then
-				for spellID, spellObject in pairs (miscActor.buff_uptime_spells._ActorTable) do
+				for spellID, spellObject in _pairs (miscActor.buff_uptime_spells._ActorTable) do
 					local spellName, _, spellIcon = GetSpellInfo (spellID)
-					tinsert (newAuraTable, {spellIcon, spellName, spellObject.uptime, spellObject.appliedamt, spellObject.refreshamt, spellObject.uptime/combatTime*100, spellID = spellID})
+					newAuraTable[#newAuraTable+1] = {spellIcon, spellName, spellObject.uptime, spellObject.appliedamt, spellObject.refreshamt, spellObject.uptime/combatTime*100, spellID = spellID}
 				end
 			end
-			table.sort (newAuraTable, _detalhes.Sort3)
+			_table_sort (newAuraTable, _detalhes.Sort3)
 			tab.BuffScroll:SetData (newAuraTable)
 			tab.BuffScroll:Refresh()
 		end
@@ -2852,12 +2016,12 @@ function gump:CriaJanelaInfo()
 		do --debuffs
 			local newAuraTable = {}
 			if (miscActor and miscActor.debuff_uptime_spells) then
-				for spellID, spellObject in pairs (miscActor.debuff_uptime_spells._ActorTable) do
+				for spellID, spellObject in _pairs (miscActor.debuff_uptime_spells._ActorTable) do
 					local spellName, _, spellIcon = GetSpellInfo (spellID)
-					tinsert (newAuraTable, {spellIcon, spellName, spellObject.uptime, spellObject.appliedamt, spellObject.refreshamt, spellObject.uptime/combatTime*100, spellID = spellID})
+					newAuraTable[#newAuraTable+1] = {spellIcon, spellName, spellObject.uptime, spellObject.appliedamt, spellObject.refreshamt, spellObject.uptime/combatTime*100, spellID = spellID}
 				end
 			end
-			table.sort (newAuraTable, _detalhes.Sort3)
+			_table_sort (newAuraTable, _detalhes.Sort3)
 			tab.DebuffScroll:SetData (newAuraTable)
 			tab.DebuffScroll:Refresh()
 		end
@@ -2888,7 +2052,7 @@ function gump:CriaJanelaInfo()
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --> ~compare
 
-		local target_texture = [[Interface\MINIMAP\TRACKING\Target]]
+		local target_texture = [[Interface\Icons\Ability_Hunter_SniperShot]]
 		local empty_text = ""
 
 		local plus = red .. "-"
@@ -2905,9 +2069,83 @@ function gump:CriaJanelaInfo()
 		local spell_compare_frame_height = 200
 		local target_compare_frame_height = 142
 
+		local faction_spells = {
+			[31803] = 53742, [53742] = 31803,
+			[42463] = 53739, [53739] = 42463,
+			[31804] = 53733, [53733] = 31804,
+			[31893] = 53719, [53719] = 31893,
+			[32221] = 53718, [53718] = 32221,
+			[31898] = 53726, [53726] = 31898,
+			[32220] = 53725, [53725] = 32220,
+		}
+
 		local xLocation = 2
 		local yLocation = -20
 		local targetBars = 9
+
+		local clear_compare_bar = function (bar)
+			bar [1]:SetTexture (nil)
+			bar [2].lefttext:SetText (empty_text)
+			bar [2].lefttext:SetTextColor (.5, .5, .5, 1)
+			bar [2].righttext:SetText ("")
+			bar [2].righttext2:SetText ("")
+			bar [2]:SetValue (0)
+			bar [2]:SetBackdropColor (1, 1, 1, 0)
+		end
+
+		local percent_diff = function (value, base)
+			local percent = _math_floor ((value - base) / base * 100)
+			if (percent > 999) then
+				return "" .. 999
+			end
+			return percent
+		end
+
+		local sorted_targets = function (actor)
+			local pool = {}
+			for target_name, amount in _pairs (actor.targets) do
+				pool [#pool+1] = {target_name, amount}
+			end
+			_table_sort (pool, _detalhes.Sort2)
+			return pool
+		end
+
+		local fill_compare_target_bar = function (bar, other_player, other_pool, target_name, amount)
+			local total, target_index
+			if (other_player) then
+				for index, t in _ipairs (other_pool) do
+					if (t[1] == target_name) then
+						total, target_index = t[2], index
+						break
+					end
+				end
+			end
+
+			if (not total) then
+				clear_compare_bar (bar)
+				bar [3][4] = nil
+				return
+			end
+
+			bar [1]:SetTexture (target_texture)
+			bar [1]:SetDesaturated (true)
+			bar [1]:SetAlpha (.7)
+
+			bar [2].lefttext:SetText (target_index .. ". " .. target_name)
+			bar [2].lefttext:SetTextColor (1, 1, 1, 1)
+			bar [2].righttext2:SetText (_detalhes:ToK2Min (total))
+			if (amount > total) then
+				bar [2].righttext:SetText (" |c" .. minor .. percent_diff (amount, total) .. "%|r")
+			else
+				bar [2].righttext:SetText (" |c" .. plus .. percent_diff (total, amount) .. "%|r")
+			end
+			bar [2]:SetValue (100)
+
+			bar [3][1] = other_player.nome
+			bar [3][2] = target_name
+			bar [3][3] = total
+			bar [3][4] = other_player
+		end
 
 		local fill_compare_targets = function (self, player, other_players, target_pool)
 
@@ -2916,7 +2154,6 @@ function gump:CriaJanelaInfo()
 			local frame2 = DetailsPlayerComparisonTarget2
 			local frame3 = DetailsPlayerComparisonTarget3
 
-			local total = player.total_without_pet
 
 			if (not target_pool [1]) then
 				for i = 1, targetBars do
@@ -2924,29 +2161,11 @@ function gump:CriaJanelaInfo()
 					local bar_2 = frame2.bars [i]
 					local bar_3 = frame3.bars [i]
 
-					bar [1]:SetTexture (nil)
-					bar [2].lefttext:SetText (empty_text)
-					bar [2].lefttext:SetTextColor (.5, .5, .5, 1)
-					bar [2].righttext:SetText ("")
-					bar [2].righttext2:SetText ("")
-					bar [2]:SetValue (0)
-					bar [2]:SetBackdropColor (1, 1, 1, 0)
+					clear_compare_bar (bar)
 					bar [3][4] = nil
-					bar_2 [1]:SetTexture (nil)
-					bar_2 [2].lefttext:SetText (empty_text)
-					bar_2 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-					bar_2 [2].righttext:SetText ("")
-					bar_2 [2].righttext2:SetText ("")
-					bar_2 [2]:SetValue (0)
-					bar_2 [2]:SetBackdropColor (1, 1, 1, 0)
+					clear_compare_bar (bar_2)
 					bar_2 [3][4] = nil
-					bar_3 [1]:SetTexture (nil)
-					bar_3 [2].lefttext:SetText (empty_text)
-					bar_3 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-					bar_3 [2].righttext:SetText ("")
-					bar_3 [2].righttext2:SetText ("")
-					bar_3 [2]:SetValue (0)
-					bar_3 [2]:SetBackdropColor (1, 1, 1, 0)
+					clear_compare_bar (bar_3)
 					bar_3 [3][4] = nil
 				end
 
@@ -2955,42 +2174,11 @@ function gump:CriaJanelaInfo()
 
 			local top = target_pool [1] [2]
 
-			--player 2
 			local player_2 = other_players [1]
-			local player_2_target_pool
-			local player_2_top
-			if (player_2) then
-				local player_2_target = player_2.targets
-				player_2_target_pool = {}
-				for target_name, amount in _pairs (player_2_target) do
-					player_2_target_pool [#player_2_target_pool+1] = {target_name, amount}
-				end
-				table.sort (player_2_target_pool, _detalhes.Sort2)
-				if (player_2_target_pool [1]) then
-					player_2_top = player_2_target_pool [1] [2]
-				else
-					player_2_top = 0
-				end
-				--1 skill,
-			end
+			local player_2_target_pool = player_2 and sorted_targets (player_2)
 
-			--player 3
 			local player_3 = other_players [2]
-			local player_3_target_pool
-			local player_3_top
-			if (player_3) then
-				local player_3_target = player_3.targets
-				player_3_target_pool = {}
-				for target_name, amount in _pairs (player_3_target) do
-					player_3_target_pool [#player_3_target_pool+1] = {target_name, amount}
-				end
-				table.sort (player_3_target_pool, _detalhes.Sort2)
-				if (player_3_target_pool [1]) then
-					player_3_top = player_3_target_pool [1] [2]
-				else
-					player_3_top = 0
-				end
-			end
+			local player_3_target_pool = player_3 and sorted_targets (player_3)
 
 			for i = 1, targetBars do
 				local bar = self.bars [i]
@@ -3018,241 +2206,108 @@ function gump:CriaJanelaInfo()
 					bar [3][3] = data [2] --total
 					bar [3][4] = player
 
-					-- 2
-					if (player_2) then
-
-						local player_2_target_total
-						local player_2_target_index
-
-						for index, t in _ipairs (player_2_target_pool) do
-							if (t[1] == target_name) then
-								player_2_target_total = t[2]
-								player_2_target_index = index
-								break
-							end
-						end
-
-						if (player_2_target_total) then
-							bar_2 [1]:SetTexture (target_texture)
-							bar_2 [1]:SetDesaturated (true)
-							bar_2 [1]:SetAlpha (.7)
-
-							bar_2 [2].lefttext:SetText (player_2_target_index .. ". " .. target_name)
-							bar_2 [2].lefttext:SetTextColor (1, 1, 1, 1)
-
-							if (data [2] > player_2_target_total) then
-								local diff = data [2] - player_2_target_total
-								local up = diff / player_2_target_total * 100
-								up = _math_floor (up)
-								if (up > 999) then
-									up = "" .. 999
-								end
-
-								bar_2 [2].righttext2:SetText (_detalhes:ToK2Min (player_2_target_total))
-								bar_2 [2].righttext:SetText (" |c" .. minor .. up .. "%|r")
-							else
-								local diff = player_2_target_total - data [2]
-								local down = diff / data [2] * 100
-								down = _math_floor (down)
-								if (down > 999) then
-									down = "" .. 999
-								end
-								bar_2 [2].righttext2:SetText (_detalhes:ToK2Min (player_2_target_total))
-								bar_2 [2].righttext:SetText (" |c" .. plus .. down .. "%|r")
-							end
-
-							--bar_2 [2]:SetValue (player_2_target_total / player_2_top * 100)
-							bar_2 [2]:SetValue (100)
-
-							bar_2 [3][1] = player_2.nome
-							bar_2 [3][2] = target_name
-							bar_2 [3][3] = player_2_target_total
-							bar_2 [3][4] = player_2
-
-						else
-							bar_2 [1]:SetTexture (nil)
-							bar_2 [2].lefttext:SetText (empty_text)
-							bar_2 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-							bar_2 [2].righttext:SetText ("")
-							bar_2 [2].righttext2:SetText ("")
-							bar_2 [2]:SetValue (0)
-							bar_2 [2]:SetBackdropColor (1, 1, 1, 0)
-							bar_2 [3][4] = nil
-						end
-					else
-						bar_2 [1]:SetTexture (nil)
-						bar_2 [2].lefttext:SetText (empty_text)
-						bar_2 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-						bar_2 [2].righttext:SetText ("")
-						bar_2 [2].righttext2:SetText ("")
-						bar_2 [2]:SetValue (0)
-						bar_2 [2]:SetBackdropColor (1, 1, 1, 0)
-						bar_2 [3][4] = nil
-					end
-
-					-- 3
-					if (player_3) then
-
-						local player_3_target_total
-						local player_3_target_index
-
-						for index, t in _ipairs (player_3_target_pool) do
-							if (t[1] == target_name) then
-								player_3_target_total = t[2]
-								player_3_target_index = index
-								break
-							end
-						end
-
-						if (player_3_target_total) then
-							bar_3 [1]:SetTexture (target_texture)
-							bar_3 [1]:SetDesaturated (true)
-							bar_3 [1]:SetAlpha (.7)
-
-							bar_3 [2].lefttext:SetText (player_3_target_index .. ". " .. target_name)
-							bar_3 [2].lefttext:SetTextColor (1, 1, 1, 1)
-
-							if (data [2] > player_3_target_total) then
-								local diff = data [2] - player_3_target_total
-								local up = diff / player_3_target_total * 100
-								up = _math_floor (up)
-								if (up > 999) then
-									up = "" .. 999
-								end
-								bar_3 [2].righttext2:SetText (_detalhes:ToK2Min (player_3_target_total))
-								bar_3 [2].righttext:SetText (" |c" .. minor .. up .. "%|r")
-							else
-								local diff = player_3_target_total - data [2]
-								local down = diff / data [2] * 100
-								down = _math_floor (down)
-								if (down > 999) then
-									down = "" .. 999
-								end
-								bar_3 [2].righttext:SetText (_detalhes:ToK2Min (player_3_target_total))
-								bar_3 [2].righttext:SetText (" |c" .. plus .. down .. "%|r")
-							end
-
-							--bar_3 [2]:SetValue (player_3_target_total / player_3_top * 100)
-							bar_3 [2]:SetValue (100)
-
-							bar_3 [3][1] = player_3.nome
-							bar_3 [3][2] = target_name
-							bar_3 [3][3] = player_3_target_total
-							bar_3 [3][4] = player_3
-
-						else
-							bar_3 [1]:SetTexture (nil)
-							bar_3 [2].lefttext:SetText (empty_text)
-							bar_3 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-							bar_3 [2].righttext:SetText ("")
-							bar_3 [2].righttext2:SetText ("")
-							bar_3 [2]:SetValue (0)
-							bar_3 [2]:SetBackdropColor (1, 1, 1, 0)
-							bar_3 [3][4] = nil
-						end
-					else
-						bar_3 [1]:SetTexture (nil)
-						bar_3 [2].lefttext:SetText (empty_text)
-						bar_3 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-						bar_3 [2].righttext:SetText ("")
-						bar_3 [2].righttext2:SetText ("")
-						bar_3 [2]:SetValue (0)
-						bar_3 [2]:SetBackdropColor (1, 1, 1, 0)
-						bar_3 [3][4] = nil
-					end
+					fill_compare_target_bar (bar_2, player_2, player_2_target_pool, target_name, data [2])
+					fill_compare_target_bar (bar_3, player_3, player_3_target_pool, target_name, data [2])
 
 				else
-					bar [1]:SetTexture (nil)
-					bar [2].lefttext:SetText (empty_text)
-					bar [2].lefttext:SetTextColor (.5, .5, .5, 1)
-					bar [2].righttext:SetText ("")
-					bar [2].righttext2:SetText ("")
-					bar [2]:SetValue (0)
-					bar [2]:SetBackdropColor (1, 1, 1, 0)
+					clear_compare_bar (bar)
 					bar [3][4] = nil
-					bar_2 [1]:SetTexture (nil)
-					bar_2 [2].lefttext:SetText (empty_text)
-					bar_2 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-					bar_2 [2].righttext:SetText ("")
-					bar_2 [2].righttext2:SetText ("")
-					bar_2 [2]:SetValue (0)
-					bar_2 [2]:SetBackdropColor (1, 1, 1, 0)
+					clear_compare_bar (bar_2)
 					bar_2 [3][4] = nil
-					bar_3 [1]:SetTexture (nil)
-					bar_3 [2].lefttext:SetText (empty_text)
-					bar_3 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-					bar_3 [2].righttext:SetText ("")
-					bar_3 [2].righttext2:SetText ("")
-					bar_3 [2]:SetValue (0)
-					bar_3 [2]:SetBackdropColor (1, 1, 1, 0)
+					clear_compare_bar (bar_3)
 					bar_3 [3][4] = nil
 				end
 			end
 
 		end
 
-		local fill_compare_actors = function (self, player, other_players)
-
-			--main player skills
+		local sorted_spells_with_pets = function (actor, container)
 			local spells_sorted = {}
-			for spellid, spelltable in _pairs (player.spells._ActorTable) do
+			for spellid, spelltable in _pairs (actor.spells._ActorTable) do
 				spells_sorted [#spells_sorted+1] = {spelltable, spelltable.total}
 			end
-
-			--main player pets
-			for petIndex, petName in _ipairs (player:Pets()) do
-				local petActor = info.instancia.showing [player.tipo]:PegarCombatente (nil, petName)
+			for petIndex, petName in _ipairs (actor:Pets()) do
+				local petActor = container:PegarCombatente (nil, petName)
 				if (petActor) then
 					for _spellid, _skill in _pairs (petActor:GetActorSpells()) do
 						spells_sorted [#spells_sorted+1] = {_skill, _skill.total, petName}
 					end
 				end
 			end
-			table.sort (spells_sorted, _detalhes.Sort2)
+			_table_sort (spells_sorted, _detalhes.Sort2)
+			return spells_sorted
+		end
+
+		local spell_index_map = function (spells_sorted)
+			local map = {}
+			for index, spelltable in _ipairs (spells_sorted) do
+				map [spelltable[1].id] = index
+			end
+			return map
+		end
+
+		local fill_compare_spell_bar = function (bar, other_player, other_spell_info, data, spellid, name, icon, petName, container)
+			local spell = other_player and (other_player.spells._ActorTable [spellid] or other_player.spells._ActorTable [faction_spells [spellid]])
+
+			if (not spell and petName and other_player) then
+				for _petIndex, _petName in _ipairs (other_player:Pets()) do
+					if (_petName:gsub (" <.*", "") == petName:gsub (" <.*", "")) then
+						local petActor = container:PegarCombatente (nil, _petName)
+						spell = petActor and petActor.spells._ActorTable [spellid]
+						name = name .. " (|cFFCCBBBB" .. _petName:gsub (" <.*", "") .. "|r)"
+					end
+				end
+			end
+
+			bar [3][4] = spell and spell.id
+			if (not spell) then
+				return clear_compare_bar (bar)
+			end
+
+			bar [1]:SetTexture (spell.id == spellid and icon or select (3, _GetSpellInfo (spell.id)))
+			bar [1]:SetTexCoord (unpack (IconTexCoord))
+			bar [2].lefttext:SetText (other_spell_info [spell.id] .. ". " .. (spell.id == spellid and name or _GetSpellInfo (spell.id)))
+			bar [2].lefttext:SetTextColor (1, 1, 1, 1)
+			bar [2]:SetStatusBarColor (unpack (bar_color))
+			bar [2]:SetBackdropColor (1, 1, 1, 0.1)
+
+			if (data [2] > spell.total and spell.total > 0) then
+				bar [2].righttext2:SetText (_detalhes:ToK2Min (spell.total))
+				bar [2].righttext:SetText (" |c" .. minor .. percent_diff (data [2], spell.total) .. "%|r")
+			elseif (data [2] <= spell.total and data [2] > 0) then
+				bar [2].righttext2:SetText (_detalhes:ToK2Min (spell.total))
+				bar [2].righttext:SetText (" |c" .. plus .. percent_diff (spell.total, data [2]) .. "%|r")
+			else
+				bar [2].righttext2:SetText ("0")
+				bar [2].righttext:SetText ("+0%")
+			end
+
+			bar [2]:SetValue (100)
+			bar [3][1] = spell.counter
+			bar [3][2] = spell.total / spell.counter
+			bar [3][3] = _math_floor (spell.c_amt / spell.counter * 100)
+		end
+
+		local fill_compare_actors = function (self, player, other_players)
+
+			local container = info.instancia.showing [player.tipo]
+			local spells_sorted = sorted_spells_with_pets (player, container)
 
 			self.player = player:Name()
 
 			local offset = FauxScrollFrame_GetOffset (self)
 
-			local total = player.total_without_pet
 			local top = spells_sorted [1] and spells_sorted [1] [2] or 0
 
 			local frame2 = DetailsPlayerComparisonBox2
 			local frame3 = DetailsPlayerComparisonBox3
 
-			local player_2_total
-			local player_2_spells_sorted
-			local player_2_top
-			local player_2_spell_info
+			local player_2, player_3 = other_players [1], other_players [2]
+			local player_2_spell_info, player_3_spell_info
 
-			if (other_players [1]) then
-				frame2.player = other_players [1]:Name()
-				player_2_total = other_players [1].total_without_pet
-				player_2_spells_sorted = {}
-
-				--player 2 spells
-				for spellid, spelltable in _pairs (other_players [1].spells._ActorTable) do
-					player_2_spells_sorted [#player_2_spells_sorted+1] = {spelltable, spelltable.total}
-				end
-				--player 2 pets
-				for petIndex, petName in _ipairs (other_players [1]:Pets()) do
-					local petActor = info.instancia.showing [player.tipo]:PegarCombatente (nil, petName)
-					if (petActor) then
-						for _spellid, _skill in _pairs (petActor:GetActorSpells()) do
-							player_2_spells_sorted [#player_2_spells_sorted+1] = {_skill, _skill.total, petName}
-						end
-					end
-				end
-
-				table.sort (player_2_spells_sorted, _detalhes.Sort2)
-				player_2_top = (player_2_spells_sorted [1] and player_2_spells_sorted [1] [2]) or 0
-				--se n�o existir uma magia no jogador e o jogador tiver um pet, ele n�o vai encontrar um valor em [1] e dar
-				-- ~pet
-				player_2_spell_info = {}
-				for index, spelltable in _ipairs (player_2_spells_sorted) do
-					player_2_spell_info [spelltable[1].id] = index
-				end
-
+			if (player_2) then
+				frame2.player = player_2:Name()
+				player_2_spell_info = spell_index_map (sorted_spells_with_pets (player_2, container))
 				frame2.NoPLayersToShow:Hide()
 				frame3.NoPLayersToShow:Hide()
 			else
@@ -3260,38 +2315,9 @@ function gump:CriaJanelaInfo()
 				frame3.NoPLayersToShow:Show()
 			end
 
-			local player_3_total
-			local player_3_spells_sorted
-			local player_3_spell_info
-			local player_3_top
-
-			if (other_players [2]) then
-				frame3.player = other_players [2] and other_players [2]:Name()
-				player_3_total = other_players [2] and other_players [2].total_without_pet
-				player_3_spells_sorted = {}
-				player_3_spell_info = {}
-
-				if (other_players [2]) then
-					--player 3 spells
-					for spellid, spelltable in _pairs (other_players [2].spells._ActorTable) do
-						player_3_spells_sorted [#player_3_spells_sorted+1] = {spelltable, spelltable.total}
-					end
-					--player 3 pets
-					for petIndex, petName in _ipairs (other_players [2]:Pets()) do
-						local petActor = info.instancia.showing [player.tipo]:PegarCombatente (nil, petName)
-						if (petActor) then
-							for _spellid, _skill in _pairs (petActor:GetActorSpells()) do
-								player_3_spells_sorted [#player_3_spells_sorted+1] = {_skill, _skill.total, petName}
-							end
-						end
-					end
-
-					table.sort (player_3_spells_sorted, _detalhes.Sort2)
-					player_3_top = player_3_spells_sorted [1] [2]
-					for index, spelltable in _ipairs (player_3_spells_sorted) do
-						player_3_spell_info [spelltable[1].id] = index
-					end
-				end
+			if (player_3) then
+				frame3.player = player_3:Name()
+				player_3_spell_info = spell_index_map (sorted_spells_with_pets (player_3, container))
 			end
 
 			for i = 1, 12 do
@@ -3331,193 +2357,15 @@ function gump:CriaJanelaInfo()
 						bar [3][3] = _math_floor (data [1].c_amt / data [1].counter * 100) --tooltip critical
 						bar [3][4] = spellid
 
-					--player 2
-					local player_2 = other_players [1]
-					local spell = player_2 and player_2.spells._ActorTable [spellid]
-
-					if (not spell and petName and player_2) then
-						for _petIndex, _petName in _ipairs (player_2:Pets()) do
-							if (_petName:gsub (" <.*", "") == petName:gsub (" <.*", "")) then
-								local petActor = info.instancia.showing [player.tipo]:PegarCombatente (nil, _petName)
-								spell = petActor and petActor.spells._ActorTable [spellid]
-								name = name .. " (|cFFCCBBBB" .. _petName:gsub (" <.*", "") .. "|r)"
-							end
-						end
-					end
-
-					local bar_2 = frame2 and frame2.bars [i]
-
-					-- ~compare
-					if (spell) then
-						bar_2 [1]:SetTexture (icon)
-						bar_2 [1]:SetTexCoord (unpack (IconTexCoord)) --bar[1] = spellicon bar[2] = statusbar
-						bar_2 [2].lefttext:SetText (player_2_spell_info [spellid] .. ". " .. name)
-						bar_2 [2].lefttext:SetTextColor (1, 1, 1, 1)
-						bar_2 [2]:SetStatusBarColor (unpack (bar_color))
-						bar_2 [2]:SetBackdropColor (1, 1, 1, 0.1)
-
-						if (spell.total == 0 and data [2] == 0) then
-							bar_2 [2].righttext2:SetText ("0")
-							bar_2 [2].righttext:SetText ("+0%")
-
-						elseif (data [2] > spell.total) then
-							if (spell.total > 0) then
-								local diff = data [2] - spell.total
-								local up = diff / spell.total * 100
-								up = _math_floor (up)
-								if (up > 999) then
-									up = "" .. 999
-								end
-								bar_2 [2].righttext2:SetText (_detalhes:ToK2Min (spell.total))
-								bar_2 [2].righttext:SetText (" |c" .. minor .. up .. "%|r")
-							else
-								bar_2 [2].righttext2:SetText ("0")
-								bar_2 [2].righttext:SetText ("+0%")
-							end
-
-						else
-							if (data [2] > 0) then
-								local diff = spell.total - data [2]
-								local down = diff / data [2] * 100
-								down = _math_floor (down)
-								if (down > 999) then
-									down = "" .. 999
-								end
-								bar_2 [2].righttext2:SetText (_detalhes:ToK2Min (spell.total))
-								bar_2 [2].righttext:SetText (" |c" .. plus .. down .. "%|r")
-							else
-								bar_2 [2].righttext2:SetText ("0")
-								bar_2 [2].righttext:SetText ("+0%")
-							end
-						end
-
-						bar_2 [2]:SetValue (spell.total / player_2_top * 100)
-						bar_2 [2]:SetValue (100)
-						bar_2 [3][1] = spell.counter --tooltip hits
-						bar_2 [3][2] = spell.total / spell.counter --tooltip average
-						bar_2 [3][3] = _math_floor (spell.c_amt / spell.counter * 100) --tooltip critical
-						bar_2 [2]:SetBackdropColor (1, 1, 1, 0)
-					else
-						bar_2 [1]:SetTexture (nil)
-						bar_2 [2].lefttext:SetText (empty_text)
-						bar_2 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-						bar_2 [2].righttext:SetText ("")
-						bar_2 [2].righttext2:SetText ("")
-						bar_2 [2]:SetValue (0)
-						bar_2 [2]:SetBackdropColor (1, 1, 1, 0)
-					end
-
-					--player 3
-					local bar_3 = frame3 and frame3.bars [i]
-
-					if (player_3_total) then
-						local player_3 = other_players [2]
-						local spell = player_3 and player_3.spells._ActorTable [spellid]
-
-						if (not spell and petName and player_3) then
-							for _petIndex, _petName in _ipairs (player_3:Pets()) do
-								if (_petName:gsub (" <.*", "") == petName:gsub (" <.*", "")) then
-									local petActor = info.instancia.showing [player.tipo]:PegarCombatente (nil, _petName)
-									spell = petActor and petActor.spells._ActorTable [spellid]
-									local name, _, icon = _GetSpellInfo (spellid)
-									name = name .. " (|cFFCCBBBB" .. _petName:gsub (" <.*", "") .. "|r)"
-								end
-							end
-						end
-
-						if (spell) then
-							bar_3 [1]:SetTexture (icon)
-							bar_3 [1]:SetTexCoord (unpack (IconTexCoord)) --bar[1] = spellicon bar[2] = statusbar
-							bar_3 [2].lefttext:SetText (player_3_spell_info [spellid] .. ". " .. name)
-							bar_3 [2].lefttext:SetTextColor (1, 1, 1, 1)
-							bar_3 [2]:SetStatusBarColor (unpack (bar_color))
-							bar_3 [2]:SetBackdropColor (1, 1, 1, 0.1)
-
-							if (spell.total == 0 and data [2] == 0) then
-								bar_3 [2].righttext2:SetText ("0")
-								bar_3 [2].righttext:SetText ("+0%")
-
-							elseif (data [2] > spell.total) then
-								if (spell.total > 0) then
-									local diff = data [2] - spell.total
-									local up = diff / spell.total * 100
-									up = _math_floor (up)
-									if (up > 999) then
-										up = "" .. 999
-									end
-									bar_3 [2].righttext2:SetText (_detalhes:ToK2Min (spell.total))
-									bar_3 [2].righttext:SetText (" |c" .. minor .. up .. "%|r")
-								else
-									bar_3 [2].righttext2:SetText ("0")
-									bar_3 [2].righttext:SetText ("0%")
-								end
-							else
-								if (data [2] > 0) then
-									local diff = spell.total - data [2]
-									local down = diff / data [2] * 100
-									down = _math_floor (down)
-									if (down > 999) then
-										down = "" .. 999
-									end
-									bar_3 [2].righttext2:SetText (_detalhes:ToK2Min (spell.total))
-									bar_3 [2].righttext:SetText (" |c" .. plus .. down .. "%|r")
-								else
-									bar_3 [2].righttext:SetText ("0")
-									bar_3 [2].righttext:SetText ("+0%")
-								end
-							end
-
-							bar_3 [2]:SetValue (spell.total / player_3_top * 100)
-							bar_3 [2]:SetValue (100)
-							bar_3 [3][1] = spell.counter --tooltip hits
-							bar_3 [3][2] = spell.total / spell.counter --tooltip average
-							bar_3 [3][3] = _math_floor (spell.c_amt / spell.counter * 100) --tooltip critical
-						else
-							bar_3 [1]:SetTexture (nil)
-							bar_3 [2].lefttext:SetText (empty_text)
-							bar_3 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-							bar_3 [2].righttext:SetText ("")
-							bar_3 [2].righttext2:SetText ("")
-							bar_3 [2]:SetValue (0)
-							bar_3 [2]:SetBackdropColor (1, 1, 1, 0)
-						end
-					else
-						bar_3 [1]:SetTexture (nil)
-						bar_3 [2].lefttext:SetText (empty_text)
-						bar_3 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-						bar_3 [2].righttext:SetText ("")
-						bar_3 [2].righttext2:SetText ("")
-						bar_3 [2]:SetValue (0)
-						bar_3 [2]:SetBackdropColor (1, 1, 1, 0)
-					end
+					fill_compare_spell_bar (frame2.bars [i], player_2, player_2_spell_info, data, spellid, name, icon, petName, container)
+					fill_compare_spell_bar (frame3.bars [i], player_3, player_3_spell_info, data, spellid, name, icon, petName, container)
 				else
-					bar [1]:SetTexture (nil)
-					bar [2].lefttext:SetText (empty_text)
-					bar [2].lefttext:SetTextColor (.5, .5, .5, 1)
-					bar [2].righttext:SetText ("")
-					bar [2]:SetValue (0)
-					bar [2]:SetBackdropColor (1, 1, 1, 0)
+					clear_compare_bar (bar)
 					local bar_2 = frame2.bars [i]
-					bar_2 [1]:SetTexture (nil)
-					bar_2 [2].lefttext:SetText (empty_text)
-					bar_2 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-					bar_2 [2].righttext:SetText ("")
-					bar_2 [2].righttext2:SetText ("")
-					bar_2 [2]:SetValue (0)
-					bar_2 [2]:SetBackdropColor (1, 1, 1, 0)
+					clear_compare_bar (bar_2)
 					local bar_3 = frame3.bars [i]
-					bar_3 [1]:SetTexture (nil)
-					bar_3 [2].lefttext:SetText (empty_text)
-					bar_3 [2].lefttext:SetTextColor (.5, .5, .5, 1)
-					bar_3 [2].righttext:SetText ("")
-					bar_3 [2].righttext2:SetText ("")
-					bar_3 [2]:SetValue (0)
-					bar_3 [2]:SetBackdropColor (1, 1, 1, 0)
+					clear_compare_bar (bar_3)
 				end
-
-			end
-
-			for index, spelltable in _ipairs (spells_sorted) do
 
 			end
 
@@ -3532,13 +2380,7 @@ function gump:CriaJanelaInfo()
 
 		local refresh_target_box = function (self)
 
-			--player 1 targets
-			local my_targets = self.tab.player.targets
-			local target_pool = {}
-			for target_name, amount in _pairs (my_targets) do
-				target_pool [#target_pool+1] = {target_name, amount}
-			end
-			table.sort (target_pool, _detalhes.Sort2)
+			local target_pool = sorted_targets (self.tab.player)
 
 			FauxScrollFrame_Update (self, #target_pool, targetBars, 14)
 			self:Show()
@@ -3580,6 +2422,43 @@ function gump:CriaJanelaInfo()
 
 		end
 
+		local target_skills = function (actor, target_name)
+			local skills = {}
+			for spellid, spell in _pairs (actor.spells._ActorTable) do
+				local amount = spell.targets [target_name]
+				if (amount) then
+					skills [#skills+1] = {spellid, amount}
+				end
+			end
+			_table_sort (skills, _detalhes.Sort2)
+			return skills
+		end
+
+		local fill_target_tooltip_row = function (tooltip, index, spell, other_skills, name, icon)
+			local bar = tooltip.bars [index] or tooltip:CreateBar (index)
+			for this_index, this_spell in _ipairs (other_skills) do
+				if (spell [1] == this_spell [1]) then
+					bar [1]:SetTexture (icon)
+					bar [1]:SetTexCoord (unpack (IconTexCoord))
+					bar [2].lefttext:SetText (this_index .. ". " .. name)
+					bar [2].bg:Show()
+					bar [2].righttext2:SetText (_detalhes:ToK2Min (this_spell [2]))
+					if (spell [2] > this_spell [2]) then
+						bar [2].righttext:SetText (" |c" .. minor .. percent_diff (spell [2], this_spell [2]) .. "%|r")
+					else
+						bar [2].righttext:SetText (" |c" .. plus .. percent_diff (this_spell [2], spell [2]) .. "%|r")
+					end
+					bar [2]:SetValue (100)
+					return true
+				end
+			end
+			bar [1]:SetTexture (nil)
+			bar [2].lefttext:SetText ("")
+			bar [2].righttext:SetText ("")
+			bar [2].righttext2:SetText ("")
+			bar [2].bg:Hide()
+		end
+
 		local on_enter_target = function (self)
 
 			local frame1 = DetailsPlayerComparisonTarget1
@@ -3603,53 +2482,18 @@ function gump:CriaJanelaInfo()
 			frame2.tooltip:SetPoint ("BOTTOMLEFT", bar2[2], "TOPLEFT", -18, 5)
 			frame3.tooltip:SetPoint ("BOTTOMLEFT", bar3[2], "TOPLEFT", -18, 5)
 
-			local actor1_total = bar1 [3] [3]
-			local actor2_total = bar1 [3] [3]
-			local actor3_total = bar1 [3] [3]
 
-			-- player 1
-			local player_1_skills = {}
-			for spellid, spell in _pairs (player_1.spells._ActorTable) do
-				for name, amount in _pairs (spell.targets) do
-					if (name == target_name) then
-						player_1_skills [#player_1_skills+1] = {spellid, amount}
-					end
-				end
-			end
-			table.sort (player_1_skills, _detalhes.Sort2)
--- ~pet
+			local player_1_skills = target_skills (player_1, target_name)
 			local player_1_top = player_1_skills [1] and player_1_skills [1][2] or 0
 			bar1 [2]:SetStatusBarColor (1, 1, 1, 1)
 
-			-- player 2
-			local player_2_skills = {}
-			local player_2_top
+			local player_2_skills = player_2 and target_skills (player_2, target_name)
 			if (player_2) then
-				for spellid, spell in _pairs (player_2.spells._ActorTable) do
-					for name, amount in _pairs (spell.targets) do
-						if (name == target_name) then
-							player_2_skills [#player_2_skills+1] = {spellid, amount}
-						end
-					end
-				end
-				table.sort (player_2_skills, _detalhes.Sort2)
-				player_2_top = player_2_skills [1] and player_2_skills [1][2] or 0
 				bar2 [2]:SetStatusBarColor (unpack (bar_color_on_enter))
 			end
 
-			-- player 3
-			local player_3_skills = {}
-			local player_3_top
+			local player_3_skills = player_3 and target_skills (player_3, target_name)
 			if (player_3) then
-				for spellid, spell in _pairs (player_3.spells._ActorTable) do
-					for name, amount in _pairs (spell.targets) do
-						if (name == target_name) then
-							player_3_skills [#player_3_skills+1] = {spellid, amount}
-						end
-					end
-				end
-				table.sort (player_3_skills, _detalhes.Sort2)
-				player_3_top = player_3_skills [1] and player_3_skills [1][2] or 0
 				bar3 [2]:SetStatusBarColor (unpack (bar_color_on_enter))
 			end
 
@@ -3680,114 +2524,12 @@ function gump:CriaJanelaInfo()
 				--bar [2]:SetValue (100)
 				bar [2].bg:Show()
 
-				if (player_2) then
-
-					local player_2_skill
-					local found_skill = false
-					for this_index, this_spell in _ipairs (player_2_skills) do
-						if (spell [1] == this_spell[1]) then
-							local bar = frame2.tooltip.bars [index]
-							if (not bar) then
-								bar = frame2.tooltip:CreateBar (index)
-							end
-
-							bar [1]:SetTexture (icon)
-							bar [1]:SetTexCoord (unpack (IconTexCoord)) --bar[1] = spellicon bar[2] = statusbar
-							bar [2].lefttext:SetText (this_index .. ". " .. name)
-							bar [2].bg:Show()
-
-							if (spell [2] > this_spell [2]) then
-								local diff = spell [2] - this_spell [2]
-								local up = diff / this_spell [2] * 100
-								up = _math_floor (up)
-								if (up > 999) then
-									up = "" .. 999
-								end
-								bar [2].righttext2:SetText (_detalhes:ToK2Min (this_spell [2]))
-								bar [2].righttext:SetText (" |c" .. minor .. up .. "%|r")
-							else
-								local diff = this_spell [2] - spell [2]
-								local down = diff / spell [2] * 100
-								down = _math_floor (down)
-								if (down > 999) then
-									down = "" .. 999
-								end
-								bar [2].righttext2:SetText (_detalhes:ToK2Min (this_spell [2]))
-								bar [2].righttext:SetText (" |c" .. plus .. down .. "%|r")
-							end
-
-							--bar [2]:SetValue (this_spell [2]/player_2_top*100)
-							bar [2]:SetValue (100)
-							found_skill = true
-							frame2_gotresults = true
-							break
-						end
-					end
-					if (not found_skill) then
-						local bar = frame2.tooltip.bars [index]
-						if (not bar) then
-							bar = frame2.tooltip:CreateBar (index)
-						end
-						bar [1]:SetTexture (nil)
-						bar [2].lefttext:SetText ("")
-						bar [2].righttext:SetText ("")
-						bar [2].righttext2:SetText ("")
-						bar [2].bg:Hide()
-					end
+				if (player_2 and fill_target_tooltip_row (frame2.tooltip, index, spell, player_2_skills, name, icon)) then
+					frame2_gotresults = true
 				end
 
-				if (player_3) then
-					local player_3_skill
-					local found_skill = false
-					for this_index, this_spell in _ipairs (player_3_skills) do
-						if (spell [1] == this_spell[1]) then
-							local bar = frame3.tooltip.bars [index]
-							if (not bar) then
-								bar = frame3.tooltip:CreateBar (index)
-							end
-
-							bar [1]:SetTexture (icon)
-							bar [1]:SetTexCoord (unpack (IconTexCoord)) --bar[1] = spellicon bar[2] = statusbar
-							bar [2].lefttext:SetText (this_index .. ". " .. name)
-							bar [2].bg:Show()
-
-							if (spell [2] > this_spell [2]) then
-								local diff = spell [2] - this_spell [2]
-								local up = diff / this_spell [2] * 100
-								up = _math_floor (up)
-								if (up > 999) then
-									up = "" .. 999
-								end
-								bar [2].righttext:SetText (_detalhes:ToK2Min (this_spell [2]) .. " |c" .. minor .. up .. "%|r")
-							else
-								local diff = this_spell [2] - spell [2]
-								local down = diff / spell [2] * 100
-								down = _math_floor (down)
-								if (down > 999) then
-									down = "" .. 999
-								end
-								bar [2].righttext2:SetText (_detalhes:ToK2Min (this_spell [2]))
-								bar [2].righttext:SetText (" |c" .. plus .. down .. "%|r")
-							end
-
-							--bar [2]:SetValue (this_spell [2]/player_3_top*100)
-							bar [2]:SetValue (100)
-							found_skill = true
-							frame3_gotresults = true
-							break
-						end
-					end
-					if (not found_skill) then
-						local bar = frame3.tooltip.bars [index]
-						if (not bar) then
-							bar = frame3.tooltip:CreateBar (index)
-						end
-						bar [1]:SetTexture (nil)
-						bar [2].lefttext:SetText ("")
-						bar [2].righttext:SetText ("")
-						bar [2].righttext2:SetText ("")
-						bar [2].bg:Hide()
-					end
+				if (player_3 and fill_target_tooltip_row (frame3.tooltip, index, spell, player_3_skills, name, icon)) then
+					frame3_gotresults = true
 				end
 
 			end
@@ -3805,25 +2547,111 @@ function gump:CriaJanelaInfo()
 
 		end
 
-		local on_leave_target = function (self)
-			local frame1 = DetailsPlayerComparisonTarget1
-			local frame2 = DetailsPlayerComparisonTarget2
-			local frame3 = DetailsPlayerComparisonTarget3
-
-			local bar1 = frame1.bars [self.index]
-			local bar2 = frame2.bars [self.index]
-			local bar3 = frame3.bars [self.index]
-
-			bar1[2]:SetStatusBarColor (.5, .5, .5, 1)
-			-- bar1[2].icon:SetTexCoord (0, 1, 0, 1)
-			bar2[2]:SetStatusBarColor (unpack (bar_color))
-			-- bar2[2].icon:SetTexCoord (0, 1, 0, 1)
-			bar3[2]:SetStatusBarColor (unpack (bar_color))
-			-- bar3[2].icon:SetTexCoord (0, 1, 0, 1)
-
+		local leave_compare_bars = function (index, frame1, frame2, frame3)
+			frame1.bars [index][2]:SetStatusBarColor (.5, .5, .5, 1)
+			frame2.bars [index][2]:SetStatusBarColor (unpack (bar_color))
+			frame3.bars [index][2]:SetStatusBarColor (unpack (bar_color))
 			frame1.tooltip:Hide()
 			frame2.tooltip:Hide()
 			frame3.tooltip:Hide()
+		end
+
+		local on_leave_target = function (self)
+			leave_compare_bars (self.index, DetailsPlayerComparisonTarget1, DetailsPlayerComparisonTarget2, DetailsPlayerComparisonTarget3)
+		end
+
+		local fill_compare_tooltip = function (frame, bar, player_misc, spellid, hits, average, critical, player1_uptime, player1_casts)
+			local tooltip = frame.tooltip
+			local data = bar [3]
+			local COMPARE_UNKNOWNDATA = "-"
+
+			bar [2]:SetStatusBarColor (unpack (bar_color_on_enter))
+			bar [2].icon:SetTexCoord (.1, .9, .1, .9)
+
+			tooltip.hits_label3:SetText (data [1])
+			if (hits > data [1]) then
+				tooltip.hits_label2:SetText (" |c" .. minor .. percent_diff (hits, data [1]) .. "%|r")
+			else
+				tooltip.hits_label2:SetText (" |c" .. plus .. percent_diff (data [1], hits) .. "%|r")
+			end
+
+			tooltip.average_label3:SetText (_detalhes:ToK2Min (data [2]))
+			if (average > data [2]) then
+				tooltip.average_label2:SetText (" |c" .. minor .. percent_diff (average, data [2]) .. "%|r")
+			else
+				tooltip.average_label2:SetText (" |c" .. plus .. percent_diff (data [2], average) .. "%|r")
+			end
+
+			tooltip.crit_label3:SetText (data [3] .. "%")
+			if (critical > data [3]) then
+				tooltip.crit_label2:SetText (" |c" .. minor .. percent_diff (critical, data [3]) .. "%|r")
+			else
+				local down = _math_floor ((data [3] - critical) / math.max (critical, 0.1) * 100)
+				if (down > 999) then
+					down = "" .. 999
+				end
+				tooltip.crit_label2:SetText (" |c" .. plus .. down .. "%|r")
+			end
+
+			if (not player_misc) then
+				tooltip.casts_label3:SetText (COMPARE_UNKNOWNDATA)
+				tooltip.casts_label2:SetText (COMPARE_UNKNOWNDATA)
+				tooltip.uptime_label3:SetText (COMPARE_UNKNOWNDATA)
+				tooltip.uptime_label2:SetText (COMPARE_UNKNOWNDATA)
+				return tooltip:Show()
+			end
+
+			local this_spellid = data [4] or spellid
+
+			local spell = player_misc.debuff_uptime_spells and player_misc.debuff_uptime_spells._ActorTable and player_misc.debuff_uptime_spells._ActorTable [this_spellid]
+			if (spell and spell.uptime) then
+				tooltip.uptime_label3:SetText (_math_floor (spell.uptime/60) .. "m" .. _math_floor (spell.uptime%60) .. "s")
+				if (not player1_uptime) then
+					tooltip.uptime_label2:SetText ("0%|r")
+				elseif (player1_uptime > spell.uptime) then
+					tooltip.uptime_label2:SetText ("|c" .. minor .. percent_diff (player1_uptime, spell.uptime) .. "%|r")
+				else
+					tooltip.uptime_label2:SetText ("|c" .. plus .. percent_diff (spell.uptime, player1_uptime) .. "%|r")
+				end
+				_detalhes.gump:SetFontColor (tooltip.uptime_label3, "white")
+				_detalhes.gump:SetFontColor (tooltip.uptime_label2, "white")
+			else
+				tooltip.uptime_label3:SetText (COMPARE_UNKNOWNDATA)
+				tooltip.uptime_label2:SetText (COMPARE_UNKNOWNDATA)
+				_detalhes.gump:SetFontColor (tooltip.uptime_label3, "gray")
+				_detalhes.gump:SetFontColor (tooltip.uptime_label2, "gray")
+			end
+
+			local amt_casts = player_misc.spell_cast and player_misc.spell_cast [this_spellid]
+			if (not amt_casts) then
+				local spellname = GetSpellInfo (this_spellid)
+				for casted_spellid, amount in _pairs (player_misc.spell_cast or {}) do
+					if (GetSpellInfo (casted_spellid) == spellname) then
+						amt_casts = amount
+						break
+					end
+				end
+			end
+
+			if (amt_casts) then
+				tooltip.casts_label3:SetText (amt_casts)
+				if (not player1_casts) then
+					tooltip.casts_label2:SetText (COMPARE_UNKNOWNDATA)
+				elseif (player1_casts > amt_casts) then
+					tooltip.casts_label2:SetText (" |c" .. minor .. percent_diff (player1_casts, amt_casts) .. "%|r")
+				else
+					tooltip.casts_label2:SetText (" |c" .. plus .. percent_diff (amt_casts, player1_casts) .. "%|r")
+				end
+				_detalhes.gump:SetFontColor (tooltip.casts_label3, "white")
+				_detalhes.gump:SetFontColor (tooltip.casts_label2, "white")
+			else
+				tooltip.casts_label3:SetText ("?")
+				tooltip.casts_label2:SetText ("?")
+				_detalhes.gump:SetFontColor (tooltip.casts_label3, "gray")
+				_detalhes.gump:SetFontColor (tooltip.casts_label2, "gray")
+			end
+
+			tooltip:Show()
 		end
 
 		local on_enter = function (self)
@@ -3948,384 +2776,28 @@ function gump:CriaJanelaInfo()
 			end
 
 			if (bar2[2].righttext:GetText()) then
-
-				bar2 [2]:SetStatusBarColor (unpack (bar_color_on_enter))
-				bar2[2].icon:SetTexCoord (.1, .9, .1, .9)
-
-				-- hits
-				if (hits > bar2[3][1]) then
-					local diff = hits - bar2[3][1]
-					local up = diff / bar2[3][1] * 100
-					up = _math_floor (up)
-					if (up > 999) then
-						up = "" .. 999
-					end
-					frame2.tooltip.hits_label3:SetText (bar2[3][1])
-					frame2.tooltip.hits_label2:SetText (" |c" .. minor .. up .. "%|r")
-				else
-					local diff = bar2[3][1] - hits
-					local down = diff / hits * 100
-					down = _math_floor (down)
-					if (down > 999) then
-						down = "" .. 999
-					end
-					frame2.tooltip.hits_label3:SetText (bar2[3][1])
-					frame2.tooltip.hits_label2:SetText (" |c" .. plus .. down .. "%|r")
-				end
-
-				--average
-				if (average > bar2[3][2]) then
-					local diff = average - bar2[3][2]
-					local up = diff / bar2[3][2] * 100
-					up = _math_floor (up)
-					if (up > 999) then
-						up = "" .. 999
-					end
-					frame2.tooltip.average_label3:SetText (_detalhes:ToK2Min (bar2[3][2]))
-					frame2.tooltip.average_label2:SetText (" |c" .. minor .. up .. "%|r")
-				else
-					local diff = bar2[3][2] - average
-					local down = diff / average * 100
-					down = _math_floor (down)
-					if (down > 999) then
-						down = "" .. 999
-					end
-					frame2.tooltip.average_label3:SetText (_detalhes:ToK2Min (bar2[3][2]))
-					frame2.tooltip.average_label2:SetText (" |c" .. plus .. down .. "%|r")
-				end
-
-				--criticals
-				if (critical > bar2[3][3]) then
-					--[[
-					local percent = abs ((bar2[3][3] / critical * 100) -100)
-					percent = _math_floor (percent)
-					if (percent > 999) then
-						up = "" .. 999
-					end
-					frame2.tooltip.crit_label3:SetText (bar2[3][3] .. "%")
-					frame2.tooltip.crit_label2:SetText (" |c" .. minor .. percent .. "%|r")
-					--]]
-					local diff = critical - bar2[3][3]
-					diff = diff / bar2[3][3] * 100
-					diff = _math_floor (diff)
-					if (diff > 999) then
-						diff = "" .. 999
-					end
-					frame2.tooltip.crit_label3:SetText (bar2[3][3] .. "%")
-					frame2.tooltip.crit_label2:SetText (" |c" .. minor .. diff .. "%|r")
-				else
-					local diff = bar2[3][3] - critical
-					local down = diff / math.max (critical, 0.1) * 100
-					--bar2[3][3] = 62 critical = 53 diff = 9
-					--print (diff, bar2[3][3], critical)
-					--print (math.max (critical * 100, 0.1))
-
-					down = _math_floor (down)
-					if (down > 999) then
-						down = "" .. 999
-					end
-					frame2.tooltip.crit_label3:SetText (bar2[3][3] .. "%")
-					frame2.tooltip.crit_label2:SetText (" |c" .. plus .. down .. "%|r")
-				end
-
-				--update and total casts
-				if (player2_misc) then
-
-					--uptime
-					local spell = player2_misc.debuff_uptime_spells and player2_misc.debuff_uptime_spells._ActorTable and player2_misc.debuff_uptime_spells._ActorTable [spellid]
-					if (spell and spell.uptime) then
-						local minutos, segundos = _math_floor (spell.uptime/60), _math_floor (spell.uptime%60)
-
-						if (not player1_uptime) then
-							frame2.tooltip.uptime_label3:SetText (minutos .. "m" .. segundos .. "s")
-							frame2.tooltip.uptime_label2:SetText ("0%|r")
-
-						elseif (player1_uptime > spell.uptime) then
-							local diff = player1_uptime - spell.uptime
-							local up = diff / spell.uptime * 100
-							up = _math_floor (up)
-							if (up > 999) then
-								up = "" .. 999
-							end
-							frame2.tooltip.uptime_label3:SetText (minutos .. "m" .. segundos .. "s")
-							frame2.tooltip.uptime_label2:SetText ("|c" .. minor .. up .. "%|r")
-						else
-							local diff = spell.uptime - player1_uptime
-							local down = diff / player1_uptime * 100
-							down = _math_floor (down)
-							if (down > 999) then
-								down = "" .. 999
-							end
-							frame2.tooltip.uptime_label3:SetText (minutos .. "m" .. segundos .. "s")
-							frame2.tooltip.uptime_label2:SetText ("|c" .. plus .. down .. "%|r")
-						end
-
-						_detalhes.gump:SetFontColor (frame2.tooltip.uptime_label3, "white")
-						_detalhes.gump:SetFontColor (frame2.tooltip.uptime_label2, "white")
-
-					else
-						frame2.tooltip.uptime_label3:SetText (COMPARE_UNKNOWNDATA)
-						frame2.tooltip.uptime_label2:SetText (COMPARE_UNKNOWNDATA)
-						_detalhes.gump:SetFontColor (frame2.tooltip.uptime_label3, "gray")
-						_detalhes.gump:SetFontColor (frame2.tooltip.uptime_label2, "gray")
-					end
-
-					--total casts
-					local amt_casts = player2_misc.spell_cast and player2_misc.spell_cast [spellid]
-					if (not amt_casts) then
-						local spellname = GetSpellInfo (spellid)
-						for casted_spellid, amount in _pairs (player2_misc.spell_cast or {}) do
-							local casted_spellname = GetSpellInfo (casted_spellid)
-							if (casted_spellname == spellname) then
-								amt_casts = amount
-								break
-							end
-						end
-					end
-					if (amt_casts) then
-
-						if (not player1_casts) then
-							frame2.tooltip.casts_label3:SetText (amt_casts)
-							frame2.tooltip.casts_label2:SetText (COMPARE_UNKNOWNDATA)
-
-						elseif (player1_casts > amt_casts) then
-							local diff = player1_casts - amt_casts
-							local up = diff / amt_casts * 100
-							up = _math_floor (up)
-							if (up > 999) then
-								up = "" .. 999
-							end
-							frame2.tooltip.casts_label3:SetText (amt_casts)
-							frame2.tooltip.casts_label2:SetText ("|c" .. minor .. up .. "%|r")
-						else
-							local diff = amt_casts - player1_casts
-							local down = diff / player1_casts * 100
-							down = _math_floor (down)
-							if (down > 999) then
-								down = "" .. 999
-							end
-							frame2.tooltip.casts_label3:SetText (amt_casts)
-							frame2.tooltip.casts_label2:SetText ("|c" .. plus .. down .. "%|r")
-						end
-
-						_detalhes.gump:SetFontColor (frame2.tooltip.casts_label3, "white")
-						_detalhes.gump:SetFontColor (frame2.tooltip.casts_label2, "white")
-					else
-						frame2.tooltip.casts_label2:SetText ("?")
-						frame2.tooltip.casts_label3:SetText ("?")
-						_detalhes.gump:SetFontColor (frame2.tooltip.casts_label3, "gray")
-						_detalhes.gump:SetFontColor (frame2.tooltip.casts_label2, "gray")
-					end
-				else
-					frame2.tooltip.casts_label2:SetText (COMPARE_UNKNOWNDATA)
-					frame2.tooltip.casts_label2:SetText (COMPARE_UNKNOWNDATA)
-					frame2.tooltip.uptime_label3:SetText (COMPARE_UNKNOWNDATA)
-					frame2.tooltip.uptime_label2:SetText (COMPARE_UNKNOWNDATA)
-				end
-
-				frame2.tooltip:Show()
+				fill_compare_tooltip (frame2, bar2, player2_misc, spellid, hits, average, critical, player1_uptime, player1_casts)
 			end
 
-			---------------------------------------------------
-
 			if (bar3[2].righttext:GetText()) then
-				bar3 [2]:SetStatusBarColor (unpack (bar_color_on_enter))
-				bar3[2].icon:SetTexCoord (.1, .9, .1, .9)
-
-				--hits
-				if (hits > bar3[3][1]) then
-					local diff = hits - bar3[3][1]
-					local up = diff / bar3[3][1] * 100
-					up = _math_floor (up)
-					if (up > 999) then
-						up = "" .. 999
-					end
-					frame3.tooltip.hits_label3:SetText (bar3[3][1])
-					frame3.tooltip.hits_label2:SetText (" |c" .. minor .. up .. "%|r")
-				else
-					local diff = bar3[3][1] - hits
-					local down = diff / hits * 100
-					down = _math_floor (down)
-					if (down > 999) then
-						down = "" .. 999
-					end
-					frame3.tooltip.hits_label3:SetText (bar3[3][1])
-					frame3.tooltip.hits_label2:SetText (" |c" .. plus .. down .. "%|r")
-				end
-
-				--average
-				if (average > bar3[3][2]) then
-					local diff = average - bar3[3][2]
-					local up = diff / bar3[3][2] * 100
-					up = _math_floor (up)
-					if (up > 999) then
-						up = "" .. 999
-					end
-					frame3.tooltip.average_label3:SetText (_detalhes:ToK2Min (bar3[3][2]))
-					frame3.tooltip.average_label2:SetText (" |c" .. minor .. up .. "%|r")
-				else
-					local diff = bar3[3][2] - average
-					local down = diff / average * 100
-					down = _math_floor (down)
-					if (down > 999) then
-						down = "" .. 999
-					end
-					frame3.tooltip.average_label3:SetText (_detalhes:ToK2Min (bar3[3][2]))
-					frame3.tooltip.average_label2:SetText (" |c" .. plus .. down .. "%|r")
-				end
-
-				--critical
-				if (critical > bar3[3][3]) then
-					--[[
-					local percent = abs ((bar3[3][3] / critical * 100) -100)
-					--local diff = critical - bar3[3][3]
-					--local up = diff / bar3[3][3] * 100
-					percent = _math_floor (percent)
-					if (percent > 999) then
-						percent = "" .. 999
-					end
-					frame3.tooltip.crit_label3:SetText (bar3[3][3] .. "%")
-					frame3.tooltip.crit_label2:SetText (" |c" .. minor .. percent .. "%|r")
-					--]]
-					local diff = critical - bar3[3][3]
-					diff = diff / bar3[3][3] * 100
-					diff = _math_floor (diff)
-					if (diff > 999) then
-						diff = "" .. 999
-					end
-					frame3.tooltip.crit_label3:SetText (bar3[3][3] .. "%")
-					frame3.tooltip.crit_label2:SetText (" |c" .. minor .. diff .. "%|r")
-				else
-					local diff = bar3[3][3] - critical
-					local down = diff / math.max (critical, 0.1) * 100
-					down = _math_floor (down)
-					if (down > 999) then
-						down = "" .. 999
-					end
-					frame3.tooltip.crit_label3:SetText (bar3[3][3] .. "%")
-					frame3.tooltip.crit_label2:SetText (" |c" .. plus .. down .. "%|r")
-				end
-
-				--uptime and casts
-				if (player3_misc) then
-
-					--uptime
-					local spell = player3_misc.debuff_uptime_spells and player3_misc.debuff_uptime_spells._ActorTable and player3_misc.debuff_uptime_spells._ActorTable [spellid]
-					if (spell and spell.uptime) then
-						local minutos, segundos = _math_floor (spell.uptime/60), _math_floor (spell.uptime%60)
-
-						if (not player1_uptime) then
-							frame3.tooltip.uptime_label3:SetText (minutos .. "m" .. segundos .. "s")
-							frame3.tooltip.uptime_label2:SetText ("0%|r")
-
-						elseif (player1_uptime > spell.uptime) then
-							local diff = player1_uptime - spell.uptime
-							local up = diff / spell.uptime * 100
-							up = _math_floor (up)
-							if (up > 999) then
-								up = "" .. 999
-							end
-							frame3.tooltip.uptime_label3:SetText (minutos .. "m" .. segundos .. "s")
-							frame3.tooltip.uptime_label2:SetText ("|c" .. minor .. up .. "%|r")
-						else
-							local diff = spell.uptime - player1_uptime
-							local down = diff / player1_uptime * 100
-							down = _math_floor (down)
-							if (down > 999) then
-								down = "" .. 999
-							end
-							frame3.tooltip.uptime_label3:SetText (minutos .. "m" .. segundos .. "s")
-							frame3.tooltip.uptime_label2:SetText ("|c" .. plus .. down .. "%|r")
-						end
-
-						_detalhes.gump:SetFontColor (frame3.tooltip.uptime_label3, "white")
-						_detalhes.gump:SetFontColor (frame3.tooltip.uptime_label2, "white")
-					else
-						frame3.tooltip.uptime_label3:SetText (COMPARE_UNKNOWNDATA)
-						frame3.tooltip.uptime_label2:SetText (COMPARE_UNKNOWNDATA)
-						_detalhes.gump:SetFontColor (frame3.tooltip.uptime_label3, "gray")
-						_detalhes.gump:SetFontColor (frame3.tooltip.uptime_label2, "gray")
-					end
-
-					--total casts
-					local amt_casts = player3_misc.spell_cast and player3_misc.spell_cast [spellid]
-					if (not amt_casts) then
-						local spellname = GetSpellInfo (spellid)
-						for casted_spellid, amount in _pairs (player3_misc.spell_cast or {}) do
-							local casted_spellname = GetSpellInfo (casted_spellid)
-							if (casted_spellname == spellname) then
-								amt_casts = amount
-								break
-							end
-						end
-					end
-
-					if (amt_casts) then
-
-						if (not player1_casts) then
-							frame3.tooltip.casts_label2:SetText (amt_casts)
-						elseif (player1_casts > amt_casts) then
-							local diff = player1_casts - amt_casts
-							local up = diff / amt_casts * 100
-							up = _math_floor (up)
-							if (up > 999) then
-								up = "" .. 999
-							end
-							frame3.tooltip.casts_label3:SetText (amt_casts)
-							frame3.tooltip.casts_label2:SetText (" |c" .. minor .. up .. "%|r")
-						else
-							local diff = amt_casts - player1_casts
-							local down = diff / player1_casts * 100
-							down = _math_floor (down)
-							if (down > 999) then
-								down = "" .. 999
-							end
-							frame3.tooltip.casts_label3:SetText (amt_casts)
-							frame3.tooltip.casts_label2:SetText (" |c" .. plus .. down .. "%|r")
-						end
-
-						_detalhes.gump:SetFontColor (frame3.tooltip.casts_label3, "white")
-						_detalhes.gump:SetFontColor (frame3.tooltip.casts_label2, "white")
-					else
-						frame3.tooltip.casts_label2:SetText ("?")
-						frame3.tooltip.casts_label3:SetText ("?")
-						_detalhes.gump:SetFontColor (frame3.tooltip.casts_label3, "gray")
-						_detalhes.gump:SetFontColor (frame3.tooltip.casts_label2, "gray")
-					end
-
-				else
-					frame3.tooltip.casts_label3:SetText (COMPARE_UNKNOWNDATA)
-					frame3.tooltip.casts_label2:SetText (COMPARE_UNKNOWNDATA)
-					frame3.tooltip.uptime_label3:SetText (COMPARE_UNKNOWNDATA)
-					frame3.tooltip.uptime_label2:SetText (COMPARE_UNKNOWNDATA)
-				end
-
-				frame3.tooltip:Show()
+				fill_compare_tooltip (frame3, bar3, player3_misc, spellid, hits, average, critical, player1_uptime, player1_casts)
 			end
 		end
 
 		local on_leave = function (self)
-			local frame1 = DetailsPlayerComparisonBox1
-			local frame2 = DetailsPlayerComparisonBox2
-			local frame3 = DetailsPlayerComparisonBox3
-
-			local bar1 = frame1.bars [self.index]
-			local bar2 = frame2.bars [self.index]
-			local bar3 = frame3.bars [self.index]
-
-			bar1[2]:SetStatusBarColor (.5, .5, .5, 1)
-			-- bar1[2].icon:SetTexCoord (0, 1, 0, 1)
-			bar2[2]:SetStatusBarColor (unpack (bar_color))
-			-- bar2[2].icon:SetTexCoord (0, 1, 0, 1)
-			bar3[2]:SetStatusBarColor (unpack (bar_color))
-			-- bar3[2].icon:SetTexCoord (0, 1, 0, 1)
-
-			frame1.tooltip:Hide()
-			frame2.tooltip:Hide()
-			frame3.tooltip:Hide()
+			leave_compare_bars (self.index, DetailsPlayerComparisonBox1, DetailsPlayerComparisonBox2, DetailsPlayerComparisonBox3)
 		end
 
 		local compare_create = function (tab, frame)
+
+			local create_bar_text = function (bar, point, x)
+				local text = bar:CreateFontString (nil, "OVERLAY", "GameFontHighlightSmall")
+				text:SetFont (SharedMedia:Fetch ("font", "Arial Narrow"), 11)
+				text:SetPoint (point, bar, point, x, 0)
+				text:SetJustifyH (point)
+				text:SetTextColor (1, 1, 1, 1)
+				return text
+			end
 
 			local create_bar = function (name, parent, index, main, is_target)
 				local y = ((index-1) * -15) - 7
@@ -4360,15 +2832,7 @@ function gump:CriaJanelaInfo()
 					bar:SetScript ("OnLeave", on_leave)
 				end
 
-				bar.lefttext = bar:CreateFontString (nil, "OVERLAY", "GameFontHighlightSmall")
-
-				local _, size, flags = bar.lefttext:GetFont()
-				local font = SharedMedia:Fetch ("font", "Arial Narrow")
-				bar.lefttext:SetFont (font, 11)
-
-				bar.lefttext:SetPoint ("LEFT", bar, "LEFT", 4, 0)
-				bar.lefttext:SetJustifyH ("LEFT")
-				bar.lefttext:SetTextColor (1, 1, 1, 1)
+				bar.lefttext = create_bar_text (bar, "LEFT", 4)
 				bar.lefttext:SetNonSpaceWrap (true)
 				bar.lefttext:SetWordWrap (false)
 				if (main) then
@@ -4377,27 +2841,10 @@ function gump:CriaJanelaInfo()
 					bar.lefttext:SetWidth (110)
 				end
 
-				bar.righttext = bar:CreateFontString (nil, "OVERLAY", "GameFontHighlightSmall")
+				bar.righttext = create_bar_text (bar, "RIGHT", -2)
+				bar.righttext2 = create_bar_text (bar, "RIGHT", -42)
 
-				local _, size, flags = bar.righttext:GetFont()
-				local font = SharedMedia:Fetch ("font", "Arial Narrow")
-				bar.righttext:SetFont (font, 11)
-
-				bar.righttext:SetPoint ("RIGHT", bar, "RIGHT", -2, 0)
-				bar.righttext:SetJustifyH ("RIGHT")
-				bar.righttext:SetTextColor (1, 1, 1, 1)
-
-				bar.righttext2 = bar:CreateFontString (nil, "OVERLAY", "GameFontHighlightSmall")
-
-				local _, size, flags = bar.righttext2:GetFont()
-				local font = SharedMedia:Fetch ("font", "Arial Narrow")
-				bar.righttext2:SetFont (font, 11)
-
-				bar.righttext2:SetPoint ("RIGHT", bar, "RIGHT", -42, 0)
-				bar.righttext2:SetJustifyH ("RIGHT")
-				bar.righttext2:SetTextColor (1, 1, 1, 1)
-
-				tinsert (parent.bars, {spellicon, bar, {0, 0, 0}})
+				parent.bars[#parent.bars+1] = {spellicon, bar, {0, 0, 0}}
 			end
 
 			local create_tooltip = function (name)
@@ -4421,72 +2868,29 @@ function gump:CriaJanelaInfo()
 				background:SetPoint ("TOPLEFT", tooltip, "TOPLEFT", 0, 0)
 				background:SetPoint ("BOTTOMRIGHT", tooltip, "BOTTOMRIGHT", 0, 0)
 
-				tooltip.casts_label = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.casts_label:SetPoint ("TOPLEFT", tooltip, "TOPLEFT", x_start, -2 + (y*0))
-				tooltip.casts_label:SetText ("Применений:")
-				tooltip.casts_label:SetJustifyH ("LEFT")
-				tooltip.casts_label2 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.casts_label2:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start, -2 + (y*0))
-				tooltip.casts_label2:SetText ("0")
-				tooltip.casts_label2:SetJustifyH ("RIGHT")
-				tooltip.casts_label3 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.casts_label3:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start - 46, -2 + (y*0))
-				tooltip.casts_label3:SetText ("0")
-				tooltip.casts_label3:SetJustifyH ("RIGHT")
+				local label_rows = {{"casts", "Применений:"}, {"hits", "Попаданий:"}, {"average", "Среднее:"}, {"crit", "Крит:"}, {"uptime", "Длительность:"}}
+				for i, row in _ipairs (label_rows) do
+					local key, ypos = row [1], -2 - ((i-1) * 12) + (y * (i-1))
 
-				tooltip.hits_label = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.hits_label:SetPoint ("TOPLEFT", tooltip, "TOPLEFT", x_start, -14 + (y*1))
-				tooltip.hits_label:SetText ("Попаданий:")
-				tooltip.hits_label:SetJustifyH ("LEFT")
-				tooltip.hits_label2 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.hits_label2:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start, -14 + (y*1))
-				tooltip.hits_label2:SetText ("0")
-				tooltip.hits_label2:SetJustifyH ("RIGHT")
-				tooltip.hits_label3 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.hits_label3:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start - 46, -14 + (y*1))
-				tooltip.hits_label3:SetText ("0")
-				tooltip.hits_label3:SetJustifyH ("RIGHT")
+					local label = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
+					label:SetPoint ("TOPLEFT", tooltip, "TOPLEFT", x_start, ypos)
+					label:SetText (row [2])
+					label:SetJustifyH ("LEFT")
+					tooltip [key .. "_label"] = label
 
-				tooltip.average_label = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.average_label:SetPoint ("TOPLEFT", tooltip, "TOPLEFT", x_start, -26 + (y*2))
-				tooltip.average_label:SetText ("Среднее:")
-				tooltip.average_label:SetJustifyH ("LEFT")
-				tooltip.average_label2 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.average_label2:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start, -26 + (y*2))
-				tooltip.average_label2:SetText ("0")
-				tooltip.average_label2:SetJustifyH ("RIGHT")
-				tooltip.average_label3 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.average_label3:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start - 46, -26 + (y*2))
-				tooltip.average_label3:SetText ("0")
-				tooltip.average_label3:SetJustifyH ("RIGHT")
+					local label2 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
+					label2:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start, ypos)
+					label2:SetText ("0")
+					label2:SetJustifyH ("RIGHT")
+					tooltip [key .. "_label2"] = label2
 
-				tooltip.crit_label = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.crit_label:SetPoint ("TOPLEFT", tooltip, "TOPLEFT", x_start, -38 + (y*3))
-				tooltip.crit_label:SetText ("Крит:")
-				tooltip.crit_label:SetJustifyH ("LEFT")
-				tooltip.crit_label2 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.crit_label2:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start, -38 + (y*3))
-				tooltip.crit_label2:SetText ("0")
-				tooltip.crit_label2:SetJustifyH ("RIGHT")
-				tooltip.crit_label3 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.crit_label3:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start - 46, -38 + (y*3))
-				tooltip.crit_label3:SetText ("0")
-				tooltip.crit_label3:SetJustifyH ("RIGHT")
+					local label3 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
+					label3:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start - 46, ypos)
+					label3:SetText ("0")
+					label3:SetJustifyH ("RIGHT")
+					tooltip [key .. "_label3"] = label3
+				end
 
-				tooltip.uptime_label = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.uptime_label:SetPoint ("TOPLEFT", tooltip, "TOPLEFT", x_start, -50 + (y*4))
-				tooltip.uptime_label:SetText ("Длительность:")
-				tooltip.uptime_label:SetJustifyH ("LEFT")
-				tooltip.uptime_label2 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.uptime_label2:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start, -50 + (y*4))
-				tooltip.uptime_label2:SetText ("0")
-				tooltip.uptime_label2:SetJustifyH ("RIGHT")
-				tooltip.uptime_label3 = tooltip:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-				tooltip.uptime_label3:SetPoint ("TOPRIGHT", tooltip, "TOPRIGHT", -x_start - 46, -50 + (y*4))
-				tooltip.uptime_label3:SetText ("0")
-				tooltip.uptime_label3:SetJustifyH ("RIGHT")
-
-				local bg_color = {0.5, 0.5, 0.5}
 				local bg_texture = [[Interface\AddOns\Details\images\bar_background]]
 				local bg_alpha = 1
 				local bg_height = 12
@@ -4560,13 +2964,7 @@ function gump:CriaJanelaInfo()
 					bar.icon = spellicon
 					bar.icon:SetTexCoord(0, 1, 0, 1)
 
-					bar.lefttext = bar:CreateFontString (nil, "OVERLAY", "GameFontHighlightSmall")
-					local _, size, flags = bar.lefttext:GetFont()
-					local font = SharedMedia:Fetch ("font", "Arial Narrow")
-					bar.lefttext:SetFont (font, 11)
-					bar.lefttext:SetPoint ("LEFT", bar, "LEFT", 2, 0)
-					bar.lefttext:SetJustifyH ("LEFT")
-					bar.lefttext:SetTextColor (1, 1, 1, 1)
+					bar.lefttext = create_bar_text (bar, "LEFT", 2)
 					bar.lefttext:SetNonSpaceWrap (true)
 					bar.lefttext:SetWordWrap (false)
 
@@ -4576,35 +2974,18 @@ function gump:CriaJanelaInfo()
 						bar.lefttext:SetWidth (80)
 					end
 
-					bar.righttext = bar:CreateFontString (nil, "OVERLAY", "GameFontHighlightSmall")
-					local _, size, flags = bar.righttext:GetFont()
-					local font = SharedMedia:Fetch ("font", "Arial Narrow")
-					bar.righttext:SetFont (font, 11)
-					bar.righttext:SetPoint ("RIGHT", bar, "RIGHT", -2, 0)
-					bar.righttext:SetJustifyH ("RIGHT")
-					bar.righttext:SetTextColor (1, 1, 1, 1)
-
-					bar.righttext2 = bar:CreateFontString (nil, "OVERLAY", "GameFontHighlightSmall")
-					local _, size, flags = bar.righttext2:GetFont()
-					local font = SharedMedia:Fetch ("font", "Arial Narrow")
-					bar.righttext2:SetFont (font, 11)
-					bar.righttext2:SetPoint ("RIGHT", bar, "RIGHT", -46, 0)
-					bar.righttext2:SetJustifyH ("RIGHT")
-					bar.righttext2:SetTextColor (1, 1, 1, 1)
+					bar.righttext = create_bar_text (bar, "RIGHT", -2)
+					bar.righttext2 = create_bar_text (bar, "RIGHT", -46)
 
 					local bg_line1 = bar:CreateTexture (nil, "artwork")
 					bg_line1:SetTexture ([[Interface\AddOns\Details\images\bar_background]])
 					bg_line1:SetAllPoints()
 					bg_line1:SetAlpha (0.7)
-					if (index % 2 == 0) then
-						bg_line1:SetVertexColor (_unpack (bars_colors [2]))
-					else
-						bg_line1:SetVertexColor (_unpack (bars_colors [2]))
-					end
+					bg_line1:SetVertexColor (_unpack (bars_colors [2]))
 					bar.bg = bg_line1
 
 					local object = {spellicon, bar}
-					tinsert (tooltip.bars, object)
+					tooltip.bars[#tooltip.bars+1] = object
 					return object
 				end
 
@@ -4671,129 +3052,61 @@ function gump:CriaJanelaInfo()
 
 --------------------------------------------
 
-			local frame2 = CreateFrame ("Frame", "DetailsPlayerComparisonBox2", frame)
-			local frame3 = CreateFrame ("Frame", "DetailsPlayerComparisonBox3", frame)
+			local previous_box = frame1
+			for n = 2, 3 do
+				local box = CreateFrame ("Frame", "DetailsPlayerComparisonBox" .. n, frame)
+				box:SetPoint ("TOPLEFT", previous_box, "TOPRIGHT", n == 2 and 27 or 5, 0)
+				box:SetSize (spell_compare_frame_width[n], spell_compare_frame_height)
+				box:SetBackdrop (frame_backdrop)
+				box:SetBackdropColor (unpack (frame_backdrop_color))
+				box:SetBackdropBorderColor (unpack (frame_backdrop_border_color))
+				Details.gump:ApplyStandardBackdrop (box)
 
-			frame2:SetPoint ("TOPLEFT", frame1, "TOPRIGHT", 27, 0)
-			frame2:SetSize (spell_compare_frame_width[2], spell_compare_frame_height)
+				box.bars = {}
+				box.tooltip = create_tooltip ("DetailsPlayerComparisonBox" .. n .. "Tooltip")
+				box.tooltip:SetWidth (spell_compare_frame_width[n])
 
-			frame2:SetBackdrop (frame_backdrop)
-			frame2:SetBackdropColor (unpack (frame_backdrop_color))
-			frame2:SetBackdropBorderColor (unpack (frame_backdrop_border_color))
+				local playername = box:CreateFontString (nil, "overlay", "GameFontNormal")
+				playername:SetPoint ("BOTTOMLEFT", box, "TOPLEFT", 2, 0)
+				playername:SetText ("Player " .. n)
+				box.name_label = playername
 
-			--override backdrop settings and use the framework defaults
-			Details.gump:ApplyStandardBackdrop (frame2)
+				local playername_percent = box:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
+				playername_percent:SetPoint ("BOTTOMRIGHT", box, "TOPRIGHT", -2, 0)
+				playername_percent:SetText ("Player 1 %")
+				playername_percent:SetTextColor (.6, .6, .6)
+				box.name_label_percent = playername_percent
 
-			frame2.bars = {}
-			frame2.tooltip = create_tooltip ("DetailsPlayerComparisonBox2Tooltip")
-			frame2.tooltip:SetWidth (spell_compare_frame_width[2])
+				local noPLayersToShow = box:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
+				noPLayersToShow:SetPoint ("CENTER")
+				noPLayersToShow:SetText (Loc["There's no more players to compare (with the same class/spec)"])
+				noPLayersToShow:SetSize (spell_compare_frame_width[2] - 10, spell_compare_frame_height)
+				noPLayersToShow:SetJustifyH ("CENTER")
+				noPLayersToShow:SetJustifyV ("CENTER")
+				_detalhes.gump:SetFontSize (noPLayersToShow, 14)
+				_detalhes.gump:SetFontColor (noPLayersToShow, "gray")
+				box.NoPLayersToShow = noPLayersToShow
 
-			local playername2 = frame2:CreateFontString (nil, "overlay", "GameFontNormal")
-			playername2:SetPoint ("BOTTOMLEFT", frame2, "TOPLEFT", 2, 0)
-			playername2:SetText ("Player 2")
-			frame2.name_label = playername2
+				for i = 1, 12 do
+					create_bar ("DetailsPlayerComparisonBox" .. n .. "Bar" .. i, box, i)
+				end
 
-			local playername2_percent = frame2:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-			playername2_percent:SetPoint ("BOTTOMRIGHT", frame2, "TOPRIGHT", -2, 0)
-			playername2_percent:SetText ("Player 1 %")
-			playername2_percent:SetTextColor (.6, .6, .6)
+				local target = CreateFrame ("Frame", "DetailsPlayerComparisonTarget" .. n, frame)
+				target:SetSize (spell_compare_frame_width[n], target_compare_frame_height)
+				target:SetPoint ("TOPLEFT", box, "BOTTOMLEFT", 0, -10)
+				target:SetBackdrop (frame_backdrop)
+				target:SetBackdropColor (unpack (frame_backdrop_color))
+				target:SetBackdropBorderColor (unpack (frame_backdrop_border_color))
+				Details.gump:ApplyStandardBackdrop (target)
+				target.bars = {}
+				target.tooltip = create_tooltip_target ("DetailsPlayerComparisonTarget" .. n .. "Tooltip")
+				target.tooltip:SetWidth (spell_compare_frame_width[n])
 
-			local noPLayersToShow = frame2:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-			noPLayersToShow:SetPoint ("CENTER")
-			noPLayersToShow:SetText (Loc["There's no more players to compare (with the same class/spec)"])
-			noPLayersToShow:SetSize (spell_compare_frame_width[2] - 10, spell_compare_frame_height)
-			noPLayersToShow:SetJustifyH ("CENTER")
-			noPLayersToShow:SetJustifyV ("CENTER")
-			_detalhes.gump:SetFontSize (noPLayersToShow, 14)
-			_detalhes.gump:SetFontColor (noPLayersToShow, "gray")
-			frame2.NoPLayersToShow = noPLayersToShow
+				for i = 1, targetBars do
+					create_bar ("DetailsPlayerComparisonTarget" .. n .. "Bar" .. i, target, i, nil, true)
+				end
 
-
-			frame2.name_label_percent = playername2_percent
-
-			--criar as barras do frame2
-			for i = 1, 12 do
-				create_bar ("DetailsPlayerComparisonBox2Bar"..i, frame2, i)
-			end
-
-			--cria o box dos targets
-			local target2 = CreateFrame ("Frame", "DetailsPlayerComparisonTarget2", frame)
-			target2:SetSize (spell_compare_frame_width[2], target_compare_frame_height)
-			target2:SetPoint ("TOPLEFT", frame2, "BOTTOMLEFT", 0, -10)
-			target2:SetBackdrop (frame_backdrop)
-			target2:SetBackdropColor (unpack (frame_backdrop_color))
-			target2:SetBackdropBorderColor (unpack (frame_backdrop_border_color))
-			target2.bars = {}
-			target2.tooltip = create_tooltip_target ("DetailsPlayerComparisonTarget2Tooltip")
-			target2.tooltip:SetWidth (spell_compare_frame_width[2])
-
-			--override backdrop settings and use the framework defaults
-			Details.gump:ApplyStandardBackdrop (target2)
-
-			--criar as barras do target2
-			for i = 1, targetBars do
-				create_bar ("DetailsPlayerComparisonTarget2Bar"..i, target2, i, nil, true)
-			end
-
------------------------------------------------------------------------
-
-			frame3:SetPoint ("TOPLEFT", frame2, "TOPRIGHT", 5, 0)
-			frame3:SetSize (spell_compare_frame_width[3], spell_compare_frame_height)
-			frame3:SetBackdrop (frame_backdrop)
-			frame3:SetBackdropColor (unpack (frame_backdrop_color))
-			frame3:SetBackdropBorderColor (unpack (frame_backdrop_border_color))
-
-			--override backdrop settings and use the framework defaults
-			Details.gump:ApplyStandardBackdrop (frame3)
-
-			frame3.bars = {}
-			frame3.tooltip = create_tooltip ("DetailsPlayerComparisonBox3Tooltip")
-			frame3.tooltip:SetWidth (spell_compare_frame_width[3])
-
-			local playername3 = frame3:CreateFontString (nil, "overlay", "GameFontNormal")
-			playername3:SetPoint ("BOTTOMLEFT", frame3, "TOPLEFT", 2, 0)
-			playername3:SetText ("Player 3")
-			frame3.name_label = playername3
-
-			local playername3_percent = frame3:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-			playername3_percent:SetPoint ("BOTTOMRIGHT", frame3, "TOPRIGHT", -2, 0)
-			playername3_percent:SetText ("Player 1 %")
-			playername3_percent:SetTextColor (.6, .6, .6)
-			frame3.name_label_percent = playername3_percent
-
-
-			local noPLayersToShow = frame3:CreateFontString (nil, "overlay", "GameFontHighlightSmall")
-			noPLayersToShow:SetPoint ("CENTER")
-			noPLayersToShow:SetText (Loc["There's no more players to compare (with the same class/spec)"])
-			noPLayersToShow:SetSize (spell_compare_frame_width[2] - 10, spell_compare_frame_height)
-			noPLayersToShow:SetJustifyH ("CENTER")
-			noPLayersToShow:SetJustifyV ("CENTER")
-			_detalhes.gump:SetFontSize (noPLayersToShow, 14)
-			_detalhes.gump:SetFontColor (noPLayersToShow, "gray")
-			frame3.NoPLayersToShow = noPLayersToShow
-
-			--criar as barras do frame3
-			for i = 1, 12 do
-				create_bar ("DetailsPlayerComparisonBox3Bar"..i, frame3, i)
-			end
-
-			--cria o box dos targets
-			local target3 = CreateFrame ("Frame", "DetailsPlayerComparisonTarget3", frame)
-			target3:SetSize (spell_compare_frame_width[3], target_compare_frame_height)
-			target3:SetPoint ("TOPLEFT", frame3, "BOTTOMLEFT", 0, -10)
-			target3:SetBackdrop (frame_backdrop)
-			target3:SetBackdropColor (unpack (frame_backdrop_color))
-			target3:SetBackdropBorderColor (unpack (frame_backdrop_border_color))
-			target3.bars = {}
-			target3.tooltip = create_tooltip_target ("DetailsPlayerComparisonTarget3Tooltip")
-			target3.tooltip:SetWidth (spell_compare_frame_width[3])
-
-			--override backdrop settings and use the framework defaults
-			Details.gump:ApplyStandardBackdrop (target3)
-
-			--criar as barras do target1
-			for i = 1, targetBars do
-				create_bar ("DetailsPlayerComparisonTarget3Bar"..i, target3, i, nil, true)
+				previous_box = box
 			end
 		end
 
@@ -4814,7 +3127,6 @@ function gump:CriaJanelaInfo()
 					return false
 				end
 
-				local same_class = {}
 				local class = playerObject.classe
 				local my_spells = {}
 				local my_spells_total = 0
@@ -4833,7 +3145,7 @@ function gump:CriaJanelaInfo()
 
 						local same_spells = 0
 						for spellid, _ in _pairs (actor.spells._ActorTable) do
-							if (my_spells [spellid]) then
+							if (my_spells [spellid] or my_spells [faction_spells [spellid]]) then
 								same_spells = same_spells + 1
 							end
 						end
@@ -4841,7 +3153,7 @@ function gump:CriaJanelaInfo()
 						local match_percentage = same_spells / max (my_spells_total, 0.000001) * 100
 
 						if (match_percentage > 30) then
-							tinsert (tabOBject.players, actor)
+							tabOBject.players[#tabOBject.players+1] = actor
 						end
 					end
 				end
@@ -4943,7 +3255,6 @@ function gump:CriaJanelaInfo()
 			end
 		end)
 
-	--DetailsInfoWindowTab1Text:SetText ("Avoidance")
 	este_gump.tipo = 1 --> tipo da janela // 1 = janela normal
 
 	return este_gump
@@ -4954,7 +3265,7 @@ info.selectedTab = "Summary"
 
 _detalhes.player_details_tabs = {}
 
-function _detalhes:CreatePlayerDetailsTab (tabname, localized_name, condition, fillfunction, onclick, oncreate, iconSettings,replace)
+function _detalhes:CreatePlayerDetailsTab (tabname, localized_name, condition, fillfunction, onclick, oncreate, iconSettings)
 	if (not tabname) then
 		tabname = "unnamed"
 	end
@@ -5075,17 +3386,46 @@ function _detalhes:CreatePlayerDetailsTab (tabname, localized_name, condition, f
 		CurrentTab = self.tabname or self.MyObject.tabname
 
 		if (CurrentTab ~= "Summary") then
-			for _, widget in ipairs (SummaryWidgets) do
+			for _, widget in _ipairs (SummaryWidgets) do
 				widget:Hide()
 			end
 		else
-			for _, widget in ipairs (SummaryWidgets) do
+			for _, widget in _ipairs (SummaryWidgets) do
 				widget:Show()
 			end
 		end
 	end)
 	return newTabButton, newTabButton.frame
 
+end
+
+local box_report_line = function (caixa, isFirst)
+	local linha = ""
+	local nome2 = caixa.nome2:GetText()
+	if (nome2 and nome2 ~= "") then
+		if (isFirst) then
+			linha = linha..nome2.." / "
+		else
+			linha = linha..caixa.nome:GetText().." "..nome2.." / "
+		end
+	end
+	local dano = caixa.dano:GetText()
+	if (dano and dano ~= "") then
+		linha = linha..dano.." / "
+	end
+	local media = caixa.dano_media:GetText()
+	if (media and media ~= "") then
+		linha = linha..media.." / "
+	end
+	local dano_dps = caixa.dano_dps:GetText()
+	if (dano_dps and dano_dps ~= "") then
+		linha = linha..dano_dps.." / "
+	end
+	local dano_porcento = caixa.dano_porcento:GetText()
+	if (dano_porcento and dano_porcento ~= "") then
+		linha = linha..dano_porcento.." "
+	end
+	return linha
 end
 
 function _detalhes.janela_info:monta_relatorio (botao)
@@ -5162,7 +3502,7 @@ function _detalhes.janela_info:monta_relatorio (botao)
 
 			--> diferentes tipos de amostragem na caixa da direita
 		     --dano                       --damage done                 --dps                                 --heal
-		if ((atributo == 1 and (sub_atributo == 1 or sub_atributo == 2)) or (atributo == 2)) then
+		if ((atributo == 1 and (sub_atributo == 1 or sub_atributo == 2)) or (atributo == 2 and sub_atributo ~= 4)) then
 			if (not player.detalhes) then
 				print (Loc ["STRING_ACTORFRAME_NOTHING"])
 				return
@@ -5177,38 +3517,7 @@ function _detalhes.janela_info:monta_relatorio (botao)
 				local caixa = info.grupos_detalhes [i]
 				if (caixa.bg:IsShown()) then
 
-					local linha = ""
-
-					local nome2 = caixa.nome2:GetText() --> golpes
-					if (nome2 and nome2 ~= "") then
-						if (i == 1) then
-							linha = linha..nome2.." / "
-						else
-							linha = linha..caixa.nome:GetText().." "..nome2.." / "
-						end
-					end
-
-					local dano = caixa.dano:GetText() --> dano
-					if (dano and dano ~= "") then
-						linha = linha..dano.." / "
-					end
-
-					local media = caixa.dano_media:GetText() --> media
-					if (media and media ~= "") then
-						linha = linha..media.." / "
-					end
-
-					local dano_dps = caixa.dano_dps:GetText()
-					if (dano_dps and dano_dps ~= "") then
-						linha = linha..dano_dps.." / "
-					end
-
-					local dano_porcento = caixa.dano_porcento:GetText()
-					if (dano_porcento and dano_porcento ~= "") then
-						linha = linha..dano_porcento.." "
-					end
-
-					report_lines [#report_lines+1] = linha
+					report_lines [#report_lines+1] = box_report_line (caixa, i == 1)
 
 				end
 
@@ -5219,9 +3528,9 @@ function _detalhes.janela_info:monta_relatorio (botao)
 			end
 
 			--dano                       --damage tanken (mostra as magias que o alvo usou)
-		elseif ( (atributo == 1 and sub_atributo == 3) or atributo == 3) then
+		elseif ( (atributo == 1 and (sub_atributo == 3 or sub_atributo == 4)) or atributo == 3 or atributo == 2) then
 			if (player.detalhes) then
-				report_lines = {"Details! " .. Loc ["STRING_ACTORFRAME_REPORTTO"] .. " " .. _detalhes.sub_atributos [1].lista [1] .. " " .. Loc ["STRING_ACTORFRAME_REPORTOF"] .. " " .. player.detalhes.. " " .. Loc ["STRING_ACTORFRAME_REPORTAT"] .. " " .. player.nome}
+				report_lines = {"Details! " .. Loc ["STRING_ACTORFRAME_REPORTTO"] .. " " .. _detalhes.sub_atributos [atributo].lista [1] .. " " .. Loc ["STRING_ACTORFRAME_REPORTOF"] .. " " .. player.detalhes.. " " .. Loc ["STRING_ACTORFRAME_REPORTAT"] .. " " .. player.nome}
 				for index, barra in _ipairs (info.barras3) do
 					if (barra:IsShown()) then
 						report_lines [#report_lines+1] = barra.texto_esquerdo:GetText().." ....... ".. barra.texto_direita:GetText()
@@ -5239,15 +3548,10 @@ function _detalhes.janela_info:monta_relatorio (botao)
 
 		botao =  botao - 10
 
-		local nome
-		if (_type (spellid) == "string") then
-			--> is a pet
-		else
-			nome = _GetSpellInfo (player.detalhes)
-			local spelllink = GetSpellLink (player.detalhes)
-			if (spelllink) then
-				nome = spelllink
-			end
+		local nome = _GetSpellInfo (player.detalhes)
+		local spelllink = GetSpellLink (player.detalhes)
+		if (spelllink) then
+			nome = spelllink
 		end
 
 		if (not nome) then
@@ -5258,35 +3562,7 @@ function _detalhes.janela_info:monta_relatorio (botao)
 
 		local caixa = info.grupos_detalhes [botao]
 
-		local linha = ""
-		local nome2 = caixa.nome2:GetText() --> golpes
-		if (nome2 and nome2 ~= "") then
-			if (i == 1) then
-				linha = linha..nome2.." / "
-			else
-				linha = linha..caixa.nome:GetText().." "..nome2.." / "
-			end
-		end
-
-		local dano = caixa.dano:GetText() --> dano
-		if (dano and dano ~= "") then
-			linha = linha..dano.." / "
-		end
-
-		local media = caixa.dano_media:GetText() --> media
-		if (media and media ~= "") then
-			linha = linha..media.." / "
-		end
-
-		local dano_dps = caixa.dano_dps:GetText()
-		if (dano_dps and dano_dps ~= "") then
-			linha = linha..dano_dps.." / "
-		end
-
-		local dano_porcento = caixa.dano_porcento:GetText()
-		if (dano_porcento and dano_porcento ~= "") then
-			linha = linha..dano_porcento.." "
-		end
+		local linha = box_report_line (caixa, botao == 1)
 
 		--> remove a cor da school
 		linha = linha:gsub ("|c%x?%x?%x?%x?%x?%x?%x?%x?", "")
@@ -5316,7 +3592,7 @@ local row_on_enter = function (self)
 
 	self.mouse_over = true
 
-	for index, block in pairs (_detalhes.janela_info.grupos_detalhes) do
+	for index, block in _pairs (_detalhes.janela_info.grupos_detalhes) do
 		detalhe_infobg_onleave (block.bg)
 	end
 
@@ -5476,7 +3752,7 @@ local row_on_mouseup = function (self, button)
 					barra_antiga:SetAlpha (.9) --> volta a alfa antiga
 
 					info.mostrando = self
-					info.showing = i
+					info.showing = self._index
 
 					info.jogador.detalhes = self.show
 					info.jogador:MontaDetalhes (self.show, self)
@@ -5588,20 +3864,16 @@ local target_on_enter = function (self)
 			local ActorTargetsContainer
 			local total = 0
 			
-			if (spell.isReflection) then
-				ActorTargetsContainer = spell.extra
+			local attribute, sub_attribute = info.instancia:GetDisplay()
+			if (attribute == 1 or attribute == 3) then
+				ActorTargetsContainer = spell.targets
 			else
-				local attribute, sub_attribute = info.instancia:GetDisplay()
-				if (attribute == 1 or attribute == 3) then
-					ActorTargetsContainer = spell.targets
+				if (sub_attribute == 3) then --overheal
+					ActorTargetsContainer = spell.targets_overheal
+				elseif (sub_attribute == 6) then --absorbs
+					ActorTargetsContainer = spell.targets_absorbs
 				else
-					if (sub_attribute == 3) then --overheal
-						ActorTargetsContainer = spell.targets_overheal
-					elseif (sub_attribute == 6) then --absorbs
-						ActorTargetsContainer = spell.targets_absorbs
-					else
-						ActorTargetsContainer = spell.targets
-					end
+					ActorTargetsContainer = spell.targets
 				end
 			end
 			
@@ -5611,7 +3883,7 @@ local target_on_enter = function (self)
 				ActorTargetsSortTable [#ActorTargetsSortTable+1] = {target_name, amount or 0}
 				total = total + (amount or 0)
 			end
-			table.sort (ActorTargetsSortTable, _detalhes.Sort2)
+			_table_sort (ActorTargetsSortTable, _detalhes.Sort2)
 			
 			local spellname = _GetSpellInfo (barra.show)
 			
@@ -5630,52 +3902,21 @@ local target_on_enter = function (self)
 			
 			local SelectedToKFunction = _detalhes.ToKFunctions [_detalhes.ps_abbreviation]
 			
-			if (spell.isReflection) then
-				_detalhes:FormatCooltipForSpells()
-				GameCooltip:SetOwner(self, "BOTTOMRIGHT", "TOP", 4, -2)
-
-				_detalhes:AddTooltipSpellHeaderText ("Заклинаний отражено", {1, 0.9, 0.0, 1}, 1, select(3, _GetSpellInfo(spell.id)), 0.1, 0.9, 0.1, 0.9) --localize-me
-				_detalhes:AddTooltipHeaderStatusbar (1, 1, 1, 0.4)
-
-				GameCooltip:AddIcon(select(3, _GetSpellInfo(spell.id)), 1, 1, 16, 16, .1, .9, .1, .9)
-				_detalhes:AddTooltipHeaderStatusbar (1, 1, 1, 0.5)
-
-				local topDamage = ActorTargetsSortTable[1] and ActorTargetsSortTable[1][2]
-
-				for index, target in ipairs (ActorTargetsSortTable) do 
-					if (target [2] > 0) then
-						local spellId = target[1]
-						local damageDone = target[2]
-						local spellName, _, spellIcon = _GetSpellInfo(spellId)
-						GameCooltip:AddLine(spellName, SelectedToKFunction (_, damageDone) .. " (" .. floor(damageDone / topDamage * 100) .. "%)")
-						GameCooltip:AddIcon(spellIcon, 1, 1, 16, 16, .1, .9, .1, .9)
-						_detalhes:AddTooltipBackgroundStatusbar (false, damageDone / topDamage * 100)
-					end
-				end
-
-				GameCooltip:Show()
-
-				self.texture:SetAlpha (1)
-				self:SetAlpha (1)
-				barra:GetScript("OnEnter")(barra)
-				return
-			else
-				for index, target in ipairs (ActorTargetsSortTable) do 
-					if (target [2] > 0) then
-						local class = _detalhes:GetClass (target [1])
-						if (class and _detalhes.class_coords [class]) then
-							local cords = _detalhes.class_coords [class]
-							if (info.target_persecond) then
-								GameTooltip:AddDoubleLine (index .. ". |TInterface\\AddOns\\Details\\images\\classes_small_alpha:14:14:0:0:128:128:"..cords[1]*128 ..":"..cords[2]*128 ..":"..cords[3]*128 ..":"..cords[4]*128 .."|t " .. target [1], _detalhes:comma_value ( _math_floor (target [2] / meu_tempo) ), 1, 1, 1, 1, 1, 1)
-							else
-								GameTooltip:AddDoubleLine (index .. ". |TInterface\\AddOns\\Details\\images\\classes_small_alpha:14:14:0:0:128:128:"..cords[1]*128 ..":"..cords[2]*128 ..":"..cords[3]*128 ..":"..cords[4]*128 .."|t " .. target [1], SelectedToKFunction (_, target [2]), 1, 1, 1, 1, 1, 1)
-							end
+			for index, target in _ipairs (ActorTargetsSortTable) do 
+				if (target [2] > 0) then
+					local class = _detalhes:GetClass (target [1])
+					if (class and _detalhes.class_coords [class]) then
+						local cords = _detalhes.class_coords [class]
+						if (info.target_persecond) then
+							GameTooltip:AddDoubleLine (index .. ". |TInterface\\AddOns\\Details\\images\\classes_small_alpha:14:14:0:0:128:128:"..cords[1]*128 ..":"..cords[2]*128 ..":"..cords[3]*128 ..":"..cords[4]*128 .."|t " .. target [1], _detalhes:comma_value ( _math_floor (target [2] / meu_tempo) ), 1, 1, 1, 1, 1, 1)
 						else
-							if (info.target_persecond) then
-								GameTooltip:AddDoubleLine (index .. ". " .. target [1], _detalhes:comma_value ( _math_floor (target [2] / meu_tempo)), 1, 1, 1, 1, 1, 1)
-							else
-								GameTooltip:AddDoubleLine (index .. ". " .. target [1], SelectedToKFunction (_, target [2]), 1, 1, 1, 1, 1, 1)
-							end
+							GameTooltip:AddDoubleLine (index .. ". |TInterface\\AddOns\\Details\\images\\classes_small_alpha:14:14:0:0:128:128:"..cords[1]*128 ..":"..cords[2]*128 ..":"..cords[3]*128 ..":"..cords[4]*128 .."|t " .. target [1], SelectedToKFunction (_, target [2]), 1, 1, 1, 1, 1, 1)
+						end
+					else
+						if (info.target_persecond) then
+							GameTooltip:AddDoubleLine (index .. ". " .. target [1], _detalhes:comma_value ( _math_floor (target [2] / meu_tempo)), 1, 1, 1, 1, 1, 1)
+						else
+							GameTooltip:AddDoubleLine (index .. ". " .. target [1], SelectedToKFunction (_, target [2]), 1, 1, 1, 1, 1, 1)
 						end
 					end
 				end
@@ -5823,8 +4064,6 @@ function gump:CriaNovaBarraInfo2 (instancia, index)
 	return esta_barra
 end
 
-local x_start = 61
-local y_start = -10
 
 function gump:CriaNovaBarraInfo3 (instancia, index)
 
@@ -5840,10 +4079,6 @@ function gump:CriaNovaBarraInfo3 (instancia, index)
 
 	local y = (index-1) * 17
 	y = y*-1
-
-	--esta_barra:SetPoint ("LEFT", janela, "LEFT", x_start, 0)
-	--esta_barra:SetPoint ("RIGHT", janela, "RIGHT", 65, 0)
-	--esta_barra:SetPoint ("TOP", janela, "TOP", 0, y+y_start)
 
 	container3_bars_pointFunc (esta_barra, index)
 

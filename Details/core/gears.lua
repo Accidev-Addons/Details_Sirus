@@ -3,7 +3,6 @@ local Loc = LibStub ("AceLocale-3.0"):GetLocale ( "Details" )
 
 local UnitName = UnitName
 local UnitGUID = UnitGUID
-local UnitGroupRolesAssigned = DetailsFramework.UnitGroupRolesAssigned
 local select = select
 local floor = floor
 
@@ -11,8 +10,7 @@ local GetNumGroupMembers = GetNumGroupMembers
 -- local LibGroupTalents = LibStub ("LibGroupTalents-1.0")
 local LibGroupInSpecT = LibStub ("LibGroupInSpecT-1.1") --disabled due to classic wow
 
-local storageDebug = true
-local store_instances = _detalhes.InstancesToStoreData
+local store_instances = _detalhes.EncounterInformation
 
 function _detalhes:UpdateGears()
 
@@ -207,8 +205,6 @@ end
 					window1:LockInstance (true)
 					window2:LockInstance (true)
 
-					local statusbar_enabled1 = window1.show_statusbar
-					local statusbar_enabled2 = window2.show_statusbar
 
 					table.wipe (window1.snap); table.wipe (window2.snap)
 					window1.snap [3] = 2; window2.snap [1] = 1;
@@ -230,14 +226,22 @@ end
 					window2:SaveMainWindowPosition()
 
 				--	/dump ChatFrame3Background:GetSize()
---[[
-					_detalhes.move_janela_func (window1.baseframe, true, window1)
-					_detalhes.move_janela_func (window1.baseframe, false, window1)
-					_detalhes.move_janela_func (window2.baseframe, true, window2)
-					_detalhes.move_janela_func (window2.baseframe, false, window2)
---]]
 				end
 			end
+		end
+	end
+
+	local release_window = function (window, x, previous_pos)
+		window.baseframe:ClearAllPoints()
+		window.baseframe:SetParent (UIParent)
+		window.rowframe:SetParent (UIParent)
+		window.baseframe:SetPoint ("CENTER", UIParent, "CENTER", x, 0)
+		window.rowframe:SetPoint ("CENTER", UIParent, "CENTER", x, 0)
+		window:LockInstance (false)
+		window:SaveMainWindowPosition()
+
+		if (previous_pos) then
+			window:RestorePositionFromPositionTable (previous_pos)
 		end
 	end
 
@@ -247,47 +251,13 @@ end
 		local window2 = _detalhes:GetInstance (2)
 
 		if (second_window) then
-			window2.baseframe:ClearAllPoints()
-			window2.baseframe:SetParent (UIParent)
-			window2.rowframe:SetParent (UIParent)
-			window2.baseframe:SetPoint ("CENTER", UIParent, "CENTER", 200, 0)
-			window2.rowframe:SetPoint ("CENTER", UIParent, "CENTER", 200, 0)
-			window2:LockInstance (false)
-			window2:SaveMainWindowPosition()
-
-			local previous_pos = _detalhes.chat_tab_embed.w2_pos
-			if (previous_pos) then
-				window2:RestorePositionFromPositionTable (previous_pos)
-			end
-			return
+			return release_window (window2, 200, _detalhes.chat_tab_embed.w2_pos)
 		end
 
-		window1.baseframe:ClearAllPoints()
-		window1.baseframe:SetParent (UIParent)
-		window1.rowframe:SetParent (UIParent)
-		window1.baseframe:SetPoint ("CENTER", UIParent, "CENTER")
-		window1.rowframe:SetPoint ("CENTER", UIParent, "CENTER")
-		window1:LockInstance (false)
-		window1:SaveMainWindowPosition()
-
-		local previous_pos = _detalhes.chat_tab_embed.w1_pos
-		if (previous_pos) then
-			window1:RestorePositionFromPositionTable (previous_pos)
-		end
+		release_window (window1, 0, _detalhes.chat_tab_embed.w1_pos)
 
 		if (not _detalhes.chat_tab_embed.single_window and window2) then
-			window2.baseframe:ClearAllPoints()
-			window2.baseframe:SetParent (UIParent)
-			window2.rowframe:SetParent (UIParent)
-			window2.baseframe:SetPoint ("CENTER", UIParent, "CENTER", 200, 0)
-			window2.rowframe:SetPoint ("CENTER", UIParent, "CENTER", 200, 0)
-			window2:LockInstance (false)
-			window2:SaveMainWindowPosition()
-
-			local previous_pos = _detalhes.chat_tab_embed.w2_pos
-			if (previous_pos) then
-				window2:RestorePositionFromPositionTable (previous_pos)
-			end
+			release_window (window2, 200, _detalhes.chat_tab_embed.w2_pos)
 		end
 	end
 
@@ -303,22 +273,6 @@ end
 		end
 	end
 
---[[
-	--create a tab on chat
-	--FCF_OpenNewWindow(name)
-	--rename it? perhaps need to hook
-	--FCF_SetWindowName(chatFrame, name, true)    --FCF_SetWindowName(3, "DDD", true)
-	--/run local chatFrame = _G["ChatFrame3"]; FCF_SetWindowName(chatFrame, "DDD", true)
-
-	--FCF_SetWindowName(frame, name, doNotSave)
-	--API SetChatWindowName(frame:GetID(), name); -- set when doNotSave is false
-
-	-- need to store the chat frame reference
-	-- hook set window name and check if the rename was on our window
-
-	--FCF_Close
-	-- ^ when the window is closed
---]]
 
 ------------------------------------------------------------------------------------------------------------
 
@@ -349,67 +303,38 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
+local track_container_specs = function (container, spelllist)
+	for _, actor in container:ListActors() do
+		if (actor:IsPlayer()) then
+			for spellid, spell in pairs (actor:GetSpellList()) do
+				if (spelllist [spell.id]) then
+					actor.spec = spelllist [spell.id]
+					_detalhes.cached_specs [actor.serial] = actor.spec
+					break
+				end
+			end
+		end
+	end
+end
+
 function _detalhes:TrackSpecsNow (track_everything)
 
 	local spelllist = _detalhes.SpecSpellList
 
-	if (not track_everything) then
-		for _, actor in _detalhes.tabela_vigente[1]:ListActors() do
-			if (actor:IsPlayer()) then
-				for spellid, spell in pairs (actor:GetSpellList()) do
-					if (spelllist [spell.id]) then
-						actor.spec = spelllist [spell.id]
-						_detalhes.cached_specs [actor.serial] = actor.spec
-						break
-					end
-				end
-			end
-		end
-
-		for _, actor in _detalhes.tabela_vigente[2]:ListActors() do
-			if (actor:IsPlayer()) then
-				for spellid, spell in pairs (actor:GetSpellList()) do
-					if (spelllist [spell.id]) then
-						actor.spec = spelllist [spell.id]
-						_detalhes.cached_specs [actor.serial] = actor.spec
-						break
-					end
-				end
-			end
-		end
-	else
-		local combatlist = {}
+	local combatlist = {}
+	if (track_everything) then
 		for _, combat in ipairs (_detalhes.tabela_historico.tabelas) do
-			tinsert (combatlist, combat)
+			combatlist[#combatlist+1] = combat
 		end
-		tinsert (combatlist, _detalhes.tabela_vigente)
-		tinsert (combatlist, _detalhes.tabela_overall)
+		combatlist[#combatlist+1] = _detalhes.tabela_vigente
+		combatlist[#combatlist+1] = _detalhes.tabela_overall
+	else
+		combatlist[1] = _detalhes.tabela_vigente
+	end
 
-		for _, combat in ipairs (combatlist) do
-			for _, actor in combat[1]:ListActors() do
-				if (actor:IsPlayer()) then
-					for spellid, spell in pairs (actor:GetSpellList()) do
-						if (spelllist [spell.id]) then
-							actor.spec = spelllist [spell.id]
-							_detalhes.cached_specs [actor.serial] = actor.spec
-							break
-						end
-					end
-				end
-			end
-
-			for _, actor in combat[2]:ListActors() do
-				if (actor:IsPlayer()) then
-					for spellid, spell in pairs (actor:GetSpellList()) do
-						if (spelllist [spell.id]) then
-							actor.spec = spelllist [spell.id]
-							_detalhes.cached_specs [actor.serial] = actor.spec
-							break
-						end
-					end
-				end
-			end
-		end
+	for _, combat in ipairs (combatlist) do
+		track_container_specs (combat[1], spelllist)
+		track_container_specs (combat[2], spelllist)
 	end
 
 end
@@ -529,11 +454,13 @@ function _detalhes:CheckForPerformanceProfile()
 	if (profile and profile.enabled) then
 		_detalhes:SetWindowUpdateSpeed (profile.update_speed, true)
 		_detalhes:SetUseAnimations (profile.use_row_animations, true)
-		_detalhes:CaptureSet (profile.damage, "damage")
-		_detalhes:CaptureSet (profile.heal, "heal")
-		_detalhes:CaptureSet (profile.energy, "energy")
-		_detalhes:CaptureSet (profile.miscdata, "miscdata")
-		_detalhes:CaptureSet (profile.aura, "aura")
+		local capture_current = _detalhes.capture_current
+		capture_current.damage = profile.damage
+		capture_current.heal = profile.heal
+		capture_current.energy = profile.energy
+		capture_current.miscdata = profile.miscdata
+		capture_current.aura = profile.aura
+		_detalhes:CaptureRefresh()
 
 		if (not _detalhes.performance_profile_lastenabled or _detalhes.performance_profile_lastenabled ~= type) then
 			_detalhes:InstanceAlert (Loc ["STRING_OPTIONS_PERFORMANCE_PROFILE_LOAD"] .. type, {_detalhes.PerformanceIcons [type].icon, 14, 14, false, 0, 1, 0, 1, unpack (_detalhes.PerformanceIcons [type].color)} , 5, {_detalhes.empty_function})
@@ -544,11 +471,13 @@ function _detalhes:CheckForPerformanceProfile()
 	else
 		_detalhes:SetWindowUpdateSpeed (_detalhes.update_speed)
 		_detalhes:SetUseAnimations (_detalhes.use_row_animations)
-		_detalhes:CaptureSet (_detalhes.capture_real ["damage"], "damage")
-		_detalhes:CaptureSet (_detalhes.capture_real ["heal"], "heal")
-		_detalhes:CaptureSet (_detalhes.capture_real ["energy"], "energy")
-		_detalhes:CaptureSet (_detalhes.capture_real ["miscdata"], "miscdata")
-		_detalhes:CaptureSet (_detalhes.capture_real ["aura"], "aura")
+		local capture_current, capture_real = _detalhes.capture_current, _detalhes.capture_real
+		capture_current.damage = capture_real.damage
+		capture_current.heal = capture_real.heal
+		capture_current.energy = capture_real.energy
+		capture_current.miscdata = capture_real.miscdata
+		capture_current.aura = capture_real.aura
+		_detalhes:CaptureRefresh()
 		_detalhes.performance_profile_enabled = nil
 	end
 
@@ -595,6 +524,7 @@ end
 
 
 local background_tasks = {}
+local background_tasks_timer
 local task_timers = {
 	["LOW"] = 30,
 	["MEDIUM"] = 18,
@@ -625,7 +555,11 @@ function _detalhes:RegisterBackgroundTask (name, func, priority, ...)
 		background_tasks [name].object = self
 		return
 	else
-		background_tasks [name] = {func = func, lastexec = time(), priority = priority, nextexec = time() + task_timers [priority] * 60, args = {...}, args_amt = select ("#", ...), object = self}
+		background_tasks [name] = {func = func, priority = priority, nextexec = time() + task_timers [priority] * 60, args = {...}, args_amt = select ("#", ...), object = self}
+	end
+
+	if (not background_tasks_timer) then
+		background_tasks_timer = _detalhes:ScheduleRepeatingTimer ("DoBackgroundTasks", 120)
 	end
 end
 
@@ -652,8 +586,6 @@ function _detalhes:DoBackgroundTasks()
 		end
 	end
 end
-
-_detalhes.background_tasks_loop = _detalhes:ScheduleRepeatingTimer ("DoBackgroundTasks", 120)
 
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -716,6 +648,16 @@ function _detalhes.storage:HaveDataForEncounter (diff, encounter_id, guild_name)
 	end
 end
 
+local normalize_role = function (role)
+	role = string.lower (role or "damage")
+	if (role == "damager") then
+		return "damage"
+	elseif (role == "healer") then
+		return "healing"
+	end
+	return role
+end
+
 function _detalhes.storage:GetBestFromGuild (diff, encounter_id, role, dps, guild_name)
 	local db = _detalhes.storage:OpenRaidStorage()
 
@@ -736,19 +678,10 @@ function _detalhes.storage:GetBestFromGuild (diff, encounter_id, role, dps, guil
 
 	local best = 0
 	local bestdps = 0
-	local bestplayername
 	local onencounter
 	local bestactor
 
-	if (not role) then
-		role = "damage"
-	end
-	role = string.lower (role)
-	if (role == "damager") then
-		role = "damage"
-	elseif (role == "healer") then
-		role = "healing"
-	end
+	role = normalize_role (role)
 
 	local table = db [diff]
 	if (table) then
@@ -762,14 +695,12 @@ function _detalhes.storage:GetBestFromGuild (diff, encounter_id, role, dps, guil
 							if (dps) then
 								if (t[1]/encounter.elapsed > bestdps) then
 									bestdps = t[1]/encounter.elapsed
-									bestplayername = playername
 									onencounter = encounter
 									bestactor = t
 								end
 							else
 								if (t[1] > best) then
 									best = t [1]
-									bestplayername = playername
 									onencounter = encounter
 									bestactor = t
 								end
@@ -782,7 +713,7 @@ function _detalhes.storage:GetBestFromGuild (diff, encounter_id, role, dps, guil
 		end
 	end
 
-	return t, onencounter
+	return bestactor, onencounter
 end
 
 function _detalhes.storage:GetPlayerGuildRank (diff, encounter_id, role, playername, dps, guild_name)
@@ -804,15 +735,7 @@ function _detalhes.storage:GetPlayerGuildRank (diff, encounter_id, role, playern
 		return
 	end
 
-	if (not role) then
-		role = "damage"
-	end
-	role = string.lower (role)
-	if (role == "damager") then
-		role = "damage"
-	elseif (role == "healer") then
-		role = "healing"
-	end
+	role = normalize_role (role)
 
 	local playerScore = {}
 
@@ -858,7 +781,7 @@ function _detalhes.storage:GetPlayerGuildRank (diff, encounter_id, role, playern
 			local t = {}
 			for playerName, playerTable in pairs (playerScore) do
 				playerTable [5]  = playerName
-				tinsert (t, playerTable)
+				t[#t+1] = playerTable
 			end
 
 			table.sort (t, dps and _detalhes.Sort2 or _detalhes.Sort1)
@@ -884,15 +807,7 @@ function _detalhes.storage:GetBestFromPlayer (diff, encounter_id, role, playerna
 	local onencounter
 	local topdps
 
-	if (not role) then
-		role = "damage"
-	end
-	role = string.lower (role)
-	if (role == "damager") then
-		role = "damage"
-	elseif (role == "healer") then
-		role = "healing"
-	end
+	role = normalize_role (role)
 
 	local table = db [diff]
 	if (table) then
@@ -933,18 +848,15 @@ function _detalhes.storage:DBGuildSync()
 
 end
 
-local OnlyFromCurrentRaidTier = true
 local encounter_is_current_tier = function (encounterID)
-	if (OnlyFromCurrentRaidTier) then
-		local mapID = _detalhes:GetInstanceIdFromEncounterId (encounterID)
-		if (mapID) then
-			--> if isn'y the mapID in the table to save data
-			if (not _detalhes.InstancesToStoreData [mapID]) then
-				return false
-			end
-		else
+	local mapID = _detalhes:GetInstanceIdFromEncounterId (encounterID)
+	if (mapID) then
+		--> if isn'y the mapID in the table to save data
+		if (not store_instances [mapID]) then
 			return false
 		end
+	else
+		return false
 	end
 	return true
 end
@@ -1003,7 +915,7 @@ function _detalhes.storage:GetIDsToGuildSync()
 					for index, encounter in ipairs (encounterTable) do
 						if (encounter.servertime) then
 							if (myGuildName == encounter.guild) then
-								tinsert (IDs, encounter.servertime)
+								IDs[#IDs+1] = encounter.servertime
 							end
 						end
 					end
@@ -1046,7 +958,7 @@ function _detalhes.storage:CheckMissingIDsToGuildSync (IDsList)
 		-- print(ID)
 		if (not have_encounter (db, ID)) then
 			if (not have_recent_requested_encounter (ID)) then
-				tinsert (RequestIDs, ID)
+				RequestIDs[#RequestIDs+1] = ID
 				_detalhes.RecentRequestedIDs [ID] = true
 			end
 		end
@@ -1076,7 +988,7 @@ function _detalhes.storage:BuildEncounterDataToGuildSync (IDsList)
 
 	local EncounterList = {}
 	local CurrentTable = {}
-	tinsert (EncounterList, CurrentTable)
+	EncounterList[#EncounterList+1] = CurrentTable
 
 	local AmtToSend = 0
 	local MaxAmount = 0
@@ -1097,14 +1009,14 @@ function _detalhes.storage:BuildEncounterDataToGuildSync (IDsList)
 							CurrentTable [diff] = CurrentTable [diff] or {}
 							CurrentTable [diff] [encounterID] = CurrentTable [diff] [encounterID] or {}
 
-							tinsert (CurrentTable [diff] [encounterID], encounter)
+							CurrentTable [diff] [encounterID][#CurrentTable [diff] [encounterID]+1] = encounter
 
 							AmtToSend = AmtToSend + 1
 							MaxAmount = MaxAmount + 1
 
 							if (MaxAmount == 3) then
 								CurrentTable = {}
-								tinsert (EncounterList, CurrentTable)
+								EncounterList[#EncounterList+1] = CurrentTable
 								MaxAmount = 0
 							end
 						end
@@ -1148,7 +1060,7 @@ function _detalhes.storage:AddGuildSyncData (data, source)
 									db [diff] = db [diff] or {}
 									db [diff] [encounterID] = db [diff] [encounterID] or {}
 
-									tinsert (db [diff] [encounterID], encounter)
+									db [diff] [encounterID][#db [diff] [encounterID]+1] = encounter
 
 									if (_G.DetailsRaidHistoryWindow and _G.DetailsRaidHistoryWindow:IsShown()) then
 										_G.DetailsRaidHistoryWindow:Refresh()
@@ -1195,7 +1107,9 @@ function _detalhes.storage:ListDiffs()
 
 	local t = {}
 	for diff, _ in pairs (db) do
-		tinsert (t, diff)
+		if (type (diff) == "number") then
+			t[#t+1] = diff
+		end
 	end
 	return t
 end
@@ -1208,17 +1122,10 @@ function _detalhes.storage:ListEncounters (diff)
 	end
 
 	local t = {}
-	if (diff) then
-		local table = db [diff]
-		if (table) then
+	for this_diff, table in pairs (db) do
+		if (type (this_diff) == "number" and (not diff or this_diff == diff)) then
 			for encounter_id, _ in pairs (table) do
-				tinsert (t, {diff, encounter_id})
-			end
-		end
-	else
-		for diff, table in pairs (db) do
-			for encounter_id, _ in pairs (table) do
-				tinsert (t, {diff, encounter_id})
+				t[#t+1] = {this_diff, encounter_id}
 			end
 		end
 	end
@@ -1237,54 +1144,25 @@ function _detalhes.storage:GetPlayerData (diff, encounter_id, playername)
 	assert (type (playername) == "string", "PlayerName must be a string.")
 
 
-	if (not diff) then
-		for diff, table in pairs (db) do
-			if (encounter_id) then
-				local encounters = table [encounter_id]
-				if (encounters) then
-					for i = 1, #encounters do
-						local encounter = encounters [i]
-						local player = encounter.healing [playername] or encounter.damage [playername]
-						if (player) then
-							tinsert (t, player)
-						end
-					end
-				end
-			else
-				for encounter_id, encounters in pairs (table) do
-					for i = 1, #encounters do
-						local encounter = encounters [i]
-						local player = encounter.healing [playername] or encounter.damage [playername]
-						if (player) then
-							tinsert (t, player)
-						end
-					end
-				end
+	local add_player_records = function (encounters)
+		for i = 1, #encounters do
+			local encounter = encounters [i]
+			local player = encounter.healing [playername] or encounter.damage [playername]
+			if (player) then
+				t[#t+1] = player
 			end
 		end
-	else
-		local table = db [diff]
-		if (table) then
+	end
+
+	for this_diff, table in pairs (db) do
+		if (type (this_diff) == "number" and (not diff or this_diff == diff)) then
 			if (encounter_id) then
-				local encounters = table [encounter_id]
-				if (encounters) then
-					for i = 1, #encounters do
-						local encounter = encounters [i]
-						local player = encounter.healing [playername] or encounter.damage [playername]
-						if (player) then
-							tinsert (t, player)
-						end
-					end
+				if (table [encounter_id]) then
+					add_player_records (table [encounter_id])
 				end
 			else
-				for encounter_id, encounters in pairs (table) do
-					for i = 1, #encounters do
-						local encounter = encounters [i]
-						local player = encounter.healing [playername] or encounter.damage [playername]
-						if (player) then
-							tinsert (t, player)
-						end
-					end
+				for _, encounters in pairs (table) do
+					add_player_records (encounters)
 				end
 			end
 		end
@@ -1318,30 +1196,14 @@ function _detalhes.storage:GetEncounterData (diff, encounter_id, guild)
 
 		if (guild) then
 			if (encounter.guild == guild) then
-				tinsert (t, encounter)
+				t[#t+1] = encounter
 			end
 		else
-			tinsert (t, encounter)
+			t[#t+1] = encounter
 		end
 	end
 
 	return t
-end
-
-local create_storage_tables = function()
-	--> get the storage table
-	local db = DetailsDataStorage
-
-	if (not db and _detalhes.CreateStorageDB) then
-		db = _detalhes:CreateStorageDB()
-		if (not db) then
-			return
-		end
-	elseif (not db) then
-		return
-	end
-
-	return db
 end
 
 function _detalhes.ScheduleLoadStorage()
@@ -1361,13 +1223,12 @@ function _detalhes.ScheduleLoadStorage()
 				return
 			end
 
-			create_storage_tables()
+			_detalhes.storage:OpenRaidStorage()
 		end
 	end
 
 	if (IsAddOnLoaded ("Details_DataStorage")) then
 		_detalhes.schedule_storage_load = nil
-		_detalhes.StorageLoaded = true
 		if (_detalhes.debug) then
 			print ("|cFFFFFF00Details! storage loaded.")
 		end
@@ -1404,11 +1265,7 @@ function _detalhes.OpenStorage()
 			return
 		end
 
-		local db = create_storage_tables()
-
-		if (db and IsAddOnLoaded ("Details_DataStorage")) then
-			_detalhes.StorageLoaded = true
-		end
+		_detalhes.storage:OpenRaidStorage()
 
 		return DetailsDataStorage
 	else
@@ -1417,39 +1274,6 @@ function _detalhes.OpenStorage()
 end
 
 Details.Database = {}
-
-function Details.Database.LoadDB()
-	--check if the storage is already loaded
-	if (not IsAddOnLoaded("Details_DataStorage")) then
-		local loaded, reason = LoadAddOn("Details_DataStorage")
-		if (not loaded) then
-			if (_detalhes.debug) then
-				print ("|cFFFFFF00Details! Storage|r: can't save the encounter, couldn't load DataStorage, may be the addon is disabled.")
-			end
-			return
-		end
-	end
-
-	--> get the storage table
-	local db = _G.DetailsDataStorage
-	
-	if (not db and _detalhes.CreateStorageDB) then
-		db = _detalhes:CreateStorageDB()
-		if (not db) then
-			if (_detalhes.debug) then
-				print ("|cFFFFFF00Details! Storage|r: can't save the encounter, couldn't load DataStorage, may be the addon is disabled.")
-			end
-			return
-		end
-	elseif (not db) then
-		if (_detalhes.debug) then
-			print ("|cFFFFFF00Details! Storage|r: can't save the encounter, couldn't load DataStorage, may be the addon is disabled.")
-		end
-		return
-	end
-
-	return db
-end
 
 function Details.Database.GetBossKillsDB(db)
 	--total kills in a boss on raid or dungeon
@@ -1474,11 +1298,10 @@ function _detalhes:StoreEncounter (combat)
 		return
 	end
 
-	local name, _, _, difficultyName, maxPlayers = GetInstanceInfo()
 	local mapID = GetCurrentMapAreaID()
-	local bossCLEUID = combat.boss_info and combat.boss_info.id
+	local bossCLEUID = combat.is_boss and combat.is_boss.id
 
-	if (not store_instances [mapID] and not _detalhes.EncountersToStoreData[bossCLEUID]) then
+	if (not store_instances [mapID] and not _detalhes:GetInstanceIdFromEncounterId(bossCLEUID)) then
 		if (_detalhes.debug) then
 			print ("|cFFFFFF00Details! Storage|r: instance not allowed.")
 		end
@@ -1496,57 +1319,17 @@ function _detalhes:StoreEncounter (combat)
 	end
 
 	local diff = combat:GetDifficulty()
-	if (storageDebug or (diff == 1 or diff == 2 or diff == 3 or diff == 4)) then
-
-		--> check the guild name
-		local match = 0
-		local guildName = select (1, GetGuildInfo ("player"))
-		local raid_size = GetNumGroupMembers() or 0
-
-		if (guildName) then
-			for i = 1, raid_size do
-				local gName = select (1, GetGuildInfo ("raid" .. i)) or ""
-				if (gName == guildName) then
-					match = match + 1
-				end
-			end
-
-			if (match < raid_size * 0.75 and not storageDebug) then
-				if (_detalhes.debug) then
-					print ("|cFFFFFF00Details! Storage|r: can't save the encounter, need at least 75% of players be from your guild.")
-				end
-				return
-			end
-		else
+	do
+		local guildName = (GetGuildInfo ("player"))
+		if (not guildName) then
 			if (_detalhes.debug) then
 				print ("|cFFFFFF00Details! Storage|r: player isn't in a guild.")
 			end
 			return
 		end
 
-		--> check if the storage is already loaded
-		if (not IsAddOnLoaded ("Details_DataStorage")) then
-			local loaded, reason = LoadAddOn ("Details_DataStorage")
-			if (not loaded) then
-				if (_detalhes.debug) then
-					print ("|cFFFFFF00Details! Storage|r: can't save the encounter, couldn't load DataStorage, may be the addon is disabled.")
-				end
-				return
-			end
-		end
-
-		--> get the storage table
-		local db = DetailsDataStorage
-
-		if (not db and _detalhes.CreateStorageDB) then
-			db = _detalhes:CreateStorageDB()
-			if (not db) then
-				if (_detalhes.debug) then
-					print ("|cFFFFFF00Details! Storage|r: can't save the encounter, couldn't load DataStorage, may be the addon is disabled.")
-				end
-				return
-			end
-		elseif (not db) then
+		local db = _detalhes.storage:OpenRaidStorage()
+		if (not db) then
 			if (_detalhes.debug) then
 				print ("|cFFFFFF00Details! Storage|r: can't save the encounter, couldn't load DataStorage, may be the addon is disabled.")
 			end
@@ -1570,7 +1353,7 @@ function _detalhes:StoreEncounter (combat)
 			healing = {},
 			date = date ("%H:%M %d/%m/%y"),
 			time = time(),
-			servertime = GetGameTime(),
+			servertime = GetServerTime(),
 			elapsed = combat:GetCombatTime(),
 			guild = guildName,
 		}
@@ -1594,30 +1377,24 @@ function _detalhes:StoreEncounter (combat)
 
 					local _, _, class = UnitClass (player_name)
 
+					local guid = UnitGUID ("raid" .. i)
+					local ilvl = C_Inspect.GetAvgItemLevel ("raid" .. i) or _detalhes.item_level_pool [guid] and _detalhes.item_level_pool [guid].ilvl or 0
+
 					local damage_actor = damage_container_pool [damage_container_hash [player_name]]
 					if (damage_actor) then
-						local guid = UnitGUID (player_name) or UnitGUID (UnitName ("raid" .. i))
-						this_combat_data.damage [player_name] = {floor (damage_actor.total), (ItemLevelMixIn and ItemLevelMixIn:GetItemLevel(guid)) or _detalhes.item_level_pool [guid] and _detalhes.item_level_pool [guid].ilvl or 0, class or 0}
+						this_combat_data.damage [player_name] = {floor (damage_actor.total), ilvl, class or 0}
 					end
-				-- elseif (role == "HEALER") then
-				-- 	local player_name, player_realm = UnitName ("raid" .. i)
-				-- 	if (player_realm and player_realm ~= "") then
-				-- 		player_name = player_name .. "-" .. player_realm
-				-- 	end
-
-				-- 	local _, _, class = UnitClass (player_name)
 
 					local heal_actor = healing_container_pool [healing_container_hash [player_name]]
 					if (heal_actor) then
-						local guid = UnitGUID (player_name) or UnitGUID (UnitName ("raid" .. i))
-						this_combat_data.healing [player_name] = {floor (heal_actor.total), (ItemLevelMixIn and ItemLevelMixIn:GetItemLevel(guid)) or _detalhes.item_level_pool [guid] and _detalhes.item_level_pool [guid].ilvl or 0, class or 0}
+						this_combat_data.healing [player_name] = {floor (heal_actor.total), ilvl, class or 0}
 					end
 				-- end
 			end
 		end
 
 		--> add the encounter data
-		tinsert (encounter_database, this_combat_data)
+		encounter_database[#encounter_database+1] = this_combat_data
 		if (_detalhes.debug) then
 			print ("|cFFFFFF00Details! Storage|r: combat data added to encounter database.")
 		end
@@ -1627,7 +1404,7 @@ function _detalhes:StoreEncounter (combat)
 		local mybest, onencounter = _detalhes.storage:GetBestFromPlayer (diff, encounter_id, myrole, _detalhes.playername, true) --> get dps or hps
 		mybest = mybest or {}
 		mybest[1] = mybest and mybest[1] or 0
-		local myBestDps = (mybest and (mybest [1] / (onencounter and onencounter.elapsed))) or 0
+		local myBestDps = (mybest and (mybest [1] / (onencounter and onencounter.elapsed or 1))) or 0
 		local mybest2, onencounter2 = _detalhes.storage:GetBestFromPlayer (diff, encounter_id, myrole2, _detalhes.playername, true) --> get dps or hps
 		mybest2 = mybest2 or {}
 		mybest2[1] = mybest2 and mybest2[1] or 0
@@ -1684,10 +1461,6 @@ function _detalhes:StoreEncounter (combat)
 				end
 			end
 		end
-	else
-		if (_detalhes.debug) then
-			print ("|cFFFFFF00Details! Storage|r: raid difficulty must be 10 normal or 25 normal or 10 heroic or 25 heroic.")
-		end
 	end
 end
 
@@ -1700,10 +1473,10 @@ ilvl_core.amt_inspecting = 0
 _detalhes.ilevel.core = ilvl_core
 
 ilvl_core:RegisterEvent ("GROUP_ONENTER", "OnEnter")
-ilvl_core:RegisterEvent ("GROUP_ONLEAVE", "OnLeave")
-ilvl_core:RegisterEvent ("COMBAT_PLAYER_ENTER", "EnterCombat")
-ilvl_core:RegisterEvent ("COMBAT_PLAYER_LEAVE", "LeaveCombat")
-ilvl_core:RegisterEvent ("ZONE_TYPE_CHANGED", "ZoneChanged")
+ilvl_core:RegisterEvent ("GROUP_ONLEAVE", "StopLoop")
+ilvl_core:RegisterEvent ("COMBAT_PLAYER_ENTER", "StopLoop")
+ilvl_core:RegisterEvent ("COMBAT_PLAYER_LEAVE", "StartLoop")
+ilvl_core:RegisterEvent ("ZONE_TYPE_CHANGED", "StartLoop")
 
 local inspecting = {}
 ilvl_core.forced_inspects = {}
@@ -1716,13 +1489,7 @@ function ilvl_core:HasQueuedInspec (unitName)
 end
 
 local inspect_frame = CreateFrame ("Frame")
-inspect_frame:RegisterEvent ("INSPECT_READY")
-
-local two_hand = {
-	["INVTYPE_2HWEAPON"] = true,
- 	["INVTYPE_RANGED"] = true,
-	["INVTYPE_RANGEDRIGHT"] = true,
-}
+inspect_frame:RegisterCustomEvent ("INSPECT_ITEM_LEVEL_UPDATE")
 
 local MAX_INSPECT_AMOUNT = 1
 local MIN_ILEVEL_TO_STORE = 50
@@ -1775,10 +1542,6 @@ function _detalhes:IlvlFromNetwork (player, realm, core, serialNumber, itemLevel
 	end
 end
 
---> test
---/run _detalhes.ilevel:CalcItemLevel ("player", UnitGUID("player"), true)
---/run wipe (_detalhes.item_level_pool)
-
 function ilvl_core:CalcItemLevel (unitid, guid, shout)
 
 	if (type (unitid) == "table") then
@@ -1787,131 +1550,32 @@ function ilvl_core:CalcItemLevel (unitid, guid, shout)
 		unitid = unitid [1]
 	end
 
-	if (CheckInteractDistance (unitid, 1)) then
+	local average = C_Inspect.GetAvgItemLevel (unitid)
 
-		--> 16 = all itens including main and off hand
-		local item_amount = 16
-		local item_level = 0
-		local failed = 0
-
-		-- for equip_id = 1, 17 do
-		-- 	if (equip_id ~= 4) then --shirt slot
-		-- 		local item = GetInventoryItemLink (unitid, equip_id)
-		-- 		if (item) then
-		-- 			local _, _, itemRarity, iLevel, _, _, _, _, equipSlot = GetItemInfo (item)
-		-- 			if (iLevel) then
-		-- 				item_level = item_level + iLevel
-
-		-- 				--> 16 = main hand 17 = off hand
-		-- 				-->  if using a two-hand, ignore the off hand slot
-		-- 				if (equip_id == 16 and two_hand [equipSlot]) then
-		-- 					item_amount = 15
-		-- 					break
-		-- 				end
-		-- 			end
-		-- 		else
-		-- 			failed = failed + 1
-		-- 			if (failed > 2) then
-		-- 				break
-		-- 			end
-		-- 		end
-		-- 	end
-		-- end
-		-- /run print()
-		local average = ItemLevelMixIn:GetItemLevel( guid)
-		--print (UnitName (unitid), "ILVL:", average, unitid, "items:", item_amount)
-
-		--> register
-		if (average > 0) then
-			if (shout) then
-				_detalhes:Msg (UnitName(unitid) .. " item level: " .. average)
-			end
-
-			if (average > MIN_ILEVEL_TO_STORE) then
-				local name = _detalhes:GetCLName (unitid)
-				_detalhes.item_level_pool [guid] = {name = name, ilvl = average, time = time()}
-			end
+	if (average and average > 0) then
+		if (shout) then
+			_detalhes:Msg (UnitName(unitid) .. " item level: " .. average)
 		end
 
---[[
-		local spec
-		local talents = {}
-
-		if (not DetailsFramework.IsClassicWow()) then
-			spec = GetInspectSpecialization (unitid)
-			if (spec and spec ~= 0) then
-				_detalhes.cached_specs [guid] = spec
-			end
-
---------------------------------------------------------------------------------------------------------
-
-			for i = 1, 7 do
-				for o = 1, 3 do
-					--need to review this in classic
-					local talentID, name, texture, selected, available = GetTalentInfo (i, o, 1, true, unitid)
-					if (selected) then
-						tinsert (talents, talentID)
-						break
-					end
-				end
-			end
-
-			if (talents [1]) then
-				_detalhes.cached_talents [guid] = talents
-				--print (UnitName (unitid), "talents:", unpack (talents))
-			end
+		if (average > MIN_ILEVEL_TO_STORE) then
+			local name = _detalhes:GetCLName (unitid)
+			_detalhes.item_level_pool [guid] = {name = name, ilvl = average, time = time()}
 		end
---------------------------------------------------------------------------------------------------------
-
-		if (ilvl_core.forced_inspects [guid]) then
-			if (type (ilvl_core.forced_inspects [guid].callback) == "function") then
-				local okey, errortext = pcall (ilvl_core.forced_inspects[guid].callback, guid, unitid, ilvl_core.forced_inspects[guid].param1, ilvl_core.forced_inspects[guid].param2)
-				if (not okey) then
-					_detalhes:Msg ("Error on QueryInspect callback: " .. errortext)
-				end
-			end
-			ilvl_core.forced_inspects [guid] = nil
-		end
-
---------------------------------------------------------------------------------------------------------
-]]
-
 	end
 end
 _detalhes.ilevel.CalcItemLevel = ilvl_core.CalcItemLevel
 
-inspect_frame:SetScript ("OnEvent", function (self, event, ...)
-	local guid = select (1, ...)
-
-	if (inspecting [guid]) then
-		local unitid, cancel_tread = inspecting [guid] [1], inspecting [guid] [2]
+inspect_frame:SetScript ("OnEvent", function (self, event, guid)
+	local t = inspecting [guid]
+	if (t) then
 		inspecting [guid] = nil
 		ilvl_core.amt_inspecting = ilvl_core.amt_inspecting - 1
+		ilvl_core:CancelTimer (t [2])
+	end
 
-		ilvl_core:CancelTimer (cancel_tread)
-
-		--> do inspect stuff
-		if (unitid) then
-			local t = {unitid, guid}
-			--ilvl_core:ScheduleTimer ("CalcItemLevel", 0.5, t)
-			ilvl_core:ScheduleTimer ("CalcItemLevel", 0.5, t)
-			ilvl_core:ScheduleTimer ("CalcItemLevel", 2, t)
-			ilvl_core:ScheduleTimer ("CalcItemLevel", 4, t)
-			ilvl_core:ScheduleTimer ("CalcItemLevel", 8, t)
-		end
-	else
-		if (IsInRaid()) then
-			--get the unitID
-			local serial = ...
-			if (serial and type (serial) == "string") then
-				for i = 1, GetNumGroupMembers() do
-					if (UnitGUID ("raid" .. i) == serial) then
-						ilvl_core:ScheduleTimer ("CalcItemLevel", 2, {"raid" .. i, serial})
-						ilvl_core:ScheduleTimer ("CalcItemLevel", 4, {"raid" .. i, serial})
-					end
-				end
-			end
-		end
+	local unitid = UnitTokenFromGUID (guid)
+	if (unitid and (UnitInRaid (unitid) or UnitInParty (unitid))) then
+		ilvl_core:CalcItemLevel (unitid, guid)
 	end
 end)
 
@@ -1920,56 +1584,21 @@ function ilvl_core:InspectTimeOut (guid)
 	ilvl_core.amt_inspecting = ilvl_core.amt_inspecting - 1
 end
 
-function ilvl_core:ReGetItemLevel (t)
-	local unitid, guid, is_forced, try_number = unpack (t)
-	return ilvl_core:GetItemLevel (unitid, guid, is_forced, try_number)
-end
-
-function ilvl_core:GetItemLevel (unitid, guid, is_forced, try_number)
-
-	--> ddouble check
+function ilvl_core:GetItemLevel (unitid, guid, is_forced)
 	if (not is_forced and (UnitAffectingCombat ("player") or InCombatLockdown())) then
 		return
 	end
-	if (not unitid or not CanInspect (unitid) or not CheckInteractDistance (unitid, 1)) then
-		if (is_forced) then
-			try_number = try_number or 0
-			if (try_number > 18) then
-				return
-			else
-				try_number = try_number + 1
-			end
-			ilvl_core:ScheduleTimer ("ReGetItemLevel", 3, {unitid, guid, is_forced, try_number})
-		end
+	if (not unitid) then
 		return
+	end
+
+	if (not C_Inspect.RequestAvgItemLevel (unitid)) then
+		return ilvl_core:CalcItemLevel (unitid, guid)
 	end
 
 	inspecting [guid] = {unitid, ilvl_core:ScheduleTimer ("InspectTimeOut", 12, guid)}
 	ilvl_core.amt_inspecting = ilvl_core.amt_inspecting + 1
-
-	NotifyInspect (unitid)
 end
-
-local NotifyInspectHook = function (unitid)
-	local unit = unitid:gsub ("%d+", "")
-
-	if ((IsInRaid() or IsInGroup()) and (_detalhes:GetZoneType() == "raid" or _detalhes:GetZoneType() == "party")) then
-		local guid = UnitGUID (unitid)
-		local name = _detalhes:GetCLName (unitid)
-		if (guid and name and not inspecting [guid]) then
-			for i = 1, GetNumGroupMembers() do
-				if (name == _detalhes:GetCLName (unit .. i)) then
-					unitid = unit .. i
-					break
-				end
-			end
-
-			inspecting [guid] = {unitid, ilvl_core:ScheduleTimer ("InspectTimeOut", 12, guid)}
-			ilvl_core.amt_inspecting = ilvl_core.amt_inspecting + 1
-		end
-	end
-end
-hooksecurefunc ("NotifyInspect", NotifyInspectHook)
 
 function ilvl_core:Reset()
 	ilvl_core.raid_id = 1
@@ -1992,7 +1621,7 @@ function ilvl_core:QueryInspect (unitName, callback, param1)
 			end
 		end
 	elseif (IsInGroup()) then
-		for i = 1, GetNumGroupMembers() do
+		for i = 1, GetNumPartyMembers() do
 			if (GetUnitName ("party" .. i, true) == unitName) then
 				unitid = "party" .. i
 				break
@@ -2073,13 +1702,6 @@ function ilvl_core:Loop()
 	ilvl_core.raid_id = ilvl_core.raid_id + 1
 end
 
-function ilvl_core:EnterCombat()
-	if (ilvl_core.loop_process) then
-		ilvl_core:CancelTimer (ilvl_core.loop_process)
-		ilvl_core.loop_process = nil
-	end
-end
-
 local can_start_loop = function()
 	if ((_detalhes:GetZoneType() ~= "raid" and _detalhes:GetZoneType() ~= "party") or ilvl_core.loop_process or _detalhes.in_combat or not _detalhes.track_item_level) then
 		return false
@@ -2087,17 +1709,17 @@ local can_start_loop = function()
 	return true
 end
 
-function ilvl_core:LeaveCombat()
+function ilvl_core:StartLoop()
 	if (can_start_loop()) then
 		ilvl_core:Reset()
 		ilvl_core.loop_process = ilvl_core:ScheduleRepeatingTimer ("Loop", LOOP_TIME)
 	end
 end
 
-function ilvl_core:ZoneChanged (zone_type)
-	if (can_start_loop()) then
-		ilvl_core:Reset()
-		ilvl_core.loop_process = ilvl_core:ScheduleRepeatingTimer ("Loop", LOOP_TIME)
+function ilvl_core:StopLoop()
+	if (ilvl_core.loop_process) then
+		ilvl_core:CancelTimer (ilvl_core.loop_process)
+		ilvl_core.loop_process = nil
 	end
 end
 
@@ -2106,17 +1728,7 @@ function ilvl_core:OnEnter()
 		_detalhes:SendCharacterData()
 	end
 
-	if (can_start_loop()) then
-		ilvl_core:Reset()
-		ilvl_core.loop_process = ilvl_core:ScheduleRepeatingTimer ("Loop", LOOP_TIME)
-	end
-end
-
-function ilvl_core:OnLeave()
-	if (ilvl_core.loop_process) then
-		ilvl_core:CancelTimer (ilvl_core.loop_process)
-		ilvl_core.loop_process = nil
-	end
+	ilvl_core:StartLoop()
 end
 
 --> ilvl API
@@ -2127,16 +1739,10 @@ function _detalhes.ilevel:TrackItemLevel (bool)
 	if (type (bool) == "boolean") then
 		if (bool) then
 			_detalhes.track_item_level = true
-			if (can_start_loop()) then
-				ilvl_core:Reset()
-				ilvl_core.loop_process = ilvl_core:ScheduleRepeatingTimer ("Loop", LOOP_TIME)
-			end
+			ilvl_core:StartLoop()
 		else
 			_detalhes.track_item_level = false
-			if (ilvl_core.loop_process) then
-				ilvl_core:CancelTimer (ilvl_core.loop_process)
-				ilvl_core.loop_process = nil
-			end
+			ilvl_core:StopLoop()
 		end
 	end
 end
@@ -2170,17 +1776,6 @@ function _detalhes:GetSpecFromSerial (guid)
 end
 
 function _detalhes:LibGroupInSpecT_UpdateReceived (event, guid, unitid, info)
---[[
-	--> update talents
-	local talents = _detalhes.cached_talents [guid] or {}
-	local i = 1
-	for talentId, _ in pairs (info.talents) do
-		talents [i] = talentId
-		i = i + 1
-	end
-	_detalhes.cached_talents [guid] = talents
-]]
-
 	if (_detalhes.debug) then
 		_detalhes:Msg ("(debug) received GroupInSpecT_Update from user", guid)
 	end
@@ -2264,362 +1859,5 @@ function Details:DecompressData (data, dataType)
 		end
 
 		return data
-	end
-end
-
-local NEEDTODO = false
---talent tree
-if (NEEDTODO) then
--- do
-	local talentWatchClassic = CreateFrame ("frame")
-	talentWatchClassic:RegisterEvent("CHARACTER_POINTS_CHANGED")
-	talentWatchClassic:RegisterEvent("SPELLS_CHANGED")
-	talentWatchClassic:RegisterEvent("PLAYER_ENTERING_WORLD")
-	talentWatchClassic:RegisterEvent("GROUP_ROSTER_UPDATE")
-
-	talentWatchClassic.cooldown = 0
-
-	C_Timer:NewTicker (600, function()
-		Details:GetOldSchoolTalentInformation()
-	end)
-
-	talentWatchClassic:SetScript("OnEvent", function(self, event, ...)
-		if (talentWatchClassic.delayedUpdate and not talentWatchClassic.delayedUpdate._cancelled) then
-			return
-		else
-			talentWatchClassic.delayedUpdate = C_Timer:NewTimer(5, Details.GetOldSchoolTalentInformation)
-		end
-	end)
-
-	function Details.GetOldSchoolTalentInformation()
-		--cancel any schedule
-		if (talentWatchClassic.delayedUpdate and not talentWatchClassic.delayedUpdate._cancelled) then
-			talentWatchClassic.delayedUpdate:Cancel()
-		end
-		talentWatchClassic.delayedUpdate = nil
-
-		--amount of tabs existing
-		local numTabs = GetNumTalentTabs() or 3
-
-		--store the background textures for each tab
-		local pointsPerSpec = {}
-		local talentsSelected = {}
-
-		for i = 1, (MAX_TALENT_TABS or 3) do
-			if (i <= numTabs) then
-				--tab information
-				local name, iconTexture, pointsSpent, fileName = GetTalentTabInfo (i)
-				if (name) then
-					tinsert (pointsPerSpec, {name, pointsSpent, fileName})
-				end
-
-				--talents information
-				local numTalents = GetNumTalents (i) or 20
-				local MAX_NUM_TALENTS = MAX_NUM_TALENTS or 20
-
-				for talentIndex = 1, MAX_NUM_TALENTS do
-					if (talentIndex <= numTalents) then
-						local name, iconTexture, tier, column, rank, maxRank, isExceptional, available = GetTalentInfo (i, talentIndex)
-						if (name and rank and type (rank) == "number") then
-							--send the specID instead of the specName
-							local specID = Details.textureToSpec [fileName]
-							tinsert (talentsSelected, {iconTexture, rank, tier, column, i, specID, maxRank})
-						end
-					end
-				end
-			end
-		end
-
-		local MIN_SPECS = 4
-
-		--put the spec with more talent point to the top
-		table.sort (pointsPerSpec, function (t1, t2) return t1[2] > t2[2] end)
-
-		--get the spec with more points spent
-		local spec = pointsPerSpec[1]
-		if (spec and spec[2] >= MIN_SPECS) then
-			local specTexture = spec[3]
-
-			--add the spec into the spec cache
-			Details.playerClassicSpec = {}
-			Details.playerClassicSpec.specs = Details.GetClassicSpecByTalentTexture(specTexture)
-			Details.playerClassicSpec.talents = talentsSelected
-
-			--cache the player specId
-			_detalhes.cached_specs [UnitGUID ("player")] = Details.playerClassicSpec.specs
-			--cache the player talents
-			_detalhes.cached_talents [UnitGUID ("player")] = talentsSelected
-
-			local role = Details:GetRoleFromSpec(Details.playerClassicSpec.specs, UnitGUID("player"))
-
-			if (Details.playerClassicSpec.specs == 103) then
-				if (role == "TANK") then
-					Details.playerClassicSpec.specs = 104
-					_detalhes.cached_specs [UnitGUID ("player")] = Details.playerClassicSpec.specs
-				end
-			end
-
-			_detalhes.cached_roles[UnitGUID ("player")] = role
-
-			--gear status
-			-- local item_amount = 16
-			-- local item_level = 0
-			-- local failed = 0
-			
-			-- local two_hand = {
-			-- 	["INVTYPE_2HWEAPON"] = true,
-			-- 	["INVTYPE_RANGED"] = true,
-			-- 	["INVTYPE_RANGEDRIGHT"] = true,
-			-- }
-			
-			-- for equip_id = 1, 17 do
-			-- 	if (equip_id ~= 4) then --shirt slot, trinkets
-			-- 		local item = GetInventoryItemLink("player", equip_id)
-			-- 		if (item) then
-			-- 			local _, _, itemRarity, iLevel, _, _, _, _, equipSlot = GetItemInfo(item)
-			-- 			if (iLevel) then
-			-- 				if (ItemUpgradeInfo) then
-			-- 					local ilvl = ItemUpgradeInfo:GetUpgradedItemLevel (item)
-			-- 					item_level = item_level + (ilvl or iLevel)
-			-- 				else
-			-- 					item_level = item_level + iLevel
-			-- 				end
-							
-			-- 				--> 16 = main hand 17 = off hand
-			-- 				-->  if using a two-hand, ignore the off hand slot
-			-- 				if (equip_id == 16 and two_hand [equipSlot]) then
-			-- 					item_amount = 15
-			-- 					break
-			-- 				end
-			-- 			end
-			-- 		else
-			-- 			failed = failed + 1
-			-- 			if (failed > 2) then
-			-- 				break
-			-- 			end
-			-- 		end
-			-- 	end
-			-- end
-
-    		local itemLevel = ItemLevelMixIn:GetItemLevel(UnitGUID ("player"))
-			local dataToShare = {role or "NONE", Details.playerClassicSpec.specs or 0, itemLevel or 0, talentsSelected, UnitGUID("player")}
-			--local serialized = _detalhes:Serialize(dataToShare)
-			local compressedData = Details:CompressData(dataToShare, "comm")
-
-			if (IsInRaid()) then
-				_detalhes:SendRaidData(DETAILS_PREFIX_TBC_DATA, compressedData)
-				if (_detalhes.debug) then
-					_detalhes:Msg ("(debug) sent talents data to Raid")
-				end
-
-			elseif (IsInGroup()) then
-				_detalhes:SendPartyData(DETAILS_PREFIX_TBC_DATA, compressedData)
-				if (_detalhes.debug) then
-					_detalhes:Msg ("(debug) sent talents data to Party")
-				end
-			end
-		end
-	end
-
-	Details.specToRole = {
-		--DRUID
-		[102] = "DAMAGER", --BALANCE
-		[103] = "DAMAGER", --FERAL DRUID
-		[105] = "HEALER", --RESTORATION
-
-		[252] = "DAMAGER", -- Unholy Death Knight
-		[251] = "DAMAGER", -- Frost Death Knight
-		[250] = "DAMAGER", -- Blood Death Knight
-		--HUNTER
-		[253] = "DAMAGER", --BM
-		[254] = "DAMAGER", --MM
-		[255] = "DAMAGER", --SURVIVOR
-	
-		--MAGE
-		[62] = "DAMAGER", --ARCANE
-		[64] = "DAMAGER", --FROST
-		[63] = "DAMAGER", ---FIRE
-	
-		--PALADIN
-		[70] = "DAMAGER", --RET
-		[65] = "HEALER", --HOLY
-		[66] = "DAMAGER", --PROT
-	
-		--PRIEST
-		[257] = "HEALER", --HOLY
-		[256] = "HEALER", --DISC
-		[258] = "DAMAGER", --SHADOW
-	
-		--ROGUE
-		[259] = "DAMAGER", --ASSASSINATION
-		[260] = "DAMAGER", --COMBAT
-		[261] = "DAMAGER", --SUB
-	
-		--SHAMAN
-		[262] = "DAMAGER", --ELEMENTAL
-		[263] = "DAMAGER", --ENHAN
-		[264] = "HEALER", --RESTO
-	
-		--WARLOCK
-		[265] = "DAMAGER", --AFF
-		[266] = "DAMAGER", --DESTRO
-		[267] = "DAMAGER", --DEMO
-	
-		--WARRIOR
-		[71] = "DAMAGER", --ARMS
-		[72] = "DAMAGER", --FURY
-		[73] = "DAMAGER", --PROT
-	}
-
-	function _detalhes:GetRoleFromSpec (specId, unitGUID)
-		if (specId == 103) then --feral druid
-			local talents = _detalhes.cached_talents [unitGUID]
-			if (talents) then
-				local tankTalents = 0
-				for i = 1, #talents do
-					local iconTexture, rank, tier, column = unpack (talents [i])
-					if (tier == 2) then
-						if (column == 1 and rank == 5) then
-							tankTalents = tankTalents + 5
-						end
-						if (column == 3 and rank == 5) then
-							tankTalents = tankTalents + 5
-						end
-	
-						if (tankTalents >= 10) then
-							return "TANK"
-						end
-					end
-				end
-			end
-		end
-		
-		return Details.specToRole [specId] or "NONE"
-	end
-
-	Details.validSpecIds = {
-		[250] = true,
-		[252] = true,
-		[251] = true,
-		[102] = true,
-		[103] = true,
-		[104] = true,
-		[105] = true,
-		[253] = true,
-		[254] = true,
-		[255] = true,
-		[62] = true,
-		[63] = true,
-		[64] = true,
-		[70] = true,
-		[65] = true,
-		[66] = true,
-		[257] = true,
-		[256] = true,
-		[258] = true,
-		[259] = true,
-		[260] = true,
-		[261] = true,
-		[262] = true,
-		[263] = true,
-		[264] = true,
-		[265] = true,
-		[266] = true,
-		[267] = true,
-		[71] = true,
-		[72] = true,
-		[73] = true,
-	}
-
-	Details.textureToSpec = {
-
-		DruidBalance = 102,
-		DruidFeralCombat = 103,
-		DruidRestoration = 105,
-
-		HunterBeastMastery = 253,
-		HunterMarksmanship = 254,
-		HunterSurvival = 255,
-
-		DKUnholy = 252, -- Unholy Death Knight
-		DKFrost = 251, -- Frost Death Knight
-		DKBlood = 250, -- Blood Death Knight
-
-		MageArcane = 62,
-		MageFrost = 64,
-		MageFire = 63,
-
-		PaladinCombat = 70,
-		PaladinHoly = 65,
-		PaladinProtection = 66,
-
-		PriestHoly = 257,
-		PriestDiscipline = 256,
-		PriestShadow = 258,
-
-		RogueAssassination = 259,
-		RogueCombat = 260,
-		RogueSubtlety = 261,
-
-		ShamanElementalCombat = 262,
-		ShamanEnhancement = 263,
-		ShamanRestoration = 264,
-
-		WarlockCurses = 265,
-		WarlockDestruction = 266,
-		WarlockSummoning = 267,
-
-		--WarriorArm = 71,
-		WarriorArms = 71,
-		WarriorFury = 72,
-		WarriorProtection = 73,
-	}
-
-
-	Details.specToTexture = {
-		[102] = "DruidBalance",
-		[103] = "DruidFeralCombat",
-		[105] = "DruidRestoration",
-
-		[253] = "HunterBeastMastery",
-		[254] = "HunterMarksmanship",
-		[255] = "HunterSurvival",
-
-		[62] = "MageArcane",
-		[64] = "MageFrost",
-		[63] = "MageFire",
-
-		[70] = "PaladinCombat",
-		[65] = "PaladinHoly",
-		[66] = "PaladinProtection",
-
-		[257] = "PriestHoly",
-		[256] = "PriestDiscipline",
-		[258] = "PriestShadow",
-
-		[259] = "RogueAssassination",
-		[260] = "RogueCombat",
-		[261] = "RogueSubtlety",
-
-		[262] = "ShamanElementalCombat",
-		[263] = "ShamanEnhancement",
-		[264] = "ShamanRestoration",
-
-		[265] = "WarlockCurses",
-		[266] = "WarlockDestruction",
-		[267] = "WarlockSummoning",
-
-		--[71] = "WarriorArm",
-		[71] = "WarriorArms",
-		[72] = "WarriorFury",
-		[73] = "WarriorProtection",
-	}
-
-	function Details.IsValidSpecId (specId)
-		return Details.validSpecIds [specId]
-	end
-
-	function Details.GetClassicSpecByTalentTexture (talentTexture)
-		return Details.textureToSpec [talentTexture] or nil
 	end
 end

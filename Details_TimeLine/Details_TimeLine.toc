@@ -1,22 +1,13 @@
 ## Interface: 30300
-## Title: Details!: Time Line (plugin)
+## Title: |cFF9B59B6D|cFFAA77CCe|cFFBB99DDt|cFFAA77CCa|cFF9B59B6i|cFFAA77CCl|cFFBB99DDs|cFFAA77CC!|cFFDDBBEE Time Line|r
 ## Notes: Show debuff, cooldown, enemy casts and enemy debuffs on a clear timeline.
 ## Notes-ruRU: Показывает дебаффы, время использования спобосностей, заклинания врагов и дебаффы врагов на временной шкале.
+## Author: Accidev
 ## RequiredDeps: Details
 ## OptionalDeps: Ace3
 ## SavedVariablesPerCharacter: DetailsTimeLineDB
-## X-Sirus-Update: https://github.com/fxpw/Details_Sirus/tree/master/Details_TimeLine
 
 locales\enUS.lua
-locales\deDE.lua
-locales\esES.lua
-locales\esMX.lua
-locales\frFR.lua
-locales\itIT.lua
-locales\koKR.lua
-locales\ptBR.lua
 locales\ruRU.lua
-locales\zhCN.lua
-locales\zhTW.lua
 
 Details_TimeLine.lua
